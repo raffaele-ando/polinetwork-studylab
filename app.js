@@ -85,7 +85,30 @@
     "dell", "all", "nell", "sull", "l", "d"
   ]);
 
-  // ==================== PERSISTENCE ====================
+  // ==================== PERSISTENCE & FIREBASE CLOUD SYNC ====================
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyC8HjMUxxtbuf0YwcjSwcedLD5_BiUFlYw",
+    authDomain: "polinetwork.firebaseapp.com",
+    projectId: "polinetwork",
+    storageBucket: "polinetwork.firebasestorage.app",
+    messagingSenderId: "234080938640",
+    appId: "1:234080938640:web:d5fd10c99545d7130e4615",
+    measurementId: "G-ZRVKLNBHLF",
+  };
+
+  let fbApp = null;
+  let fbAuth = null;
+  let fbDb = null;
+  let fbModules = null;
+  let fbUser = null;
+  let fbUnsubSnapshot = null;
+  let fbCollectionName = "users";
+  let cloudSyncTimer = null;
+  let cloudPendingPush = false;
+  let cloudLastSyncedAt = 0;
+  let cloudApplyingRemote = false;
+  let cloudStatus = "idle"; // idle | syncing | online | pending | error
+
   function defaultState() {
     return {
       mastery: {},
@@ -96,6 +119,9 @@
       theme: "light",
       readerScale: 1,
       lastSecId: null,
+      updatedAt: 0,
+      resetAt: 0,
+      _ts: { mastery: {}, bookmarks: {} },
       prefs: {
         highlightNums: true,
         clozeLevel: "1",
@@ -105,30 +131,505 @@
     };
   }
 
+  function normalizeStateObject(p) {
+    const def = defaultState();
+    if (!p || typeof p !== "object") return def;
+    return {
+      ...def,
+      ...p,
+      mastery: p.mastery || {},
+      bookmarks: p.bookmarks || {},
+      sm2: p.sm2 || {},
+      quizStats: p.quizStats || { total: 0, correct: 0 },
+      quizMastered: p.quizMastered || {},
+      updatedAt: Number(p.updatedAt) || 0,
+      resetAt: Number(p.resetAt) || 0,
+      _ts: {
+        mastery: p._ts?.mastery || {},
+        bookmarks: p._ts?.bookmarks || {},
+      },
+      prefs: { ...def.prefs, ...(p.prefs || {}) },
+    };
+  }
+
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const p = JSON.parse(raw);
-        const def = defaultState();
-        return {
-          ...def,
-          ...p,
-          mastery: p.mastery || {},
-          bookmarks: p.bookmarks || {},
-          sm2: p.sm2 || {},
-          quizStats: p.quizStats || { total: 0, correct: 0 },
-          quizMastered: p.quizMastered || {},
-          prefs: { ...def.prefs, ...(p.prefs || {}) },
-        };
-      }
+      if (raw) return normalizeStateObject(JSON.parse(raw));
     } catch (_) { /* ignore */ }
     return defaultState();
   }
 
-  function saveState() {
+  function saveState(opts = {}) {
+    if (!opts.preserveTimestamp) {
+      state.updatedAt = Date.now();
+    }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (_) { /* ignore */ }
+    if (!cloudApplyingRemote && fbUser && !opts.skipCloud) {
+      scheduleCloudPush();
+    }
+  }
+
+  function mergeCloudAndLocalState(localRaw, remoteRaw) {
+    const local = normalizeStateObject(localRaw);
+    const remote = normalizeStateObject(remoteRaw);
+
+    // If one side executed an explicit full reset more recently than the other side's updates
+    if (remote.resetAt > local.updatedAt && remote.resetAt > local.resetAt) {
+      return { ...remote };
+    }
+    if (local.resetAt > remote.updatedAt && local.resetAt > remote.resetAt) {
+      return { ...local };
+    }
+
+    const baseResetAt = Math.max(local.resetAt || 0, remote.resetAt || 0);
+    const newerIsRemote = (remote.updatedAt || 0) > (local.updatedAt || 0);
+    const primary = newerIsRemote ? remote : local;
+
+    const mergedMastery = {};
+    const mergedMasteryTs = {};
+    const allMasteryKeys = new Set([...Object.keys(local.mastery), ...Object.keys(remote.mastery)]);
+    for (const k of allMasteryKeys) {
+      const lTs = Number(local._ts?.mastery?.[k]) || 0;
+      const rTs = Number(remote._ts?.mastery?.[k]) || 0;
+      const lVal = Number(local.mastery[k]) || 0;
+      const rVal = Number(remote.mastery[k]) || 0;
+      if (lTs > 0 || rTs > 0) {
+        if (rTs > lTs) { mergedMastery[k] = rVal; mergedMasteryTs[k] = rTs; }
+        else if (lTs > rTs) { mergedMastery[k] = lVal; mergedMasteryTs[k] = lTs; }
+        else { mergedMastery[k] = Math.max(lVal, rVal); mergedMasteryTs[k] = Math.max(lTs, rTs); }
+      } else {
+        mergedMastery[k] = Math.max(lVal, rVal);
+      }
+      if (mergedMastery[k] === 0) delete mergedMastery[k];
+    }
+
+    const mergedBookmarks = {};
+    const mergedBookmarksTs = {};
+    const allBmKeys = new Set([
+      ...Object.keys(local.bookmarks),
+      ...Object.keys(remote.bookmarks),
+      ...Object.keys(local._ts?.bookmarks || {}),
+      ...Object.keys(remote._ts?.bookmarks || {}),
+    ]);
+    for (const k of allBmKeys) {
+      const lTs = Number(local._ts?.bookmarks?.[k]) || 0;
+      const rTs = Number(remote._ts?.bookmarks?.[k]) || 0;
+      if (lTs > 0 || rTs > 0) {
+        const active = rTs > lTs ? !!remote.bookmarks[k] : (lTs > rTs ? !!local.bookmarks[k] : !!(local.bookmarks[k] || remote.bookmarks[k]));
+        mergedBookmarksTs[k] = Math.max(lTs, rTs);
+        if (active) mergedBookmarks[k] = true;
+      } else if (local.bookmarks[k] || remote.bookmarks[k]) {
+        mergedBookmarks[k] = true;
+      }
+    }
+
+    const mergedSm2 = {};
+    const allSm2Keys = new Set([...Object.keys(local.sm2), ...Object.keys(remote.sm2)]);
+    for (const k of allSm2Keys) {
+      const lRec = local.sm2[k];
+      const rRec = remote.sm2[k];
+      if (lRec && !rRec) mergedSm2[k] = lRec;
+      else if (rRec && !lRec) mergedSm2[k] = rRec;
+      else if (lRec && rRec) {
+        const lRev = Number(lRec.lastReviewedAt) || Number(lRec.nextReview) || 0;
+        const rRev = Number(rRec.lastReviewedAt) || Number(rRec.nextReview) || 0;
+        if (rRev > lRev) mergedSm2[k] = rRec;
+        else if (lRev > rRev) mergedSm2[k] = lRec;
+        else mergedSm2[k] = (Number(rRec.reps) || 0) >= (Number(lRec.reps) || 0) ? rRec : lRec;
+      }
+    }
+
+    const mergedQuizMastered = { ...remote.quizMastered, ...local.quizMastered };
+    const mergedQuizStats = {
+      total: Math.max(Number(local.quizStats?.total) || 0, Number(remote.quizStats?.total) || 0),
+      correct: Math.max(Number(local.quizStats?.correct) || 0, Number(remote.quizStats?.correct) || 0),
+    };
+
+    return normalizeStateObject({
+      ...primary,
+      mastery: mergedMastery,
+      bookmarks: mergedBookmarks,
+      sm2: mergedSm2,
+      quizMastered: mergedQuizMastered,
+      quizStats: mergedQuizStats,
+      theme: primary.theme || local.theme || "light",
+      readerScale: primary.readerScale || local.readerScale || 1,
+      lastSecId: primary.lastSecId || local.lastSecId || remote.lastSecId || null,
+      updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0, Date.now()),
+      resetAt: baseResetAt,
+      _ts: { mastery: mergedMasteryTs, bookmarks: mergedBookmarksTs },
+      prefs: { ...local.prefs, ...remote.prefs, ...primary.prefs },
+    });
+  }
+
+  function makeInitialsAvatarDataUri(nameOrEmail) {
+    const clean = String(nameOrEmail || "PN").trim();
+    const parts = clean.split(/[\s._@-]+/).filter(Boolean);
+    const initials = (parts.length >= 2 ? parts[0][0] + parts[1][0] : clean.slice(0, 2)).toUpperCase();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="32" fill="#0071e3"/><text x="32" y="40" font-family="-apple-system,system-ui,sans-serif" font-size="24" font-weight="700" fill="#ffffff" text-anchor="middle">${esc(initials)}</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  }
+
+  function formatSyncTime(ts) {
+    if (!ts) return "in tempo reale";
+    const d = new Date(ts);
+    return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  function setCloudNotice(msg, isError = false) {
+    const el = document.getElementById("cloudModalNotice");
+    if (!el) return;
+    if (!msg) {
+      el.classList.add("hidden");
+      el.textContent = "";
+      return;
+    }
+    el.textContent = msg;
+    el.style.background = isError ? "var(--red-soft)" : "var(--orange-soft)";
+    el.style.color = isError ? "var(--red-text)" : "var(--orange-text)";
+    el.classList.remove("hidden");
+  }
+
+  function updateCloudUI() {
+    const isSigned = !!fbUser;
+    const avatarSrc = isSigned ? (fbUser.photoURL || makeInitialsAvatarDataUri(fbUser.displayName || fbUser.email)) : "";
+    const fallbackSrc = isSigned ? makeInitialsAvatarDataUri(fbUser.displayName || fbUser.email) : "";
+
+    [
+      { ic: "cloudBtnIcon", av: "cloudBtnAvatar", dot: "cloudStatusDot" },
+      { ic: "cloudBtnIconMobile", av: "cloudBtnAvatarMobile", dot: "cloudStatusDotMobile" },
+    ].forEach(({ ic, av, dot }) => {
+      const icEl = document.getElementById(ic);
+      const avEl = document.getElementById(av);
+      const dotEl = document.getElementById(dot);
+      if (icEl) icEl.classList.toggle("hidden", isSigned);
+      if (avEl) {
+        avEl.classList.toggle("hidden", !isSigned);
+        if (isSigned && avEl.getAttribute("src") !== avatarSrc) {
+          avEl.src = avatarSrc;
+          avEl.onerror = () => { avEl.src = fallbackSrc; };
+        }
+      }
+      if (dotEl) {
+        dotEl.classList.toggle("hidden", !isSigned);
+        dotEl.className = `cloud-dot ${!isSigned ? "hidden" : (cloudStatus === "syncing" ? "syncing" : (cloudStatus === "pending" ? "pending" : (cloudStatus === "error" ? "error" : "")))}`;
+      }
+    });
+
+    const homeOut = document.getElementById("cloudHomeOut");
+    const homeIn = document.getElementById("cloudHomeIn");
+    if (homeOut && homeIn) {
+      homeOut.classList.toggle("hidden", isSigned);
+      homeIn.classList.toggle("hidden", !isSigned);
+      if (isSigned) {
+        const hAv = document.getElementById("cloudHomeAvatar");
+        if (hAv && hAv.getAttribute("src") !== avatarSrc) {
+          hAv.src = avatarSrc;
+          hAv.onerror = () => { hAv.src = fallbackSrc; };
+        }
+        document.getElementById("cloudHomeName").textContent = fbUser.displayName || fbUser.email || "Account Google";
+        const subEl = document.getElementById("cloudHomeSub");
+        if (cloudStatus === "syncing") subEl.textContent = "● Sincronizzazione Cloud in corso…";
+        else if (cloudStatus === "pending") subEl.textContent = "● Salvato in locale · In attesa di rete";
+        else if (cloudStatus === "error") subEl.textContent = "● Salvato in locale · Tocca per verificare Cloud";
+        else subEl.textContent = `● Sincronizzato nel Cloud · ${formatSyncTime(cloudLastSyncedAt)}`;
+      }
+    }
+
+    const modOut = document.getElementById("cloudModalOut");
+    const modIn = document.getElementById("cloudModalIn");
+    if (modOut && modIn) {
+      modOut.classList.toggle("hidden", isSigned);
+      modIn.classList.toggle("hidden", !isSigned);
+      if (isSigned) {
+        const mAv = document.getElementById("cloudModalAvatar");
+        if (mAv && mAv.getAttribute("src") !== avatarSrc) {
+          mAv.src = avatarSrc;
+          mAv.onerror = () => { mAv.src = fallbackSrc; };
+        }
+        document.getElementById("cloudModalName").textContent = fbUser.displayName || "Utente Google";
+        document.getElementById("cloudModalEmail").textContent = fbUser.email || "";
+        const badge = document.getElementById("cloudModalStatusBadge");
+        const tsEl = document.getElementById("cloudModalTimestamp");
+        if (cloudStatus === "syncing") {
+          badge.className = "cloud-pill-status syncing";
+          badge.textContent = "● Sincronizzo…";
+          tsEl.textContent = "Aggiornamento continuo nel Cloud in corso…";
+        } else if (cloudStatus === "pending") {
+          badge.className = "cloud-pill-status pending";
+          badge.textContent = "● In coda";
+          tsEl.textContent = "Progressi al sicuro sul dispositivo; verranno inviati al Cloud appena torna la rete.";
+        } else if (cloudStatus === "error") {
+          badge.className = "cloud-pill-status error";
+          badge.textContent = "● Locale attivo";
+          tsEl.textContent = "Progressi salvati sul dispositivo.";
+        } else {
+          badge.className = "cloud-pill-status online";
+          badge.textContent = "● Cloud attivo";
+          tsEl.textContent = cloudLastSyncedAt
+            ? `Ultimo backup Cloud automatico: oggi alle ${formatSyncTime(cloudLastSyncedAt)} — Sincronizzazione continua attiva.`
+            : "Sincronizzazione continua attiva in tempo reale.";
+        }
+      }
+    }
+  }
+
+  function applyFullStateToUI() {
+    applyTheme(state.theme);
+    applyReaderScale(state.readerScale);
+    applySavedPrefsToControls();
+    if (state.lastSecId && SECTION_MAP.has(state.lastSecId) && currentView !== "reader") {
+      readerSecId = state.lastSecId;
+    }
+    renderOverview();
+    renderReaderSidebar();
+    if (readerSecId && SECTION_MAP.has(readerSecId)) {
+      renderReaderArticle(readerSecId, { skipHash: true });
+    }
+    buildFcQueue(false);
+    renderBackupSummary();
+    updateDueBadges();
+  }
+
+  async function resolveCloudDocRef(uid) {
+    const { doc } = fbModules;
+    return doc(fbDb, fbCollectionName, uid);
+  }
+
+  async function pushStateToCloud(immediate = false) {
+    if (!fbUser || !fbDb || !fbModules) return;
+    if (cloudSyncTimer) {
+      clearTimeout(cloudSyncTimer);
+      cloudSyncTimer = null;
+    }
+    if (!navigator.onLine) {
+      cloudPendingPush = true;
+      cloudStatus = "pending";
+      updateCloudUI();
+      return;
+    }
+
+    cloudStatus = "syncing";
+    updateCloudUI();
+
+    const payload = {
+      studylab_v1: JSON.parse(JSON.stringify(state)),
+      studylab_updatedAt: state.updatedAt || Date.now(),
+      uid: fbUser.uid,
+      email: fbUser.email || "",
+      displayName: fbUser.displayName || "",
+    };
+
+    const collectionsToTry = [fbCollectionName, "users", "studylab_users", "backups"].filter((v, i, a) => a.indexOf(v) === i);
+    for (const col of collectionsToTry) {
+      try {
+        const ref = fbModules.doc(fbDb, col, fbUser.uid);
+        await fbModules.setDoc(ref, payload, { merge: true });
+        fbCollectionName = col;
+        cloudPendingPush = false;
+        cloudLastSyncedAt = Date.now();
+        cloudStatus = "online";
+        setCloudNotice("");
+        try {
+          localStorage.setItem(`${STORAGE_KEY}_cloud_${fbUser.uid}`, JSON.stringify(state));
+        } catch (_) { /* ignore */ }
+        updateCloudUI();
+        if (immediate) showToast("Sincronizzato nel Cloud ✓");
+        return;
+      } catch (err) {
+        if (err?.code === "permission-denied") continue;
+        console.warn("Cloud push warning:", err);
+      }
+    }
+
+    // Fallback: cache under user-scoped local mirror and display helpful message if Firestore rules need enabling
+    try {
+      localStorage.setItem(`${STORAGE_KEY}_cloud_${fbUser.uid}`, JSON.stringify(state));
+    } catch (_) { /* ignore */ }
+    cloudStatus = "error";
+    setCloudNotice("Accesso Google attivo. Nota: verifica che le regole Cloud Firestore nel progetto Firebase 'polinetwork' consentano la scrittura agli utenti autenticati (request.auth != null). I dati sono comunque salvati in locale.");
+    updateCloudUI();
+  }
+
+  function scheduleCloudPush() {
+    cloudPendingPush = true;
+    cloudStatus = "syncing";
+    updateCloudUI();
+    if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
+    cloudSyncTimer = setTimeout(() => {
+      pushStateToCloud(false);
+    }, 300);
+  }
+
+  async function pullAndMergeFromCloud(uid, showNotification = false) {
+    if (!fbDb || !fbModules || !uid) return;
+    cloudStatus = "syncing";
+    updateCloudUI();
+
+    const collectionsToTry = [fbCollectionName, "users", "studylab_users", "backups"].filter((v, i, a) => a.indexOf(v) === i);
+    let remoteState = null;
+
+    for (const col of collectionsToTry) {
+      try {
+        const ref = fbModules.doc(fbDb, col, uid);
+        const snap = await fbModules.getDoc(ref);
+        fbCollectionName = col;
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data?.studylab_v1) {
+            remoteState = data.studylab_v1;
+          }
+        }
+        break;
+      } catch (err) {
+        if (err?.code === "permission-denied") continue;
+      }
+    }
+
+    // Also merge any user-scoped local cache
+    try {
+      const cachedRaw = localStorage.getItem(`${STORAGE_KEY}_cloud_${uid}`);
+      if (cachedRaw) {
+        const cachedState = JSON.parse(cachedRaw);
+        remoteState = remoteState ? mergeCloudAndLocalState(cachedState, remoteState) : cachedState;
+      }
+    } catch (_) { /* ignore */ }
+
+    if (remoteState) {
+      cloudApplyingRemote = true;
+      state = mergeCloudAndLocalState(state, remoteState);
+      saveState({ skipCloud: true, preserveTimestamp: true });
+      applyFullStateToUI();
+      cloudApplyingRemote = false;
+    }
+
+    await pushStateToCloud(showNotification);
+    startRealtimeCloudListener(uid);
+  }
+
+  function startRealtimeCloudListener(uid) {
+    if (fbUnsubSnapshot) {
+      fbUnsubSnapshot();
+      fbUnsubSnapshot = null;
+    }
+    if (!fbDb || !fbModules || !uid) return;
+    try {
+      const ref = fbModules.doc(fbDb, fbCollectionName, uid);
+      fbUnsubSnapshot = fbModules.onSnapshot(ref, snap => {
+        if (!snap.exists() || cloudPendingPush) return;
+        const data = snap.data();
+        const remote = data?.studylab_v1;
+        if (!remote) return;
+        const remoteTs = Number(remote.updatedAt) || Number(data.studylab_updatedAt) || 0;
+        if (remoteTs > (state.updatedAt || 0)) {
+          cloudApplyingRemote = true;
+          state = mergeCloudAndLocalState(state, remote);
+          saveState({ skipCloud: true, preserveTimestamp: true });
+          cloudLastSyncedAt = Date.now();
+          cloudStatus = "online";
+          applyFullStateToUI();
+          updateCloudUI();
+          cloudApplyingRemote = false;
+        }
+      }, () => { /* ignore snapshot permission errors handled in push */ });
+    } catch (_) { /* ignore */ }
+  }
+
+  async function initFirebaseCloud() {
+    try {
+      const [appMod, authMod, fsMod, anMod] = await Promise.all([
+        import("https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js"),
+        import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js"),
+        import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"),
+        import("https://www.gstatic.com/firebasejs/11.0.2/firebase-analytics.js").catch(() => null),
+      ]);
+
+      fbApp = appMod.initializeApp(FIREBASE_CONFIG);
+      if (anMod && typeof anMod.isSupported === "function") {
+        anMod.isSupported().then(yes => { if (yes) anMod.getAnalytics(fbApp); }).catch(() => {});
+      }
+      fbAuth = authMod.getAuth(fbApp);
+      fbDb = fsMod.getFirestore(fbApp);
+      fbModules = { ...authMod, ...fsMod };
+
+      // Check redirect result if user signed in via mobile redirect fallback
+      authMod.getRedirectResult(fbAuth).catch(err => {
+        if (err?.code === "auth/unauthorized-domain") {
+          setCloudNotice(`Dominio non autorizzato in Firebase Auth: aggiungi "${location.hostname}" in Firebase Console → Authentication → Settings → Authorized domains.`, true);
+        }
+      });
+
+      authMod.onAuthStateChanged(fbAuth, async user => {
+        fbUser = user || null;
+        if (fbUser) {
+          cloudStatus = "syncing";
+          updateCloudUI();
+          await pullAndMergeFromCloud(fbUser.uid, false);
+        } else {
+          if (fbUnsubSnapshot) { fbUnsubSnapshot(); fbUnsubSnapshot = null; }
+          cloudStatus = "idle";
+          updateCloudUI();
+        }
+      });
+
+      window.addEventListener("online", () => {
+        if (fbUser && cloudPendingPush) pushStateToCloud(false);
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden" && fbUser && cloudPendingPush) {
+          pushStateToCloud(false);
+        }
+      });
+    } catch (err) {
+      console.warn("Firebase init offline/fallback:", err);
+    }
+  }
+
+  async function handleGoogleLogin() {
+    if (!fbAuth || !fbModules) {
+      showToast("Connessione a Firebase in corso, riprova tra un istante…");
+      await initFirebaseCloud();
+      if (!fbAuth || !fbModules) {
+        setCloudNotice("Impossibile caricare Firebase SDK. Verifica la connessione internet.", true);
+        return;
+      }
+    }
+    setCloudNotice("");
+    const provider = new fbModules.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    try {
+      const res = await fbModules.signInWithPopup(fbAuth, provider);
+      if (res?.user) {
+        showToast(`Connesso come ${res.user.displayName || res.user.email}`);
+      }
+    } catch (err) {
+      if (err?.code === "auth/popup-blocked" || err?.code === "auth/cancelled-popup-request") {
+        try {
+          await fbModules.signInWithRedirect(fbAuth, provider);
+          return;
+        } catch (e2) {
+          setCloudNotice(`Errore accesso Google: ${e2.message || e2.code}`, true);
+        }
+      } else if (err?.code === "auth/unauthorized-domain") {
+        const msg = `Dominio "${location.hostname}" da autorizzare in Firebase Console → Authentication → Settings → Authorized domains.`;
+        setCloudNotice(msg, true);
+        openModal("backupModal");
+      } else if (err?.code !== "auth/popup-closed-by-user") {
+        setCloudNotice(`Accesso Google non riuscito (${err?.code || "errore"}).`, true);
+        openModal("backupModal");
+      }
+    }
+  }
+
+  async function handleGoogleLogout() {
+    if (!fbAuth || !fbModules) return;
+    try {
+      if (cloudPendingPush) await pushStateToCloud(false);
+      await fbModules.signOut(fbAuth);
+      showToast("Disconnesso da Google Cloud (progressi conservati in locale)");
     } catch (_) { /* ignore */ }
   }
 
@@ -233,7 +734,8 @@
       reps++;
     }
     ef = Math.max(1.3, ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
-    return { reps, interval, ef: Number(ef.toFixed(2)), nextReview: Date.now() + interval * 86400000 };
+    const now = Date.now();
+    return { reps, interval, ef: Number(ef.toFixed(2)), lastReviewedAt: now, nextReview: now + interval * 86400000 };
   }
 
   // ==================== FOCUS TRAP ====================
@@ -300,6 +802,8 @@
     applyRouteFromHash();
     window.addEventListener("hashchange", applyRouteFromHash);
     setInterval(renderDeadlineCard, 60000);
+    updateCloudUI();
+    initFirebaseCloud();
   }
 
   function applySavedPrefsToControls() {
@@ -1051,6 +1555,8 @@
         } else {
           if ((state.mastery[secId] || 0) === 0) {
             state.mastery[secId] = 1;
+            if (!state._ts) state._ts = { mastery: {}, bookmarks: {} };
+            state._ts.mastery[secId] = Date.now();
             saveState();
             syncAllViewsForStateChange(secId);
           }
@@ -1070,6 +1576,8 @@
           });
           noticeEl.querySelector("[data-clz-mem]")?.addEventListener("click", () => {
             state.mastery[secId] = 3;
+            if (!state._ts) state._ts = { mastery: {}, bookmarks: {} };
+            state._ts.mastery[secId] = Date.now();
             saveState();
             syncAllViewsForStateChange(secId);
             showToast(`${sec.code} segnato a memoria`);
@@ -2060,6 +2568,8 @@
       if (!readerSecId) return;
       const val = Number(e.target.value);
       state.mastery[readerSecId] = val;
+      if (!state._ts) state._ts = { mastery: {}, bookmarks: {} };
+      state._ts.mastery[readerSecId] = Date.now();
       saveState();
       syncAllViewsForStateChange(readerSecId);
       showToast(`Stato: ${STATUS_LABELS[val]}`);
@@ -2067,6 +2577,8 @@
 
     document.getElementById("btnBookmarkSec").addEventListener("click", () => {
       if (!readerSecId) return;
+      if (!state._ts) state._ts = { mastery: {}, bookmarks: {} };
+      state._ts.bookmarks[readerSecId] = Date.now();
       if (state.bookmarks[readerSecId]) { delete state.bookmarks[readerSecId]; showToast("Rimosso dai salvati"); }
       else { state.bookmarks[readerSecId] = true; showToast("Salvato"); }
       saveState();
@@ -2219,6 +2731,8 @@
     document.getElementById("btnPClozeMarkMem").addEventListener("click", () => {
       if (!practiceClozeSecId) return;
       state.mastery[practiceClozeSecId] = 3;
+      if (!state._ts) state._ts = { mastery: {}, bookmarks: {} };
+      state._ts.mastery[practiceClozeSecId] = Date.now();
       saveState();
       syncAllViewsForStateChange(practiceClozeSecId);
       showToast("Segnato a memoria");
@@ -2289,12 +2803,22 @@
       }
     });
 
-    // Backup Modal
+    // Backup & Firebase Cloud Sync Modal
     document.getElementById("btnBackup").addEventListener("click", () => {
       renderBackupSummary();
+      updateCloudUI();
       openModal("backupModal");
-      document.getElementById("btnExportProgress").focus();
+      const focusTarget = fbUser ? document.getElementById("btnCloudSyncNow") : document.getElementById("btnModalGoogleLogin");
+      (focusTarget || document.getElementById("btnExportProgress"))?.focus();
     });
+    document.getElementById("btnHomeGoogleLogin")?.addEventListener("click", handleGoogleLogin);
+    document.getElementById("btnModalGoogleLogin")?.addEventListener("click", handleGoogleLogin);
+    document.getElementById("btnHomeCloudManage")?.addEventListener("click", () => document.getElementById("btnBackup").click());
+    document.getElementById("btnCloudSyncNow")?.addEventListener("click", () => {
+      if (fbUser) pullAndMergeFromCloud(fbUser.uid, true);
+    });
+    document.getElementById("btnGoogleLogout")?.addEventListener("click", handleGoogleLogout);
+
     document.getElementById("closeBackupModal").addEventListener("click", closeAllModals);
     document.getElementById("backupModal").addEventListener("click", e => { if (e.target.id === "backupModal") closeAllModals(); });
     document.getElementById("lblImportProgress").addEventListener("keydown", e => {
@@ -2317,25 +2841,12 @@
         try {
           const imp = JSON.parse(reader.result);
           if (!imp || typeof imp !== "object") throw new Error("invalid");
-          const def = defaultState();
-          state = {
-            ...def, ...imp,
-            mastery: imp.mastery || {}, bookmarks: imp.bookmarks || {},
-            sm2: imp.sm2 || {}, quizStats: imp.quizStats || { total: 0, correct: 0 },
-            quizMastered: imp.quizMastered || {},
-            prefs: { ...def.prefs, ...(imp.prefs || {}) },
-          };
+          state = mergeCloudAndLocalState(state, imp);
           saveState();
-          applyTheme(state.theme);
-          applyReaderScale(state.readerScale);
-          applySavedPrefsToControls();
-          renderOverview();
-          renderReaderSidebar();
-          if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
-          buildFcQueue(false);
+          applyFullStateToUI();
           startQuiz();
           closeAllModals();
-          showToast("Progressi ripristinati");
+          showToast("Progressi uniti e sincronizzati");
         } catch (_) {
           showToast("File JSON non valido");
         }
@@ -2347,13 +2858,13 @@
     document.getElementById("btnResetCancel").addEventListener("click", () => document.getElementById("resetConfirmBox").classList.add("hidden"));
     document.getElementById("btnResetConfirm").addEventListener("click", () => {
       const theme = state.theme;
-      state = { ...defaultState(), theme };
+      const now = Date.now();
+      state = { ...defaultState(), theme, updatedAt: now, resetAt: now };
+      if (fbUser) {
+        try { localStorage.removeItem(`${STORAGE_KEY}_cloud_${fbUser.uid}`); } catch (_) {}
+      }
       saveState();
-      applySavedPrefsToControls();
-      renderOverview();
-      renderReaderSidebar();
-      if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
-      buildFcQueue(false);
+      applyFullStateToUI();
       startQuiz();
       closeAllModals();
       showToast("Progressi azzerati");

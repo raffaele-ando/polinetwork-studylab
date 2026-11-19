@@ -1266,6 +1266,98 @@ table.ref-table tr.tl-election td { background: var(--orange-soft); }
   display: flex; flex-direction: column; gap: 0.65rem; font-size: 0.85rem;
 }
 
+/* ==================== FIREBASE GOOGLE CLOUD SYNC UI ==================== */
+.cloud-btn { position: relative; overflow: visible; }
+.cloud-btn-avatar {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+}
+.cloud-dot {
+  position: absolute; bottom: -1px; right: -1px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: #198744; border: 2px solid var(--bg-surface);
+}
+.cloud-dot.syncing { background: var(--accent); animation: cloudPulse 1s infinite ease-in-out; }
+.cloud-dot.pending { background: var(--orange); }
+.cloud-dot.error { background: var(--cal-red); }
+@keyframes cloudPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.25); opacity: 0.7; } }
+
+.cloud-home-card { padding: 0.95rem 1.2rem; }
+.cloud-home-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.85rem;
+}
+.cloud-home-left { display: flex; align-items: center; gap: 0.85rem; min-width: 0; flex: 1; }
+.google-sq {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--bg-subtle); border: 0.5px solid var(--sep);
+  display: grid; place-items: center; flex-shrink: 0;
+}
+[data-theme="dark"] .google-sq { background: #2c2c2e; }
+.google-g-ic { width: 18px; height: 18px; flex-shrink: 0; }
+.cloud-home-copy { display: flex; flex-direction: column; min-width: 0; }
+.cloud-home-title {
+  font-size: 0.93rem; font-weight: 600; color: var(--ink-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cloud-home-sub {
+  font-size: 0.79rem; color: var(--ink-secondary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cloud-user-avatar {
+  width: 36px; height: 36px; border-radius: 50%; object-fit: cover;
+  background: var(--accent-soft); flex-shrink: 0; border: 0.5px solid var(--sep);
+}
+.cloud-user-avatar.lg { width: 42px; height: 42px; }
+
+.cloud-modal-box {
+  background: var(--bg-subtle); border-radius: var(--r-md);
+  padding: 1rem 1.05rem; display: flex; flex-direction: column; gap: 0.85rem;
+}
+.cloud-modal-out, .cloud-modal-in { display: flex; flex-direction: column; gap: 0.8rem; }
+.cloud-modal-head { display: flex; align-items: flex-start; gap: 0.8rem; }
+.cloud-modal-head strong { display: block; font-size: 0.94rem; margin-bottom: 0.15rem; }
+
+.btn-google-signin {
+  width: 100%; min-height: 44px; padding: 0.55rem 1.1rem;
+  border-radius: 12px; border: 1px solid var(--field-border);
+  background: var(--bg-surface); color: var(--ink-primary);
+  font-size: 0.92rem; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: background 0.14s, transform 0.1s;
+}
+.btn-google-signin:hover { background: var(--bg-hover); }
+.btn-google-signin:active { transform: scale(0.988); }
+
+.cloud-profile-row {
+  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+}
+.cloud-profile-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.cloud-profile-info strong { font-size: 0.94rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-profile-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cloud-pill-status {
+  font-size: 0.74rem; font-weight: 700; padding: 0.22rem 0.62rem; border-radius: 999px;
+  background: var(--green-soft); color: var(--green-text); white-space: nowrap;
+}
+.cloud-pill-status.syncing { background: var(--accent-soft); color: var(--accent-soft-text); }
+.cloud-pill-status.pending { background: var(--orange-soft); color: var(--orange-text); }
+.cloud-pill-status.error { background: var(--red-soft); color: var(--red-text); }
+
+.cloud-sync-meta {
+  font-size: 0.79rem; color: var(--ink-secondary);
+  background: var(--bg-surface); padding: 0.55rem 0.75rem; border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.cloud-notice {
+  font-size: 0.79rem; line-height: 1.45;
+  padding: 0.65rem 0.8rem; border-radius: 10px;
+  background: var(--orange-soft); color: var(--orange-text);
+}
+.modal-divider-label {
+  font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--ink-tertiary); margin-top: 0.15rem; margin-bottom: -0.35rem;
+}
+
 .search-results { overflow-y: auto; display: flex; flex-direction: column; gap: 0.45rem; max-height: 56vh; }
 .sr-item {
   width: 100%; text-align: left; border: none; background: var(--bg-subtle);
