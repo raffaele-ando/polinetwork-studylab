@@ -16,11 +16,15 @@
   let readerStatusFilter = "all";
   let readerSecId = null;
   let readerMode = "read"; // "read" | "cloze"
-  let returnStack = []; // [{ type: 'article'|'view', target, label, reason, sub }]
+  let returnStack = [];
 
   // Practice hub state
-  let practiceMode = "flashcards"; // "flashcards" | "quiz" | "cloze"
+  let practiceMode = "flashcards";
   let practiceClozeSecId = null;
+
+  // Active Cloze controller handles (separate recalled vs passively revealed!)
+  let inlineClozeCtrl = null;
+  let practiceClozeCtrl = null;
 
   // Flashcards state
   let fcQueue = [];
@@ -28,7 +32,7 @@
   let fcCompletedSession = 0;
   let fcFlipped = false;
   let fcLastAction = null;
-  let fcCustomContext = null; // e.g. "Art. 12" when launched from an article
+  let fcCustomContext = null;
 
   // Quiz state
   let qzQueue = [];
@@ -43,16 +47,12 @@
   let lbGallery = [];
   let lbIdx = 0;
 
-  // Search modal state
+  // Search & Focus Trap state
   let gsResults = [];
   let gsActiveIdx = -1;
   let lastFocusedEl = null;
+  let activeTrapContainer = null;
 
-  const DOC_LABELS = {
-    statuto: "Statuto PoliNetwork APS",
-    rri: "Raccolta dei Regolamenti Interni (RRI)",
-    elettorale: "Regolamento Elettorale Direttivo 2026",
-  };
   const DOC_SHORT = { statuto: "Statuto", rri: "RRI", elettorale: "Elettorale" };
   const STATUS_LABELS = ["Da studiare", "In corso", "Imparato", "A memoria"];
   const MODE_LABELS = { all: "Tutte", blitz: "Blitz Numeri", mc: "Normativa", scenario: "Scenari" };
@@ -92,6 +92,12 @@
       theme: "light",
       readerScale: 1,
       lastSecId: null,
+      prefs: {
+        highlightNums: true,
+        clozeLevel: "1",
+        clozeInputMode: "click",
+        fcDeckMode: "curated",
+      },
     };
   }
 
@@ -100,14 +106,16 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const p = JSON.parse(raw);
+        const def = defaultState();
         return {
-          ...defaultState(),
+          ...def,
           ...p,
           mastery: p.mastery || {},
           bookmarks: p.bookmarks || {},
           sm2: p.sm2 || {},
           quizStats: p.quizStats || { total: 0, correct: 0 },
           quizMastered: p.quizMastered || {},
+          prefs: { ...def.prefs, ...(p.prefs || {}) },
         };
       }
     } catch (_) { /* ignore */ }
@@ -188,10 +196,33 @@
     return { reps, interval, ef: Number(ef.toFixed(2)), nextReview: Date.now() + interval * 86400000 };
   }
 
+  // ==================== FOCUS TRAP (WCAG 2.2 AA) ====================
+  function getFocusable(container) {
+    return Array.from(container.querySelectorAll(
+      'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(el => el.offsetParent !== null);
+  }
+
+  function handleFocusTrap(e) {
+    if (e.key !== "Tab" || !activeTrapContainer) return;
+    const focusables = getFocusable(activeTrapContainer);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   // ==================== INIT ====================
   async function init() {
     applyTheme(state.theme);
     applyReaderScale(state.readerScale);
+    applySavedPrefsToControls();
 
     const [corpusRes, packRes] = await Promise.all([
       fetch("data/corpus.json"),
@@ -232,6 +263,16 @@
     applyRouteFromHash();
     window.addEventListener("hashchange", applyRouteFromHash);
     setInterval(renderDeadlineStrip, 60000);
+  }
+
+  function applySavedPrefsToControls() {
+    const p = state.prefs;
+    document.getElementById("toggleHighlightNums").checked = p.highlightNums !== false;
+    document.getElementById("inlineClozeLevel").value = p.clozeLevel || "1";
+    document.getElementById("clozeLevelSelect").value = p.clozeLevel || "1";
+    document.getElementById("inlineClozeInput").value = p.clozeInputMode || "click";
+    document.getElementById("clozeInputMode").value = p.clozeInputMode || "click";
+    document.getElementById("fcDeckMode").value = p.fcDeckMode || "curated";
   }
 
   function syncDynamicOptionLabels() {
@@ -280,7 +321,26 @@
     document.documentElement.style.setProperty("--reader-scale", state.readerScale);
   }
 
-  // ==================== ROUTING & NAVIGATION ====================
+  // ==================== CROSS-VIEW SYNC & ROUTING ====================
+  function syncAllViewsForStateChange(affectedSecId = null) {
+    updateDueBadges();
+    if (affectedSecId) {
+      syncReaderSidebarDots();
+      if (readerSecId === affectedSecId) {
+        const cur = state.mastery[affectedSecId] || 0;
+        document.querySelectorAll("#readerMasteryBtns .m-chip").forEach(b => {
+          const act = Number(b.dataset.status) === cur;
+          b.classList.toggle("active", act);
+          b.setAttribute("aria-pressed", act ? "true" : "false");
+        });
+      }
+      const sec = SECTION_MAP.get(affectedSecId);
+      if (sec && document.getElementById("clozeDocSelect").value === sec.doc) {
+        populatePracticeClozeSecSelect(sec.doc);
+      }
+    }
+  }
+
   function setHash(path) {
     const target = `#${path}`;
     if (location.hash !== target) history.replaceState(null, "", target);
@@ -301,6 +361,11 @@
     });
 
     if (viewName === "overview") renderOverview();
+    else if (viewName === "reader") syncReaderSidebarDots();
+    else if (viewName === "practice") {
+      populatePracticeClozeSecSelect(document.getElementById("clozeDocSelect").value);
+    }
+
     if (!opts.skipHash) {
       if (viewName === "reader" && readerSecId) setHash(`reader/${readerSecId}${readerMode === "cloze" ? "/cloze" : ""}`);
       else if (viewName === "practice") setHash(`practice/${practiceMode}${practiceMode === "cloze" && practiceClozeSecId ? `/${practiceClozeSecId}` : ""}`);
@@ -321,6 +386,7 @@
     ["flashcards", "quiz", "cloze"].forEach(m => {
       document.getElementById(`pane-${m}`).classList.toggle("hidden", m !== mode);
     });
+    if (mode === "cloze") populatePracticeClozeSecSelect(document.getElementById("clozeDocSelect").value);
     if (!opts.skipHash && currentView === "practice") {
       setHash(`practice/${practiceMode}${practiceMode === "cloze" && practiceClozeSecId ? `/${practiceClozeSecId}` : ""}`);
     }
@@ -329,25 +395,16 @@
   function applyRouteFromHash() {
     const raw = (location.hash || "").replace(/^#/, "");
     if (!raw) return;
-    const parts = raw.split("/");
-    const [head, p1, p2] = parts;
-
-    // Support both new v3 routes and legacy v2 routes gracefully
+    const [head, p1, p2] = raw.split("/");
     if (head === "overview" || head === "dashboard") {
       switchView("overview", { skipHash: true });
     } else if (head === "reader") {
-      if (p1 && SECTION_MAP.has(p1)) {
-        openArticle(p1, { mode: p2 === "cloze" ? "cloze" : "read", skipHash: true });
-      } else {
-        switchView("reader", { skipHash: true });
-      }
+      if (p1 && SECTION_MAP.has(p1)) openArticle(p1, { mode: p2 === "cloze" ? "cloze" : "read", skipHash: true });
+      else switchView("reader", { skipHash: true });
     } else if (head === "practice") {
       switchPracticeMode(p1 || "flashcards", { skipHash: true });
-      if (p1 === "cloze" && p2 && SECTION_MAP.has(p2)) {
-        openPracticeClozeArticle(p2, { skipHash: true });
-      } else {
-        switchView("practice", { skipHash: true });
-      }
+      if (p1 === "cloze" && p2 && SECTION_MAP.has(p2)) openPracticeClozeArticle(p2, { skipHash: true });
+      else switchView("practice", { skipHash: true });
     } else if (head === "reference" || head === "cheatsheet") {
       if (p1 && document.querySelector(`#csTabs .rail-tab[data-cs="${p1}"]`)) {
         csTab = p1;
@@ -366,11 +423,8 @@
 
   function openArticle(secId, opts = {}) {
     if (!SECTION_MAP.has(secId)) return;
-    if (opts.returnTo) {
-      returnStack.push(opts.returnTo);
-    } else if (!opts.keepReturn) {
-      returnStack = [];
-    }
+    if (opts.returnTo) returnStack.push(opts.returnTo);
+    else if (!opts.keepReturn) returnStack = [];
 
     if (readerDocFilter !== "all" && SECTION_MAP.get(secId).doc !== readerDocFilter) {
       readerDocFilter = "all";
@@ -383,8 +437,7 @@
     const searchInp = document.getElementById("readerSearch");
     if (searchInp.value) searchInp.value = "";
 
-    const desiredMode = opts.mode === "cloze" && CLOZEABLE_SECTIONS.some(s => s.id === secId) ? "cloze" : "read";
-    readerMode = desiredMode;
+    readerMode = opts.mode === "cloze" && CLOZEABLE_SECTIONS.some(s => s.id === secId) ? "cloze" : "read";
     renderReaderSidebar();
     renderReaderArticle(secId, opts);
     switchView("reader", opts);
@@ -393,7 +446,7 @@
   function openPracticeClozeArticle(secId, opts = {}) {
     const sec = SECTION_MAP.get(secId);
     if (!sec || !CLOZEABLE_SECTIONS.some(s => s.id === secId)) {
-      showToast("Seleziona un articolo normativo (non un titolo contenitore).", "warn");
+      showToast("Seleziona un articolo normativo.", "warn");
       return;
     }
     practiceClozeSecId = secId;
@@ -430,15 +483,26 @@
     const kicker = document.getElementById("deadlineKicker");
     const text = document.getElementById("deadlineText");
     const cd = document.getElementById("deadlineCountdown");
+    const artBtn = document.getElementById("btnDeadlineArticle");
+
     if (nextItem) {
       const isElec = nextItem.date.startsWith("21/11/2026") && nextItem.event.includes("ASSEMBLEA");
       kicker.textContent = isElec ? "ASSEMBLEA ELETTIVA · 21/11/2026" : `PROSSIMA SCADENZA · ${nextItem.date}`;
       text.textContent = nextItem.event;
       cd.textContent = formatCountdown(nextItem.dt.getTime() - now);
+      if (nextItem.ref && SECTION_MAP.has(nextItem.ref)) {
+        artBtn.classList.remove("hidden");
+        artBtn.onclick = () => openArticle(nextItem.ref, {
+          returnTo: { type: "overview", label: "Panoramica", reason: "Scadenza elettorale" },
+        });
+      } else {
+        artBtn.classList.add("hidden");
+      }
     } else {
       kicker.textContent = "CRONOPROGRAMMA ELEZIONI 2026";
-      text.textContent = "Ciclo elettorale 2026 concluso.";
-      cd.textContent = "Archiviato";
+      text.textContent = "Tutte le scadenze del ciclo elettorale 2026 risultano concluse.";
+      cd.textContent = "Concluso";
+      artBtn.classList.add("hidden");
     }
   }
 
@@ -463,18 +527,17 @@
     document.getElementById("corpusTotalsMeta").textContent =
       `${CORPUS.documents.reduce((a, d) => a + d.pages, 0)} pagine · ${ALL_SECTIONS.length} voci d'indice`;
 
-    // Ring & Legend
     document.getElementById("overallPct").textContent = `${pct}%`;
     const circ = 2 * Math.PI * 50;
     const ringEl = document.getElementById("overallRing");
     ringEl.style.strokeDashoffset = circ * (1 - pct / 100);
     ringEl.style.opacity = pct === 0 ? "0" : "1";
+
     document.getElementById("legMem").textContent = nMem;
     document.getElementById("legLearned").textContent = nLearned;
     document.getElementById("legWip").textContent = nWip;
     document.getElementById("legTodo").textContent = nTodo;
 
-    // Smart Next Best Action recommendation
     const nextBtn = document.getElementById("btnNextBestAction");
     const nextLbl = document.getElementById("nextBestLabel");
     const advice = document.getElementById("briefingAdvice");
@@ -482,11 +545,11 @@
 
     if (firstWipSec) {
       nextLbl.textContent = `Continua ${firstWipSec.code}`;
-      advice.textContent = `Hai lasciato in corso «${firstWipSec.code} — ${firstWipSec.title}» (${DOC_SHORT[firstWipSec.doc]}). Riprendi la lettura o passa subito a Cloze per fissarlo a memoria.`;
+      advice.textContent = `Hai in corso «${firstWipSec.code} — ${firstWipSec.title}» (${DOC_SHORT[firstWipSec.doc]}). Riprendi la lettura o passa al testo a scomparsa per fissarlo a memoria.`;
       nextBtn.onclick = () => openArticle(firstWipSec.id);
     } else if (hasStarted && due > 0) {
       nextLbl.textContent = `Ripassa ${due} flashcards`;
-      advice.textContent = `Hai ${due} schede pronte per il ripasso SM-2 oggi: consolidarle ora massimizza la ritenzione prima dell'Assemblea.`;
+      advice.textContent = `Hai ${due} schede pronte per il ripasso programmato oggi: rivederle ora rafforza la memoria a lungo termine.`;
       nextBtn.onclick = () => {
         document.getElementById("fcOnlyDue").checked = true;
         buildFcQueue(false);
@@ -495,15 +558,14 @@
       };
     } else if (hasStarted) {
       nextLbl.textContent = "Apri Normativa";
-      advice.textContent = `Ottimo ritmo: ${nLearned + nMem} sezioni consolidate e ${qzMast}/${PACK.quizzes.length} quiz padroneggiati.`;
+      advice.textContent = `${nLearned + nMem} sezioni consolidate su ${STUDYABLE_SECTIONS.length} e ${qzMast}/${PACK.quizzes.length} domande quiz superate.`;
       nextBtn.onclick = () => openArticle(readerSecId || STUDYABLE_SECTIONS[0].id);
     } else {
       nextLbl.textContent = "Inizia dallo Statuto";
-      advice.textContent = "Leggi ogni disposizione verbatim con numeri e quorum evidenziati, poi attiva Cloze sullo stesso articolo e consolida con SM-2 e Quiz.";
+      advice.textContent = "Consulta il testo ufficiale con numeri e quorum evidenziati, esercitati con il testo a scomparsa sullo stesso articolo e consolida con flashcards e quiz.";
       nextBtn.onclick = () => openArticle(STUDYABLE_SECTIONS[0].id);
     }
 
-    // Metric Strip
     document.getElementById("statSections").textContent = `${nLearned + nMem} / ${STUDYABLE_SECTIONS.length}`;
     document.getElementById("statSectionsHint").textContent = `${nMem} a memoria · ${nWip} in corso`;
 
@@ -513,19 +575,18 @@
     document.getElementById("statQuizMastered").textContent = `${qzMast} / ${PACK.quizzes.length}`;
     if (state.quizStats.total > 0) {
       const acc = Math.round((state.quizStats.correct / state.quizStats.total) * 100);
-      document.getElementById("statQuizAcc").textContent = `Precisione ${acc}% (${state.quizStats.correct}/${state.quizStats.total})`;
+      document.getElementById("statQuizAcc").textContent = `Precisione storica ${acc}% (${state.quizStats.correct}/${state.quizStats.total})`;
     } else {
       document.getElementById("statQuizAcc").textContent = "0 risposte registrate";
     }
 
     document.getElementById("statBookmarks").textContent = bmCount;
     document.getElementById("statBookmarksHint").textContent = bmCount > 0
-      ? "Apri gli articoli salvati"
+      ? "Apri gli articoli contrassegnati"
       : "Segna gli articoli chiave";
 
     renderDeadlineStrip();
 
-    // Structured Document List
     const listEl = document.getElementById("docList");
     listEl.innerHTML = "";
     for (const doc of CORPUS.documents) {
@@ -545,7 +606,7 @@
           <div class="doc-row-meta">${doc.pages} pagine · ${secs.length} sezioni normative · ${dMem} a memoria</div>
         </div>
         <div class="doc-row-prog">
-          <div class="doc-prog-head"><span>Padronanza</span><strong>${dPct}%</strong></div>
+          <div class="doc-prog-head"><span>Avanzamento</span><strong>${dPct}%</strong></div>
           <div class="stacked-bar">
             <div class="seg-mem" style="width:${(dMem / secs.length) * 100}%"></div>
             <div class="seg-ok" style="width:${(dOk / secs.length) * 100}%"></div>
@@ -554,7 +615,7 @@
         </div>
         <div class="doc-row-actions">
           <button type="button" class="btn small secondary" data-doc-read="${doc.id}">Leggi</button>
-          <button type="button" class="btn small secondary" data-doc-cloze="${firstCloze}">Cloze</button>
+          <button type="button" class="btn small secondary" data-doc-cloze="${firstCloze}">A memoria</button>
           <button type="button" class="btn small ghost" data-doc-quiz="${doc.id}">Quiz</button>
         </div>
       `;
@@ -589,7 +650,7 @@
     });
   }
 
-  // ==================== 2. NORMATIVA (READER + INLINE CLOZE) ====================
+  // ==================== 2. NORMATIVA (READER + INLINE A MEMORIA) ====================
   function syncReaderDocPills() {
     document.querySelectorAll("#readerDocPills .seg-btn").forEach(b => {
       const act = b.dataset.doc === readerDocFilter;
@@ -613,7 +674,7 @@
     document.getElementById("readerClozePane").classList.toggle("hidden", readerMode !== "cloze");
     document.getElementById("readOnlyTools").classList.toggle("hidden", readerMode !== "read");
     document.getElementById("btnSwitchInlineCloze").textContent =
-      readerMode === "read" ? "Allenati A Memoria" : "Torna a Lettura";
+      readerMode === "read" ? "Testo a scomparsa" : "Torna a Lettura";
   }
 
   function getFilteredReaderSections() {
@@ -648,7 +709,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.dataset.secId = s.id;
-      btn.className = `toc-item lvl-${s.level} ${s.id === readerSecId ? "active" : ""}`;
+      btn.className = `toc-item lvl-${s.level} ${isContainer ? "is-group" : ""} ${s.id === readerSecId ? "active" : ""}`;
       btn.innerHTML = `
         <span class="${isContainer ? "dot" : `dot s${m}`}" aria-hidden="true"></span>
         <span class="toc-code">${esc(s.num || s.code)}</span>
@@ -665,42 +726,54 @@
     list.appendChild(frag);
   }
 
-  function syncReaderSidebarSelection(secId) {
+  function syncReaderSidebarDots() {
     const list = document.getElementById("readerTocList");
-    const m = state.mastery[secId] || 0;
-    const isBm = !!state.bookmarks[secId];
     list.querySelectorAll(".toc-item").forEach(el => {
-      const isTarget = el.dataset.secId === secId;
+      const id = el.dataset.secId;
+      const sec = SECTION_MAP.get(id);
+      const isTarget = id === readerSecId;
       el.classList.toggle("active", isTarget);
-      if (isTarget) {
+      if (sec?.text?.trim()) {
         const dot = el.querySelector(".dot");
-        const sec = SECTION_MAP.get(secId);
-        if (dot && sec?.text?.trim()) dot.className = `dot s${m}`;
-        let star = el.querySelector(".toc-star");
-        if (isBm && !star) {
-          star = document.createElement("span");
-          star.className = "toc-star";
-          star.textContent = "★";
-          el.appendChild(star);
-        } else if (!isBm && star) {
-          star.remove();
-        }
-        el.scrollIntoView({ block: "nearest" });
+        if (dot) dot.className = `dot s${state.mastery[id] || 0}`;
       }
+      const isBm = !!state.bookmarks[id];
+      let star = el.querySelector(".toc-star");
+      if (isBm && !star) {
+        star = document.createElement("span");
+        star.className = "toc-star";
+        star.textContent = "★";
+        el.appendChild(star);
+      } else if (!isBm && star) {
+        star.remove();
+      }
+      if (isTarget) el.scrollIntoView({ block: "nearest" });
     });
   }
 
   function openTocDrawer() {
-    document.getElementById("readerSidebar").classList.add("open");
+    lastFocusedEl = document.activeElement;
+    const sidebar = document.getElementById("readerSidebar");
+    sidebar.classList.add("open");
     document.getElementById("tocBackdrop").classList.remove("hidden");
     document.getElementById("btnOpenTocDrawer").setAttribute("aria-expanded", "true");
+    document.body.classList.add("modal-open");
+    activeTrapContainer = sidebar;
     document.getElementById("readerSearch").focus();
   }
 
   function closeTocDrawer() {
-    document.getElementById("readerSidebar").classList.remove("open");
+    const sidebar = document.getElementById("readerSidebar");
+    if (!sidebar.classList.contains("open")) return;
+    sidebar.classList.remove("open");
     document.getElementById("tocBackdrop").classList.add("hidden");
     document.getElementById("btnOpenTocDrawer").setAttribute("aria-expanded", "false");
+    document.body.classList.remove("modal-open");
+    if (activeTrapContainer === sidebar) activeTrapContainer = null;
+    if (lastFocusedEl && typeof lastFocusedEl.focus === "function") {
+      lastFocusedEl.focus();
+      lastFocusedEl = null;
+    }
   }
 
   function formatLegalText(rawText, currentDoc) {
@@ -750,13 +823,12 @@
     state.lastSecId = secId;
     saveState();
 
-    syncReaderSidebarSelection(secId);
+    syncReaderSidebarDots();
     syncReaderModeTabs();
     if (!opts.skipHash && currentView === "reader") {
       setHash(`reader/${secId}${readerMode === "cloze" ? "/cloze" : ""}`);
     }
 
-    // Context return bar
     const retBar = document.getElementById("returnBanner");
     if (returnStack.length > 0) {
       const top = returnStack[returnStack.length - 1];
@@ -788,7 +860,6 @@
       b.setAttribute("aria-pressed", act ? "true" : "false");
     });
 
-    // Editorial prose rendering
     const bodyEl = document.getElementById("readerArtBody");
     bodyEl.innerHTML = "";
     if (!isStudyable) {
@@ -828,7 +899,6 @@
       });
     });
 
-    // PDF visual diagrams if attached
     const imgWrap = document.getElementById("readerArtImages");
     imgWrap.innerHTML = "";
     if (sec.images && sec.images.length) {
@@ -843,33 +913,34 @@
       });
     }
 
-    // Inline Cloze pane
     if (readerMode === "cloze" && CLOZEABLE_SECTIONS.some(s => s.id === sec.id)) {
       renderInlineCloze();
     }
 
-    // Related Connections (Cloze + Flashcards + Quiz on this article)
     const canCloze = CLOZEABLE_SECTIONS.some(s => s.id === sec.id);
     const relFcs = PACK.flashcards.filter(c => c.ref === sec.id);
     const relQzs = PACK.quizzes.filter(q => q.ref === sec.id);
-    const connBox = document.getElementById("articleConnections");
-    connBox.classList.toggle("hidden", !canCloze && !relFcs.length && !relQzs.length);
+    document.getElementById("articleConnections").classList.toggle("hidden", !canCloze && !relFcs.length && !relQzs.length);
     document.getElementById("btnSwitchInlineCloze").classList.toggle("hidden", !canCloze);
-
-    const fcBtn = document.getElementById("btnArticleFlashcards");
-    fcBtn.classList.toggle("hidden", relFcs.length === 0);
+    document.getElementById("btnArticleFlashcards").classList.toggle("hidden", relFcs.length === 0);
     document.getElementById("artFcCount").textContent = relFcs.length;
-
-    const qzBtn = document.getElementById("btnArticleQuiz");
-    qzBtn.classList.toggle("hidden", relQzs.length === 0);
+    document.getElementById("btnArticleQuiz").classList.toggle("hidden", relQzs.length === 0);
     document.getElementById("artQzCount").textContent = relQzs.length;
 
-    // Prev / Next
-    const navList = getFilteredReaderSections();
-    const pool = navList.some(s => s.id === secId) ? navList : ALL_SECTIONS;
+    // Prev / Next skip empty structural container headings for smooth continuous reading!
+    const filteredStudyable = getFilteredReaderSections().filter(s => s.text && s.text.trim().length > 0);
+    const pool = filteredStudyable.some(s => s.id === secId) ? filteredStudyable : STUDYABLE_SECTIONS;
     const idx = pool.findIndex(s => s.id === secId);
-    const prev = idx > 0 ? pool[idx - 1] : null;
-    const next = idx >= 0 && idx < pool.length - 1 ? pool[idx + 1] : null;
+    let prev = null, next = null;
+    if (idx >= 0) {
+      prev = idx > 0 ? pool[idx - 1] : null;
+      next = idx < pool.length - 1 ? pool[idx + 1] : null;
+    } else {
+      // Currently on an empty container: next goes to first child article
+      const allIdx = ALL_SECTIONS.findIndex(s => s.id === secId);
+      for (let i = allIdx - 1; i >= 0; i--) if (ALL_SECTIONS[i].text?.trim()) { prev = ALL_SECTIONS[i]; break; }
+      for (let i = allIdx + 1; i < ALL_SECTIONS.length; i++) if (ALL_SECTIONS[i].text?.trim()) { next = ALL_SECTIONS[i]; break; }
+    }
 
     const btnPrev = document.getElementById("btnPrevSec");
     const btnNext = document.getElementById("btnNextSec");
@@ -883,7 +954,7 @@
     document.getElementById("nextSecTitle").textContent = next ? `${next.code} · ${next.title}` : "Fine";
   }
 
-  // ==================== UNIFIED CLOZE ENGINE ====================
+  // ==================== EPISTEMICALLY HONEST CLOZE ENGINE ====================
   function shouldBlankToken(word, level, idx) {
     const clean = word.replace(/^[^\p{L}\p{N}€]+|[^\p{L}\p{N}%]+$/gu, "");
     if (!clean) return false;
@@ -899,9 +970,15 @@
     return false;
   }
 
+  /**
+   * Epistemically separates:
+   * - recalled: actively typed without peek (type mode) OR individually self-checked (click mode)
+   * - revealed: passively shown via "Suggerisci 1", "Mostra testo", or "?" peek
+   * Never falsely claims recall or auto-promotes mastery when text is merely revealed!
+   */
   function renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange }) {
     const sec = SECTION_MAP.get(secId);
-    if (!sec) return;
+    if (!sec) return { hintOne: () => {}, revealAll: () => {} };
     const level = Number(levelSel.value);
     const mode = modeSel.value;
 
@@ -909,41 +986,76 @@
     noticeEl.classList.add("hidden");
     noticeEl.classList.remove("ok");
 
-    let total = 0;
-    let solved = 0;
+    const items = []; // [{ isDone, revealPassively }]
+    let recalled = 0;
+    let revealed = 0;
     let tokenIndex = 0;
 
     const updateProgress = () => {
-      counterEl.textContent = `${solved} / ${total}`;
-      barEl.style.width = total > 0 ? `${Math.round((solved / total) * 100)}%` : "0%";
+      const total = items.length;
+      const done = recalled + revealed;
+      if (mode === "type") {
+        counterEl.textContent = revealed > 0
+          ? `Ricordate ${recalled}/${total} · Rivelate ${revealed}`
+          : `Ricordate ${recalled}/${total}`;
+      } else {
+        counterEl.textContent = revealed > 0
+          ? `${recalled} verificate · ${revealed} mostrate / ${total}`
+          : `${recalled} / ${total}`;
+      }
+      barEl.style.width = total > 0 ? `${Math.round((done / total) * 100)}%` : "0%";
 
-      if (total > 0 && solved >= total) {
-        // Synchronize unstudied article automatically to "In corso" (never downgrades!)
-        if ((state.mastery[secId] || 0) === 0) {
-          state.mastery[secId] = 1;
-          saveState();
-          if (onMasteryChange) onMasteryChange();
+      if (total > 0 && done >= total) {
+        if (recalled === 0) {
+          // Pure passive reveal: do NOT claim completion or alter mastery!
+          noticeEl.classList.remove("ok", "hidden");
+          noticeEl.innerHTML = `
+            <span><strong>Testo mostrato per la consultazione.</strong> Premi <em>Ricomincia</em> per metterti alla prova senza aiuti.</span>
+            <div class="notice-actions">
+              <button type="button" class="btn small secondary" data-clz-retry>Ricomincia</button>
+            </div>
+          `;
+          noticeEl.querySelector("[data-clz-retry]").addEventListener("click", () => {
+            renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange });
+          });
+        } else {
+          // Genuine active engagement -> safely promote unstudied (0) to In corso (1)
+          if ((state.mastery[secId] || 0) === 0) {
+            state.mastery[secId] = 1;
+            saveState();
+            syncAllViewsForStateChange(secId);
+            if (onMasteryChange) onMasteryChange();
+          }
+          const recallPct = Math.round((recalled / total) * 100);
+          noticeEl.classList.add("ok");
+          noticeEl.classList.remove("hidden");
+          const nextLvHtml = level < 4 ? `<button type="button" class="btn small secondary" data-clz-lvup>Livello ${level + 1}</button>` : "";
+          const summaryMsg = mode === "type"
+            ? `Ricordate ${recalled}/${total} parole (${recallPct}%)${revealed > 0 ? `, ${revealed} con suggerimento` : ""}.`
+            : (revealed > 0
+              ? `Verifica terminata (${recalled} scoperte singolarmente, ${revealed} mostrate).`
+              : `Tutte le ${total} parti verificate.`);
+          noticeEl.innerHTML = `
+            <span><strong>Esercizio terminato.</strong> ${summaryMsg}</span>
+            <div class="notice-actions">
+              ${nextLvHtml}
+              <button type="button" class="btn small primary" data-clz-mem>Segna A Memoria</button>
+            </div>
+          `;
+          noticeEl.querySelector("[data-clz-lvup]")?.addEventListener("click", () => {
+            levelSel.value = String(level + 1);
+            state.prefs.clozeLevel = levelSel.value;
+            saveState();
+            renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange });
+          });
+          noticeEl.querySelector("[data-clz-mem]")?.addEventListener("click", () => {
+            state.mastery[secId] = 3;
+            saveState();
+            syncAllViewsForStateChange(secId);
+            if (onMasteryChange) onMasteryChange();
+            showToast(`${sec.code} segnato A MEMORIA.`, "ok");
+          });
         }
-        noticeEl.classList.add("ok");
-        noticeEl.classList.remove("hidden");
-        const nextLvHtml = level < 4 ? `<button type="button" class="btn small secondary" data-clz-lvup>Livello ${level + 1}</button>` : "";
-        noticeEl.innerHTML = `
-          <span><strong>Completato!</strong> ${level < 4 ? `Prova il Livello ${level + 1} per fissare ancora meglio.` : "Richiamo completo riuscito."}</span>
-          <div class="notice-actions">
-            ${nextLvHtml}
-            <button type="button" class="btn small primary" data-clz-mem>Segna A Memoria</button>
-          </div>
-        `;
-        noticeEl.querySelector("[data-clz-lvup]")?.addEventListener("click", () => {
-          levelSel.value = String(level + 1);
-          renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange });
-        });
-        noticeEl.querySelector("[data-clz-mem]")?.addEventListener("click", () => {
-          state.mastery[secId] = 3;
-          saveState();
-          if (onMasteryChange) onMasteryChange();
-          showToast(`${sec.code} segnato A MEMORIA.`, "ok");
-        });
       }
     };
 
@@ -957,7 +1069,6 @@
         if (/^\s+$/.test(tok)) { p.appendChild(document.createTextNode(tok)); continue; }
         tokenIndex++;
         paraWordIdx++;
-        // Never blank leading comma/subitem index ("1.", "2.", "(a)")
         if (paraWordIdx === 1 && (/^\d+\.$/.test(tok) || /^\([a-z]\)$/.test(tok))) {
           p.appendChild(document.createTextNode(tok));
           continue;
@@ -970,22 +1081,34 @@
         const [, lead, core, trail] = m;
         if (lead) p.appendChild(document.createTextNode(lead));
 
-        total++;
         if (mode === "click") {
           const btn = document.createElement("button");
           btn.type = "button";
           btn.className = "cloze-blank";
           btn.textContent = level === 4 ? `${core[0]}${"·".repeat(Math.min(core.length - 1, 5))}` : `${core[0]}___`;
-          btn.setAttribute("aria-label", `Rivela parola che inizia con ${core[0]}`);
-          btn.addEventListener("click", () => {
-            if (!btn.classList.contains("revealed")) {
-              btn.classList.add("revealed");
+          btn.setAttribute("aria-label", `Scopri parola che inizia per ${core[0]}`);
+          const entry = {
+            done: false,
+            revealPassively: () => {
+              if (entry.done) return;
+              entry.done = true;
+              btn.classList.add("peeked");
               btn.textContent = core;
               btn.disabled = true;
-              solved++;
+              revealed++;
               updateProgress();
-            }
+            },
+          };
+          btn.addEventListener("click", () => {
+            if (entry.done) return;
+            entry.done = true;
+            btn.classList.add("revealed");
+            btn.textContent = core;
+            btn.disabled = true;
+            recalled++;
+            updateProgress();
           });
+          items.push(entry);
           p.appendChild(btn);
         } else {
           const wrap = document.createElement("span");
@@ -994,39 +1117,57 @@
           inp.type = "text";
           inp.className = "cloze-input";
           inp.placeholder = `${core[0]}…`;
-          inp.setAttribute("aria-label", `Completa parola che inizia con ${core[0]}`);
+          inp.setAttribute("aria-label", `Scrivi parola che inizia per ${core[0]}`);
           inp.style.width = `${Math.max(68, Math.min(176, core.length * 9.5 + 18))}px`;
 
           const peek = document.createElement("button");
           peek.type = "button";
           peek.className = "cloze-peek";
           peek.textContent = "?";
-          peek.title = "Rivela parola";
+          peek.title = "Mostra questa parola (conta come rivelata)";
+          peek.setAttribute("aria-label", "Mostra questa parola");
 
-          const markOk = () => {
-            if (inp.classList.contains("ok")) return;
+          const entry = {
+            done: false,
+            revealPassively: () => {
+              if (entry.done) return;
+              entry.done = true;
+              inp.classList.remove("bad");
+              inp.classList.add("peeked");
+              inp.value = core;
+              inp.readOnly = true;
+              peek.remove();
+              revealed++;
+              updateProgress();
+              bodyEl.querySelector(".cloze-input:not([readonly])")?.focus();
+            },
+          };
+          const markRecalled = () => {
+            if (entry.done) return;
+            entry.done = true;
             inp.classList.remove("bad");
             inp.classList.add("ok");
             inp.value = core;
             inp.readOnly = true;
             peek.remove();
-            solved++;
+            recalled++;
             updateProgress();
-            bodyEl.querySelector(".cloze-input:not(.ok)")?.focus();
+            bodyEl.querySelector(".cloze-input:not([readonly])")?.focus();
           };
+
           inp.addEventListener("input", () => {
-            if (norm(inp.value) === norm(core)) markOk();
+            if (norm(inp.value) === norm(core)) markRecalled();
             else inp.classList.toggle("bad", inp.value.length >= core.length);
           });
           inp.addEventListener("keydown", e => {
             if (e.key === "Enter") {
               e.preventDefault();
-              if (norm(inp.value) === norm(core)) markOk();
+              if (norm(inp.value) === norm(core)) markRecalled();
               else inp.classList.add("bad");
             }
           });
-          peek.addEventListener("click", markOk);
-
+          peek.addEventListener("click", entry.revealPassively);
+          items.push(entry);
           wrap.appendChild(inp);
           wrap.appendChild(peek);
           p.appendChild(wrap);
@@ -1036,22 +1177,34 @@
       bodyEl.appendChild(p);
     }
 
-    if (total === 0) {
+    if (items.length === 0) {
       noticeEl.classList.remove("hidden");
       noticeEl.innerHTML = `
-        <span>Nessun numero o termine chiave in questa sezione per il Livello 1.</span>
+        <span>Questa sezione non contiene numeri o termini chiave per il Livello 1.</span>
         <button type="button" class="btn small primary" data-jump-lv2>Passa al Livello 2</button>
       `;
       noticeEl.querySelector("[data-jump-lv2]").addEventListener("click", () => {
         levelSel.value = "2";
+        state.prefs.clozeLevel = "2";
+        saveState();
         renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange });
       });
     }
     updateProgress();
+
+    return {
+      hintOne: () => {
+        const next = items.find(it => !it.done);
+        if (next) next.revealPassively();
+      },
+      revealAll: () => {
+        for (const it of items) if (!it.done) it.revealPassively();
+      },
+    };
   }
 
   function renderInlineCloze() {
-    renderClozeInto({
+    inlineClozeCtrl = renderClozeInto({
       secId: readerSecId,
       levelSel: document.getElementById("inlineClozeLevel"),
       modeSel: document.getElementById("inlineClozeInput"),
@@ -1059,15 +1212,6 @@
       counterEl: document.getElementById("inlineClozeCounter"),
       barEl: document.getElementById("inlineClozeBar"),
       noticeEl: document.getElementById("inlineClozeNotice"),
-      onMasteryChange: () => {
-        const cur = state.mastery[readerSecId] || 0;
-        document.querySelectorAll("#readerMasteryBtns .m-chip").forEach(b => {
-          const act = Number(b.dataset.status) === cur;
-          b.classList.toggle("active", act);
-          b.setAttribute("aria-pressed", act ? "true" : "false");
-        });
-        syncReaderSidebarSelection(readerSecId);
-      },
     });
   }
 
@@ -1100,7 +1244,7 @@
     document.getElementById("btnPClozePrev").disabled = idx <= 0;
     document.getElementById("btnPClozeNext").disabled = idx >= CLOZEABLE_SECTIONS.length - 1;
 
-    renderClozeInto({
+    practiceClozeCtrl = renderClozeInto({
       secId: practiceClozeSecId,
       levelSel: document.getElementById("clozeLevelSelect"),
       modeSel: document.getElementById("clozeInputMode"),
@@ -1108,11 +1252,10 @@
       counterEl: document.getElementById("pClozeCounter"),
       barEl: document.getElementById("pClozeBar"),
       noticeEl: document.getElementById("pClozeNotice"),
-      onMasteryChange: () => populatePracticeClozeSecSelect(sec.doc),
     });
   }
 
-  // ==================== 3A. FLASHCARDS (SM-2) ====================
+  // ==================== 3A. FLASHCARDS ====================
   function getArticleFlashcards() {
     return CLOZEABLE_SECTIONS.map(s => ({
       id: `auto-${s.id}`, doc: s.doc, ref: s.id,
@@ -1151,6 +1294,8 @@
   }
 
   function updateFcSummaryText() {
+    const clearChip = document.getElementById("btnFcClearFocus");
+    clearChip.classList.toggle("hidden", !fcCustomContext);
     if (fcCustomContext) {
       document.getElementById("fcActiveSummary").textContent = `Focus ${fcCustomContext} · ${fcTotalSession} schede`;
       return;
@@ -1159,7 +1304,7 @@
     const mode = modeNames[document.getElementById("fcDeckMode").value];
     const docVal = document.getElementById("fcDocFilter").value;
     const docTxt = docVal === "all" ? "Tutti" : DOC_SHORT[docVal];
-    const dueTxt = document.getElementById("fcOnlyDue").checked ? " · Solo scadute" : "";
+    const dueTxt = document.getElementById("fcOnlyDue").checked ? " · Solo oggi" : "";
     document.getElementById("fcActiveSummary").textContent = `${mode} · ${docTxt}${dueTxt} · ${fcTotalSession} schede`;
   }
 
@@ -1213,10 +1358,10 @@
       const onlyDue = document.getElementById("fcOnlyDue").checked;
       document.getElementById("fcQueueInfo").textContent = fcTotalSession > 0 ? `Completate ${fcCompletedSession}/${fcTotalSession}` : "0 schede";
       document.getElementById("fcCardMeta").textContent = "Sessione conclusa";
-      document.getElementById("fcEmptyTitle").textContent = fcTotalSession > 0 ? "Sessione completata" : "Nessuna scheda in scadenza";
+      document.getElementById("fcEmptyTitle").textContent = fcTotalSession > 0 ? "Sessione completata" : "Nessuna scheda da ripassare oggi";
       document.getElementById("fcEmptyDesc").textContent = onlyDue
-        ? "Sei in pari con il calendario SM-2 per questi filtri."
-        : "Modifica i filtri o avvia un nuovo ciclo di ripasso.";
+        ? "Sei in pari con il calendario di ripasso programmato per questi filtri."
+        : "Modifica i filtri o avvia un nuovo ciclo.";
       document.getElementById("btnFcShowAll").classList.toggle("hidden", !onlyDue && !fcCustomContext);
       return;
     }
@@ -1227,7 +1372,9 @@
     const card = fcQueue[0];
     const rec = state.sm2[card.id];
     document.getElementById("fcQueueInfo").textContent = `Rimanenti: ${fcQueue.length} · Completate: ${fcCompletedSession}/${fcTotalSession}`;
-    document.getElementById("fcCardMeta").textContent = rec ? `Rip. ${rec.reps} · Int. ${rec.interval}g` : "Nuova";
+    document.getElementById("fcCardMeta").textContent = !rec
+      ? "Nuova scheda"
+      : (rec.reps === 0 ? "Da rivedere in sessione" : `Rivista ${rec.reps} ${rec.reps === 1 ? "volta" : "volte"} · ${formatInterval(rec.interval)}`);
 
     document.getElementById("fcDocBadge").textContent = DOC_SHORT[card.doc] || card.doc;
     document.getElementById("fcTagBadge").textContent = card.tag;
@@ -1303,6 +1450,7 @@
   }
 
   function updateQzSummaryText() {
+    document.getElementById("btnQzClearFocus").classList.toggle("hidden", !qzCustomContext);
     if (qzCustomContext) {
       document.getElementById("qzActiveSummary").textContent = `Focus ${qzCustomContext} · ${qzQueue.length} domande`;
       return;
@@ -1324,21 +1472,22 @@
 
     document.getElementById("btnRetryWrong").classList.add("hidden");
     document.getElementById("quizSummary").classList.add("hidden");
-    document.getElementById("quizBox").classList.remove("hidden");
     updateQzSummaryText();
     renderQuizQuestion();
   }
 
   function renderQuizQuestion() {
+    const qBox = document.getElementById("quizBox");
+    const qEmpty = document.getElementById("quizEmptyState");
+
     if (!qzQueue.length) {
-      document.getElementById("qzCounter").textContent = "0 domande";
-      document.getElementById("qzScoreLive").textContent = "—";
-      document.getElementById("qzBarFill").style.width = "100%";
-      document.getElementById("qzQuestion").textContent = "Hai già consolidato tutte le domande con questi filtri.";
-      document.getElementById("qzOptions").innerHTML = "";
-      document.getElementById("qzFeedback").classList.add("hidden");
+      qBox.classList.add("hidden");
+      qEmpty.classList.remove("hidden");
       return;
     }
+    qEmpty.classList.add("hidden");
+    qBox.classList.remove("hidden");
+
     if (qzIdx >= qzQueue.length) {
       showQuizSummary();
       return;
@@ -1407,8 +1556,7 @@
     document.getElementById("btnQzNext").textContent = qzIdx + 1 >= qzQueue.length ? "Vedi riepilogo →" : "Prossima →";
     fb.classList.remove("hidden");
 
-    const retryBtn = document.getElementById("btnRetryWrong");
-    retryBtn.classList.toggle("hidden", qzWrong.length === 0);
+    document.getElementById("btnRetryWrong").classList.toggle("hidden", qzWrong.length === 0);
     document.getElementById("wrongInlineCount").textContent = qzWrong.length;
   }
 
@@ -1420,7 +1568,7 @@
     document.getElementById("qzSumScore").textContent = `${qzCorrect} / ${qzQueue.length} (${pct}%)`;
     document.getElementById("qzSumMsg").textContent =
       pct >= 90 ? "Padronanza solida: questi punti sono ormai acquisiti." :
-      pct >= 70 ? "Buona base: ripeti subito gli errori per arrivare al 100%." :
+      pct >= 70 ? "Buona base: ripeti subito gli errori per completare la preparazione." :
       "Conviene rivedere gli articoli collegati agli errori qui sotto e ripetere.";
 
     const missed = document.getElementById("qzMissedList");
@@ -1578,17 +1726,29 @@
   // ==================== MODALS, SEARCH & LIGHTBOX ====================
   function openModal(id) {
     lastFocusedEl = document.activeElement;
-    document.getElementById(id).classList.remove("hidden");
+    const modal = document.getElementById(id);
+    modal.classList.remove("hidden");
+    document.body.classList.add("modal-open");
+    activeTrapContainer = modal;
   }
 
   function closeAllModals() {
+    let anyOpen = false;
     ["searchModal", "backupModal", "lightboxModal"].forEach(id => {
-      document.getElementById(id).classList.add("hidden");
+      const el = document.getElementById(id);
+      if (!el.classList.contains("hidden")) {
+        el.classList.add("hidden");
+        anyOpen = true;
+      }
     });
     document.getElementById("resetConfirmBox").classList.add("hidden");
-    if (lastFocusedEl && typeof lastFocusedEl.focus === "function") {
-      lastFocusedEl.focus();
-      lastFocusedEl = null;
+    if (anyOpen) {
+      document.body.classList.remove("modal-open");
+      activeTrapContainer = null;
+      if (lastFocusedEl && typeof lastFocusedEl.focus === "function") {
+        lastFocusedEl.focus();
+        lastFocusedEl = null;
+      }
     }
   }
 
@@ -1620,7 +1780,6 @@
       return;
     }
 
-    // Search both articles and synoptic quorums/deadlines
     const artMatches = ALL_SECTIONS
       .filter(s => s.code.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || (s.text && s.text.toLowerCase().includes(q)))
       .slice(0, 24)
@@ -1674,9 +1833,8 @@
 
   function executeSearchResult(item) {
     closeAllModals();
-    if (item.kind === "article") {
-      openArticle(item.target);
-    } else {
+    if (item.kind === "article") openArticle(item.target);
+    else {
       csTab = item.target;
       syncCsTabs();
       renderReference();
@@ -1690,18 +1848,16 @@
     const sm2Count = Object.keys(state.sm2).length;
     const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k]).length;
     document.getElementById("backupSummary").textContent =
-      `Consolidate: ${studied}/${STUDYABLE_SECTIONS.length} (${mem} a memoria) · SM-2: ${sm2Count} · Segnalibri: ${bmCount} · Quiz: ${state.quizStats.total}`;
+      `Consolidate: ${studied}/${STUDYABLE_SECTIONS.length} (${mem} a memoria) · Flashcards valutate: ${sm2Count} · Segnalibri: ${bmCount} · Risposte quiz: ${state.quizStats.total}`;
   }
 
   // ==================== EVENT WIRING ====================
   function bindAllEvents() {
-    // Primary 4-Destination Navigation
     document.getElementById("brandHome").addEventListener("click", () => switchView("overview"));
     document.querySelectorAll("#desktopNav .nav-tab, #mobileNav .bnav-btn").forEach(btn => {
       btn.addEventListener("click", () => switchView(btn.dataset.view));
     });
 
-    // Overview quick actions
     document.getElementById("btnQuickFlashcards").addEventListener("click", () => {
       switchPracticeMode("flashcards");
       switchView("practice");
@@ -1735,7 +1891,6 @@
       switchView("reader");
     });
 
-    // Theme
     document.getElementById("btnTheme").addEventListener("click", () => {
       state.theme = state.theme === "dark" ? "light" : "dark";
       applyTheme(state.theme);
@@ -1760,7 +1915,7 @@
       renderReaderSidebar();
     });
 
-    // Inline Reader Mode Switch (Lettura <-> A Memoria)
+    // Inline Reader Mode Switch
     document.querySelectorAll("#readerModeSwitch .seg-btn").forEach(b => {
       b.addEventListener("click", () => {
         if (b.disabled) return;
@@ -1778,24 +1933,28 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
-    // Inline Cloze tools
-    document.getElementById("inlineClozeLevel").addEventListener("change", renderInlineCloze);
-    document.getElementById("inlineClozeInput").addEventListener("change", renderInlineCloze);
-    document.getElementById("btnInlineHint").addEventListener("click", () => {
-      const b = document.querySelector("#inlineClozeBody .cloze-blank:not(.revealed)");
-      if (b) { b.click(); return; }
-      document.querySelector("#inlineClozeBody .cloze-peek")?.click();
+    // Inline Cloze controls (synced preferences + true passive reveal handles!)
+    document.getElementById("inlineClozeLevel").addEventListener("change", e => {
+      state.prefs.clozeLevel = e.target.value;
+      document.getElementById("clozeLevelSelect").value = e.target.value;
+      saveState();
+      renderInlineCloze();
     });
-    document.getElementById("btnInlineRevealAll").addEventListener("click", () => {
-      document.querySelectorAll("#inlineClozeBody .cloze-blank:not(.revealed)").forEach(el => el.click());
-      document.querySelectorAll("#inlineClozeBody .cloze-peek").forEach(el => el.click());
+    document.getElementById("inlineClozeInput").addEventListener("change", e => {
+      state.prefs.clozeInputMode = e.target.value;
+      document.getElementById("clozeInputMode").value = e.target.value;
+      saveState();
+      renderInlineCloze();
     });
+    document.getElementById("btnInlineHint").addEventListener("click", () => inlineClozeCtrl?.hintOne());
+    document.getElementById("btnInlineRevealAll").addEventListener("click", () => inlineClozeCtrl?.revealAll());
     document.getElementById("btnInlineReset").addEventListener("click", renderInlineCloze);
 
-    // Font size, numbers highlight, bookmark, mastery, context return
     document.getElementById("btnFontDec").addEventListener("click", () => { applyReaderScale(state.readerScale - 0.08); saveState(); });
     document.getElementById("btnFontInc").addEventListener("click", () => { applyReaderScale(state.readerScale + 0.08); saveState(); });
-    document.getElementById("toggleHighlightNums").addEventListener("change", () => {
+    document.getElementById("toggleHighlightNums").addEventListener("change", e => {
+      state.prefs.highlightNums = e.target.checked;
+      saveState();
       if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
     });
     document.getElementById("btnBookmarkSec").addEventListener("click", () => {
@@ -1808,17 +1967,10 @@
     document.getElementById("btnContextReturn").addEventListener("click", () => {
       const top = returnStack.pop();
       if (!top) return;
-      if (top.type === "article") {
-        renderReaderArticle(top.target);
-      } else if (top.type === "practice") {
-        switchPracticeMode(top.sub || "flashcards");
-        switchView("practice");
-      } else if (top.type === "reference") {
-        csTab = top.sub || "timeline";
-        syncCsTabs();
-        renderReference();
-        switchView("reference");
-      }
+      if (top.type === "article") renderReaderArticle(top.target);
+      else if (top.type === "overview") switchView("overview");
+      else if (top.type === "practice") { switchPracticeMode(top.sub || "flashcards"); switchView("practice"); }
+      else if (top.type === "reference") { csTab = top.sub || "timeline"; syncCsTabs(); renderReference(); switchView("reference"); }
     });
     document.querySelectorAll("#readerMasteryBtns .m-chip").forEach(b => {
       b.addEventListener("click", () => {
@@ -1826,12 +1978,11 @@
         const val = Number(b.dataset.status);
         state.mastery[readerSecId] = val;
         saveState();
-        renderReaderArticle(readerSecId, { skipHash: true });
-        showToast(`Padronanza: ${STATUS_LABELS[val]}`, val >= 2 ? "ok" : "info");
+        syncAllViewsForStateChange(readerSecId);
+        showToast(`Stato aggiornato: ${STATUS_LABELS[val]}`, val >= 2 ? "ok" : "info");
       });
     });
 
-    // Focused Article Flashcards & Quiz launch
     document.getElementById("btnArticleFlashcards").addEventListener("click", () => {
       const sec = SECTION_MAP.get(readerSecId);
       const rel = PACK.flashcards.filter(c => c.ref === readerSecId);
@@ -1860,7 +2011,7 @@
       });
     });
 
-    // Practice Hub Switcher & Collapsible Filter Trays
+    // Practice Hub Switcher & Filter Trays
     document.querySelectorAll("#practiceModeSwitch .seg-btn").forEach(b => {
       b.addEventListener("click", () => switchPracticeMode(b.dataset.pmode));
     });
@@ -1878,9 +2029,15 @@
     wireTrayToggle("btnToggleClozeFilters", "clozeFilterTray");
 
     // Flashcards controls
-    ["fcDeckMode", "fcDocFilter", "fcTagFilter", "fcOnlyDue"].forEach(id => {
+    document.getElementById("fcDeckMode").addEventListener("change", e => {
+      state.prefs.fcDeckMode = e.target.value;
+      saveState();
+      buildFcQueue(false);
+    });
+    ["fcDocFilter", "fcTagFilter", "fcOnlyDue"].forEach(id => {
       document.getElementById(id).addEventListener("change", () => buildFcQueue(false));
     });
+    document.getElementById("btnFcClearFocus").addEventListener("click", () => buildFcQueue(false));
     document.getElementById("btnFcShuffle").addEventListener("click", () => { buildFcQueue(true); showToast("Mazzo mescolato."); });
     document.getElementById("btnFcUndo").addEventListener("click", undoLastFlashcard);
     document.getElementById("flashcardEl").addEventListener("click", flipFlashcard);
@@ -1907,6 +2064,11 @@
     ["qzModeFilter", "qzDocFilter", "qzOnlyUnmastered"].forEach(id => {
       document.getElementById(id).addEventListener("change", () => startQuiz());
     });
+    document.getElementById("btnQzClearFocus").addEventListener("click", () => startQuiz());
+    document.getElementById("btnQzShowAll").addEventListener("click", () => {
+      document.getElementById("qzOnlyUnmastered").checked = false;
+      startQuiz();
+    });
     document.getElementById("btnStartQuiz").addEventListener("click", () => startQuiz());
     document.getElementById("btnQzRestart").addEventListener("click", () => startQuiz());
     document.getElementById("btnRetryWrong").addEventListener("click", () => startQuiz([...qzWrong], "Ripasso errori"));
@@ -1922,29 +2084,32 @@
       practiceClozeSecId = e.target.value;
       renderPracticeCloze();
     });
-    document.getElementById("clozeLevelSelect").addEventListener("change", renderPracticeCloze);
-    document.getElementById("clozeInputMode").addEventListener("change", renderPracticeCloze);
-    document.getElementById("btnPClozeHint").addEventListener("click", () => {
-      const b = document.querySelector("#pClozeBody .cloze-blank:not(.revealed)");
-      if (b) { b.click(); return; }
-      document.querySelector("#pClozeBody .cloze-peek")?.click();
+    document.getElementById("clozeLevelSelect").addEventListener("change", e => {
+      state.prefs.clozeLevel = e.target.value;
+      document.getElementById("inlineClozeLevel").value = e.target.value;
+      saveState();
+      renderPracticeCloze();
     });
-    document.getElementById("btnPClozeRevealAll").addEventListener("click", () => {
-      document.querySelectorAll("#pClozeBody .cloze-blank:not(.revealed)").forEach(el => el.click());
-      document.querySelectorAll("#pClozeBody .cloze-peek").forEach(el => el.click());
+    document.getElementById("clozeInputMode").addEventListener("change", e => {
+      state.prefs.clozeInputMode = e.target.value;
+      document.getElementById("inlineClozeInput").value = e.target.value;
+      saveState();
+      renderPracticeCloze();
     });
+    document.getElementById("btnPClozeHint").addEventListener("click", () => practiceClozeCtrl?.hintOne());
+    document.getElementById("btnPClozeRevealAll").addEventListener("click", () => practiceClozeCtrl?.revealAll());
     document.getElementById("btnPClozeReset").addEventListener("click", renderPracticeCloze);
     document.getElementById("btnPClozeMarkMem").addEventListener("click", () => {
       if (!practiceClozeSecId) return;
       state.mastery[practiceClozeSecId] = 3;
       saveState();
-      populatePracticeClozeSecSelect(SECTION_MAP.get(practiceClozeSecId).doc);
+      syncAllViewsForStateChange(practiceClozeSecId);
       showToast("Sezione segnata A MEMORIA.", "ok");
     });
     document.getElementById("btnPClozeOpenReader").addEventListener("click", () => {
       if (practiceClozeSecId) {
         openArticle(practiceClozeSecId, {
-          returnTo: { type: "practice", sub: "cloze", label: "Percorso Cloze", reason: "Consultazione articolo" },
+          returnTo: { type: "practice", sub: "cloze", label: "Testo a scomparsa", reason: "Consultazione articolo" },
         });
       }
     });
@@ -1998,7 +2163,7 @@
       }
     });
 
-    // Backup Modal
+    // Backup Modal (keyboard accessible import label + in-app reset confirm)
     document.getElementById("btnBackup").addEventListener("click", () => {
       renderBackupSummary();
       openModal("backupModal");
@@ -2006,6 +2171,12 @@
     });
     document.getElementById("closeBackupModal").addEventListener("click", closeAllModals);
     document.getElementById("backupModal").addEventListener("click", e => { if (e.target.id === "backupModal") closeAllModals(); });
+    document.getElementById("lblImportProgress").addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        document.getElementById("inputImportProgress").click();
+      }
+    });
     document.getElementById("btnExportProgress").addEventListener("click", () => {
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
@@ -2023,19 +2194,23 @@
         try {
           const imp = JSON.parse(reader.result);
           if (!imp || typeof imp !== "object") throw new Error("invalid");
+          const def = defaultState();
           state = {
-            ...defaultState(), ...imp,
+            ...def, ...imp,
             mastery: imp.mastery || {}, bookmarks: imp.bookmarks || {},
             sm2: imp.sm2 || {}, quizStats: imp.quizStats || { total: 0, correct: 0 },
             quizMastered: imp.quizMastered || {},
+            prefs: { ...def.prefs, ...(imp.prefs || {}) },
           };
           saveState();
           applyTheme(state.theme);
           applyReaderScale(state.readerScale);
+          applySavedPrefsToControls();
           renderOverview();
           renderReaderSidebar();
           if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
           buildFcQueue(false);
+          startQuiz();
           closeAllModals();
           showToast("Progressi ripristinati.", "ok");
         } catch (_) {
@@ -2051,6 +2226,7 @@
       const theme = state.theme;
       state = { ...defaultState(), theme };
       saveState();
+      applySavedPrefsToControls();
       renderOverview();
       renderReaderSidebar();
       if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
@@ -2070,8 +2246,10 @@
       if (lbGallery.length > 1) { lbIdx = (lbIdx + 1) % lbGallery.length; updateLightbox(); }
     });
 
-    // Global Keyboard Shortcuts
+    // Global Keyboard Shortcuts & Focus Trap
     document.addEventListener("keydown", e => {
+      if (activeTrapContainer) handleFocusTrap(e);
+
       const inInput = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();

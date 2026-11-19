@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#f7f6f2" />
+  <meta name="theme-color" content="#f6f5f0" />
   <meta name="description" content="PoliNetwork StudyLab — Consultazione integrale, studio attivo e memorizzazione per Statuto, Raccolta dei Regolamenti Interni (RRI) e Regolamento Elettorale Direttivo di PoliNetwork APS." />
   <title>PoliNetwork StudyLab — Normativa &amp; Preparazione</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d4ed8'/%3E%3Ctext x='32' y='42' font-family='system-ui,sans-serif' font-size='27' font-weight='800' fill='%23ffffff' text-anchor='middle'%3EPN%3C/text%3E%3C/svg%3E" />
@@ -26,7 +26,6 @@
         </span>
       </button>
 
-      <!-- 4 Primary Destinations (Desktop >= 900px) -->
       <nav class="primary-nav" id="desktopNav" aria-label="Navigazione principale">
         <button type="button" class="nav-tab active" data-view="overview" aria-current="page">
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
@@ -39,7 +38,7 @@
         <button type="button" class="nav-tab" data-view="practice">
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
           <span>Allenamento</span>
-          <span class="nav-count" id="navDueBadge" aria-label="Carte da ripassare">0</span>
+          <span class="nav-count" id="navDueBadge" aria-label="Flashcards da ripassare oggi">0</span>
         </button>
         <button type="button" class="nav-tab" data-view="reference">
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M9 10v10"/></svg>
@@ -56,7 +55,7 @@
         <button type="button" class="icon-btn" id="btnTheme" aria-label="Cambia tema chiaro o scuro" title="Cambia tema">
           <svg class="ic" id="iconTheme" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <button type="button" class="icon-btn" id="btnBackup" aria-label="Backup e gestione dati" title="Salvataggio e backup">
+        <button type="button" class="icon-btn" id="btnBackup" aria-label="Salvataggio e backup progressi" title="Backup e dati">
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
       </div>
@@ -69,13 +68,12 @@
     <!-- ==================== 1. PANORAMICA ==================== -->
     <section class="view active" id="view-overview" aria-labelledby="overviewHeading">
       <div class="overview-grid">
-        <!-- Primary Action Briefing -->
         <div class="briefing-hero">
           <div class="briefing-main">
             <p class="eyebrow" id="overviewEyebrow">CORPUS UFFICIALE · 3 DOCUMENTI · 137 SEZIONI NORMATIVE</p>
             <h1 class="display-title" id="overviewHeading">Preparazione normativa PoliNetwork APS</h1>
             <p class="briefing-sub" id="briefingAdvice">
-              Statuto, Raccolta dei Regolamenti Interni e Regolamento Elettorale 2026 in un unico spazio di consultazione e memorizzazione attiva.
+              Consulta il testo integrale di Statuto, Regolamenti Interni e Regolamento Elettorale 2026, esercitati con il testo a scomparsa e consolida con ripassi programmati e quiz.
             </p>
             <div class="briefing-cta-row">
               <button type="button" class="btn primary" id="btnNextBestAction">
@@ -87,8 +85,7 @@
             </div>
           </div>
 
-          <!-- Progress Visual Summary -->
-          <div class="mastery-summary" aria-label="Avanzamento complessivo sulla normativa">
+          <div class="mastery-summary" aria-label="Indice di preparazione sulle 137 sezioni normative">
             <div class="ring-box">
               <svg class="progress-ring" viewBox="0 0 120 120" role="img" aria-labelledby="overallPct">
                 <circle class="ring-track" cx="60" cy="60" r="50"></circle>
@@ -96,15 +93,18 @@
               </svg>
               <div class="ring-text">
                 <span class="ring-pct" id="overallPct">0%</span>
-                <span class="ring-lbl">Normativa</span>
+                <span class="ring-lbl">Avanzamento</span>
               </div>
             </div>
-            <ul class="legend-list" id="overviewLegend">
-              <li><span class="dot s3"></span><span>A memoria</span><strong id="legMem">0</strong></li>
-              <li><span class="dot s2"></span><span>Imparate</span><strong id="legLearned">0</strong></li>
-              <li><span class="dot s1"></span><span>In corso</span><strong id="legWip">0</strong></li>
-              <li><span class="dot s0"></span><span>Da studiare</span><strong id="legTodo">137</strong></li>
-            </ul>
+            <div class="legend-col">
+              <ul class="legend-list" id="overviewLegend">
+                <li><span class="dot s3"></span><span>A memoria</span><strong id="legMem">0</strong></li>
+                <li><span class="dot s2"></span><span>Imparate</span><strong id="legLearned">0</strong></li>
+                <li><span class="dot s1"></span><span>In corso</span><strong id="legWip">0</strong></li>
+                <li><span class="dot s0"></span><span>Da studiare</span><strong id="legTodo">137</strong></li>
+              </ul>
+              <p class="legend-note">Media pesata sulle 137 sezioni normative</p>
+            </div>
           </div>
         </div>
 
@@ -119,11 +119,12 @@
           </div>
           <div class="deadline-right">
             <span class="countdown-tag" id="deadlineCountdown">—</span>
-            <button type="button" class="btn small ghost" id="btnOpenTimeline">Cronoprogramma →</button>
+            <button type="button" class="link-btn hidden" id="btnDeadlineArticle">Leggi articolo</button>
+            <button type="button" class="btn small secondary" id="btnOpenTimeline">Cronoprogramma</button>
           </div>
         </aside>
 
-        <!-- Clean Hairline Metric Strip (Not 4 heavy cards!) -->
+        <!-- Hairline Metric Strip -->
         <div class="metric-strip" role="region" aria-label="Indicatori di preparazione">
           <button type="button" class="metric-cell" id="metricNormativa">
             <span class="metric-label">Sezioni consolidate</span>
@@ -131,23 +132,23 @@
             <span class="metric-hint" id="statSectionsHint">Imparate o a memoria</span>
           </button>
           <button type="button" class="metric-cell" id="metricFlashcards">
-            <span class="metric-label">Ripassi SM-2 oggi</span>
+            <span class="metric-label">Flashcards da ripassare</span>
             <span class="metric-val" id="statDue">0</span>
-            <span class="metric-hint" id="statDueHint">Su 58 schede chiave</span>
+            <span class="metric-hint" id="statDueHint">Ripasso programmato oggi</span>
           </button>
           <button type="button" class="metric-cell" id="metricQuiz">
-            <span class="metric-label">Quiz padroneggiati</span>
+            <span class="metric-label">Quiz superati</span>
             <span class="metric-val" id="statQuizMastered">0 / 40</span>
             <span class="metric-hint" id="statQuizAcc">Nessuna risposta ancora</span>
           </button>
           <button type="button" class="metric-cell" id="metricBookmarks">
-            <span class="metric-label">Segnalibri salvati</span>
+            <span class="metric-label">Segnalibri</span>
             <span class="metric-val" id="statBookmarks">0</span>
             <span class="metric-hint" id="statBookmarksHint">Articoli contrassegnati</span>
           </button>
         </div>
 
-        <!-- Document Directory (Structured Editorial List) -->
+        <!-- Document Directory -->
         <div class="block-section">
           <div class="block-head">
             <h2 class="section-title">I tre documenti del corpus</h2>
@@ -156,41 +157,40 @@
           <div class="doc-list" id="docList"></div>
         </div>
 
-        <!-- Contextual Guide (Collapsible so returning users have zero noise) -->
+        <!-- Collapsible Method Guide -->
         <details class="guide-accordion" id="guideAccordion">
           <summary>
-            <span>Come funziona il metodo integrato (Lettura → Cloze → SM-2 → Quiz)</span>
+            <span>Come studiare in 4 fasi (Lettura → Testo a scomparsa → Flashcards → Quiz)</span>
             <svg class="ic chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
           </summary>
           <div class="guide-steps">
             <div class="guide-step">
               <span class="step-num">01</span>
-              <h3>Consulta e evidenzia in Normativa</h3>
-              <p>Leggi il testo verbatim con numeri e quorum evidenziati, segui i rimandi incrociati e salva nei segnalibri gli articoli chiave.</p>
+              <h3>Consulta in Normativa</h3>
+              <p>Leggi il testo ufficiale con numeri, quorum e scadenze evidenziati; segui i rimandi incrociati e salva i passaggi chiave nei segnalibri.</p>
             </div>
             <div class="guide-step">
               <span class="step-num">02</span>
-              <h3>Passa a Cloze sullo stesso articolo</h3>
-              <p>Senza cambiare schermata, passa da <strong>Lettura</strong> ad <strong>A Memoria</strong> e scala dal Livello 1 (numeri) al Livello 4 (sole iniziali).</p>
+              <h3>Fissa con il Testo a scomparsa</h3>
+              <p>Senza cambiare schermo, attiva <strong>A Memoria</strong> sullo stesso articolo e progredisci dal Livello 1 (numeri) al Livello 4 (sole iniziali).</p>
             </div>
             <div class="guide-step">
               <span class="step-num">03</span>
-              <h3>Ripassa con SM-2 in Allenamento</h3>
-              <p>Le flashcards programmano automaticamente l'intervallo di ripasso in base alla tua sicurezza reale, riducendo la curva dell'oblio.</p>
+              <h3>Ripassa con le Flashcards</h3>
+              <p>L'algoritmo di ripetizione dilazionata (SM-2) calcola l'intervallo ottimale in base alla tua sicurezza, riproponendo prima ciò che esiti a ricordare.</p>
             </div>
             <div class="guide-step">
               <span class="step-num">04</span>
-              <h3>Metti alla prova su casi e numeri</h3>
-              <p>Usa il Blitz Numeri &amp; Quorum e gli Scenari Pratici per verificare di saper applicare ogni norma in assemblea.</p>
+              <h3>Verifica con Quiz e Casi Pratici</h3>
+              <p>Allenati sui numeri critici, sulle maggioranze e sugli scenari realistici di assemblea, con rimando immediato alla disposizione originale.</p>
             </div>
           </div>
         </details>
       </div>
     </section>
 
-    <!-- ==================== 2. NORMATIVA (READER + INLINE CLOZE) ==================== -->
+    <!-- ==================== 2. NORMATIVA (READER + INLINE A MEMORIA) ==================== -->
     <section class="view" id="view-reader" aria-label="Consultazione e memorizzazione normativa">
-      <!-- Mobile sticky bar -->
       <div class="mobile-reader-bar">
         <button type="button" class="btn small secondary" id="btnOpenTocDrawer" aria-expanded="false" aria-controls="readerSidebar">
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg>
@@ -210,7 +210,6 @@
       <div class="drawer-backdrop hidden" id="tocBackdrop" aria-hidden="true"></div>
 
       <div class="reader-shell">
-        <!-- Left TOC Sidebar / Mobile Drawer -->
         <aside class="toc-drawer" id="readerSidebar" aria-label="Indice dei tre documenti">
           <div class="toc-mobile-head">
             <strong>Indice Normativa</strong>
@@ -223,7 +222,7 @@
               <button type="button" class="seg-btn active" data-doc="all" role="tab" aria-selected="true">Tutti</button>
               <button type="button" class="seg-btn" data-doc="statuto" role="tab" aria-selected="false">Statuto</button>
               <button type="button" class="seg-btn" data-doc="rri" role="tab" aria-selected="false">RRI</button>
-              <button type="button" class="seg-btn" data-doc="elettorale" role="tab" aria-selected="false">Elett.</button>
+              <button type="button" class="seg-btn" data-doc="elettorale" role="tab" aria-selected="false">Elettorale</button>
             </div>
             <input type="search" id="readerSearch" class="field sm" placeholder="Filtra indice o testo…" aria-label="Filtra indice o testo" />
             <div class="toc-filter-footer">
@@ -240,15 +239,12 @@
           <div class="toc-list" id="readerTocList" role="navigation" aria-label="Elenco articoli"></div>
         </aside>
 
-        <!-- Editorial Reading & Inline Memorization Sheet -->
         <article class="editorial-sheet" id="readerSheet">
-          <!-- Context Return Bar (returns to previous article, Quiz, Flashcards, or Sinossi!) -->
           <div class="return-banner hidden" id="returnBanner">
             <span id="returnReason">Provenienza</span>
             <button type="button" class="btn small ghost" id="btnContextReturn">← Torna a <strong id="returnLabel"></strong></button>
           </div>
 
-          <!-- Top Breadcrumb + Mode Switch + Reading Utilities -->
           <div class="sheet-top-bar">
             <nav class="breadcrumb" id="readerBreadcrumb" aria-label="Percorso documento">Statuto</nav>
             <div class="sheet-utilities">
@@ -262,7 +258,6 @@
             </div>
           </div>
 
-          <!-- Article Header -->
           <header class="article-head">
             <div class="article-kicker">
               <span class="code-chip" id="readerArtCode">Art. 1</span>
@@ -272,9 +267,8 @@
             </div>
             <h1 class="article-title" id="readerArtTitle">Denominazione</h1>
 
-            <!-- Mastery Selector + Read Tools -->
             <div class="article-status-row" id="readerMasteryWrap">
-              <div class="mastery-seg" id="readerMasteryBtns" role="group" aria-label="Stato di padronanza articolo">
+              <div class="mastery-seg" id="readerMasteryBtns" role="group" aria-label="Stato di apprendimento articolo">
                 <button type="button" class="m-chip" data-status="0" aria-pressed="false"><span class="dot s0"></span>Da studiare</button>
                 <button type="button" class="m-chip" data-status="1" aria-pressed="false"><span class="dot s1"></span>In corso</button>
                 <button type="button" class="m-chip" data-status="2" aria-pressed="false"><span class="dot s2"></span>Imparato</button>
@@ -287,8 +281,8 @@
                   <span>Evidenzia numeri</span>
                 </label>
                 <div class="font-stepper" role="group" aria-label="Dimensione testo">
-                  <button type="button" class="stepper-btn" id="btnFontDec" aria-label="Testo più piccolo">A-</button>
-                  <button type="button" class="stepper-btn" id="btnFontInc" aria-label="Testo più grande">A+</button>
+                  <button type="button" class="stepper-btn" id="btnFontDec" aria-label="Riduci dimensione testo">A-</button>
+                  <button type="button" class="stepper-btn" id="btnFontInc" aria-label="Aumenta dimensione testo">A+</button>
                 </div>
               </div>
             </div>
@@ -300,9 +294,9 @@
             <div class="pdf-gallery" id="readerArtImages"></div>
           </div>
 
-          <!-- MODE B: INLINE CLOZE MEMORIZATION ON THIS EXACT ARTICLE -->
+          <!-- MODE B: INLINE TESTO A SCOMPARSA -->
           <div id="readerClozePane" class="hidden">
-            <div class="cloze-toolbar">
+            <div class="cloze-toolbar sticky-bar">
               <div class="cloze-toolbar-selects">
                 <select id="inlineClozeLevel" class="field sm" aria-label="Livello testo a scomparsa">
                   <option value="1">Lv. 1 — Numeri &amp; Quorum</option>
@@ -310,16 +304,16 @@
                   <option value="3">Lv. 3 — Difficile (~65%)</option>
                   <option value="4">Lv. 4 — Solo iniziali (100%)</option>
                 </select>
-                <select id="inlineClozeInput" class="field sm" aria-label="Modalità interazione Cloze">
-                  <option value="click">Tocca per rivelare</option>
+                <select id="inlineClozeInput" class="field sm" aria-label="Modalità di risposta">
+                  <option value="click">Tocca per scoprire</option>
                   <option value="type">Scrivi la parola</option>
                 </select>
               </div>
               <div class="cloze-toolbar-actions">
                 <span class="mono-meta" id="inlineClozeCounter" aria-live="polite">0 / 0</span>
-                <button type="button" class="btn small secondary" id="btnInlineHint">Rivela 1</button>
-                <button type="button" class="btn small secondary" id="btnInlineRevealAll">Rivela tutto</button>
-                <button type="button" class="btn small ghost" id="btnInlineReset">Ripristina</button>
+                <button type="button" class="btn small secondary" id="btnInlineHint">Suggerisci 1</button>
+                <button type="button" class="btn small secondary" id="btnInlineRevealAll">Mostra testo</button>
+                <button type="button" class="btn small ghost" id="btnInlineReset">Ricomincia</button>
               </div>
             </div>
             <div class="thin-bar"><div class="thin-bar-fill" id="inlineClozeBar"></div></div>
@@ -330,11 +324,11 @@
           <!-- Related Learning Connections -->
           <section class="article-connections" id="articleConnections" aria-label="Esercizi collegati a questo articolo">
             <div class="conn-copy">
-              <strong>Esercitazione collegata</strong>
-              <span class="muted small" id="connSummary">Passa al testo a scomparsa o verifica questo articolo con flashcards e quiz.</span>
+              <strong>Esercitati su questo articolo</strong>
+              <span class="muted small" id="connSummary">Metti alla prova la memoria con il testo a scomparsa o le domande collegate.</span>
             </div>
             <div class="conn-actions">
-              <button type="button" class="btn small primary" id="btnSwitchInlineCloze">Allenati A Memoria</button>
+              <button type="button" class="btn small primary" id="btnSwitchInlineCloze">Testo a scomparsa</button>
               <button type="button" class="btn small secondary hidden" id="btnArticleFlashcards"><span>Flashcards (<span id="artFcCount">0</span>)</span></button>
               <button type="button" class="btn small secondary hidden" id="btnArticleQuiz"><span>Quiz (<span id="artQzCount">0</span>)</span></button>
             </div>
@@ -355,31 +349,30 @@
       </div>
     </section>
 
-    <!-- ==================== 3. ALLENAMENTO (UNIFIED PRACTICE HUB) ==================== -->
+    <!-- ==================== 3. ALLENAMENTO ==================== -->
     <section class="view" id="view-practice" aria-labelledby="practiceHeading">
       <div class="practice-top">
         <div>
           <h1 class="page-title" id="practiceHeading">Allenamento attivo</h1>
-          <p class="muted small" id="practiceSubtitle">Ripetizione dilazionata SM-2, quiz normativi e percorso guidato a memoria.</p>
+          <p class="muted small">Ripasso programmato (SM-2), quiz normativi e percorso guidato con testo a scomparsa.</p>
         </div>
 
-        <!-- Unified 3-Mode Practice Switcher -->
         <div class="seg-control" id="practiceModeSwitch" role="tablist" aria-label="Modalità di allenamento">
           <button type="button" class="seg-btn active" data-pmode="flashcards" role="tab" aria-selected="true">
-            <span>Flashcards SM-2</span>
+            <span>Flashcards</span>
             <span class="seg-pill" id="practiceDuePill">0</span>
           </button>
-          <button type="button" class="seg-btn" data-pmode="quiz" role="tab" aria-selected="false">Quiz &amp; Scenari</button>
-          <button type="button" class="seg-btn" data-pmode="cloze" role="tab" aria-selected="false">Percorso Cloze</button>
+          <button type="button" class="seg-btn" data-pmode="quiz" role="tab" aria-selected="false">Quiz &amp; Casi</button>
+          <button type="button" class="seg-btn" data-pmode="cloze" role="tab" aria-selected="false">A Memoria</button>
         </div>
       </div>
 
-      <!-- SUB-MODE 3A: FLASHCARDS SM-2 -->
+      <!-- SUB-MODE 3A: FLASHCARDS -->
       <div class="practice-pane" id="pane-flashcards" role="tabpanel">
-        <!-- Compact 1-Line Filter Summary + Collapsible Filter Tray -->
         <div class="filter-bar-compact">
           <div class="filter-summary-left">
             <span class="mono-meta" id="fcActiveSummary">Alta Resa · Tutti · 58 schede</span>
+            <button type="button" class="clear-focus-chip hidden" id="btnFcClearFocus">✕ Mostra mazzo completo</button>
           </div>
           <div class="filter-summary-right">
             <button type="button" class="btn small ghost hidden" id="btnFcUndo">Annulla voto</button>
@@ -407,15 +400,15 @@
             </select>
           </div>
           <div class="tray-field">
-            <label for="fcTagFilter">Tema</label>
+            <label for="fcTagFilter">Argomento</label>
             <select id="fcTagFilter" class="field sm">
-              <option value="all">Tutti i temi</option>
+              <option value="all">Tutti gli argomenti</option>
             </select>
           </div>
           <div class="tray-field align-end">
             <label class="inline-toggle full">
               <input type="checkbox" id="fcOnlyDue" />
-              <span>Solo in scadenza SM-2</span>
+              <span>Solo da ripassare oggi</span>
             </label>
           </div>
         </div>
@@ -430,7 +423,7 @@
           <div class="flashcard-sheet" id="flashcardEl" tabindex="0" role="region" aria-label="Scheda flashcard">
             <div class="card-tags">
               <span class="doc-tag" id="fcDocBadge">Statuto</span>
-              <span class="soft-tag" id="fcTagBadge">Tema</span>
+              <span class="soft-tag" id="fcTagBadge">Argomento</span>
               <span class="soft-tag warn hidden" id="fcRetryBadge">Ripetizione</span>
             </div>
             <div class="fc-question" id="fcQuestion">Caricamento…</div>
@@ -446,7 +439,7 @@
 
           <div class="session-done hidden" id="fcEmptyState">
             <h2 id="fcEmptyTitle">Sessione completata</h2>
-            <p class="muted" id="fcEmptyDesc">Hai ripassato tutte le carte con questi filtri.</p>
+            <p class="muted" id="fcEmptyDesc">Hai ripassato tutte le schede previste per questi filtri.</p>
             <div class="briefing-cta-row centered">
               <button type="button" class="btn primary" id="btnFcShowAll">Mostra tutte le schede</button>
               <button type="button" class="btn secondary" id="btnFcRestartSession">Ricomincia</button>
@@ -458,20 +451,21 @@
             <span class="kbd-hint desktop-only">Premi <kbd>Spazio</kbd> per girare · <kbd>1</kbd>–<kbd>4</kbd> per valutare · <kbd>Z</kbd> annulla</span>
           </div>
 
-          <div class="sm2-grid hidden" id="fcRatingBar" role="group" aria-label="Valutazione SM-2">
+          <div class="sm2-grid hidden" id="fcRatingBar" role="group" aria-label="Quanto ricordavi questa scheda?">
             <button type="button" class="sm2-btn r1" data-q="1"><span class="sm2-key">1</span><strong>Non la so</strong><small id="int1">Rivedi ora</small></button>
-            <button type="button" class="sm2-btn r2" data-q="3"><span class="sm2-key">2</span><strong>Difficile</strong><small id="int2">1g</small></button>
-            <button type="button" class="sm2-btn r3" data-q="4"><span class="sm2-key">3</span><strong>Bene</strong><small id="int3">3g</small></button>
-            <button type="button" class="sm2-btn r4" data-q="5"><span class="sm2-key">4</span><strong>A memoria</strong><small id="int4">6g</small></button>
+            <button type="button" class="sm2-btn r2" data-q="3"><span class="sm2-key">2</span><strong>Difficile</strong><small id="int2">1 giorno</small></button>
+            <button type="button" class="sm2-btn r3" data-q="4"><span class="sm2-key">3</span><strong>Bene</strong><small id="int3">3 giorni</small></button>
+            <button type="button" class="sm2-btn r4" data-q="5"><span class="sm2-key">4</span><strong>A memoria</strong><small id="int4">6 giorni</small></button>
           </div>
         </div>
       </div>
 
-      <!-- SUB-MODE 3B: QUIZ & SCENARI -->
+      <!-- SUB-MODE 3B: QUIZ & CASI PRATICI -->
       <div class="practice-pane hidden" id="pane-quiz" role="tabpanel">
         <div class="filter-bar-compact">
           <div class="filter-summary-left">
-            <span class="mono-meta" id="qzActiveSummary">Tutte · Tutti i documenti · 40 domande</span>
+            <span class="mono-meta" id="qzActiveSummary">Tutte · Tutti · 40 domande</span>
+            <button type="button" class="clear-focus-chip hidden" id="btnQzClearFocus">✕ Mostra tutte le domande</button>
           </div>
           <div class="filter-summary-right">
             <button type="button" class="btn small ghost hidden" id="btnRetryWrong"><span>Ripeti errori (<span id="wrongInlineCount">0</span>)</span></button>
@@ -502,7 +496,7 @@
           <div class="tray-field align-end">
             <label class="inline-toggle full">
               <input type="checkbox" id="qzOnlyUnmastered" />
-              <span>Solo non ancora padroneggiate</span>
+              <span>Solo non ancora superate</span>
             </label>
           </div>
         </div>
@@ -534,6 +528,14 @@
             <span class="kbd-hint desktop-only" style="margin-top:0.9rem; display:block;">Scorciatoie: <kbd>A</kbd>–<kbd>D</kbd> rispondi · <kbd>Invio</kbd> continua</span>
           </div>
 
+          <div class="session-done hidden" id="quizEmptyState">
+            <h2>Tutte le domande di questa selezione sono già superate</h2>
+            <p class="muted">Ottimo risultato! Puoi disattivare il filtro per esercitarti nuovamente sull'intero banco.</p>
+            <div class="briefing-cta-row centered">
+              <button type="button" class="btn primary" id="btnQzShowAll">Rivedi tutte le domande</button>
+            </div>
+          </div>
+
           <div class="session-done hidden" id="quizSummary">
             <h2>Riepilogo sessione</h2>
             <div class="big-score" id="qzSumScore">0 / 0</div>
@@ -547,11 +549,11 @@
         </div>
       </div>
 
-      <!-- SUB-MODE 3C: PERCORSO CLOZE GUIDATO -->
+      <!-- SUB-MODE 3C: PERCORSO TESTO A SCOMPARSA -->
       <div class="practice-pane hidden" id="pane-cloze" role="tabpanel">
         <div class="filter-bar-compact">
           <div class="filter-summary-left">
-            <span class="mono-meta" id="clozeQueueSummary">Statuto · Lv. 1 · Tocca per rivelare</span>
+            <span class="mono-meta" id="clozeQueueSummary">Statuto · Art. 1 · Lv. 1</span>
           </div>
           <div class="filter-summary-right">
             <button type="button" class="btn small secondary" id="btnClozeRandom">Casuale non memorizzato</button>
@@ -582,9 +584,9 @@
             </select>
           </div>
           <div class="tray-field">
-            <label for="clozeInputMode">Interazione</label>
+            <label for="clozeInputMode">Modalità</label>
             <select id="clozeInputMode" class="field sm">
-              <option value="click">Tocca per rivelare</option>
+              <option value="click">Tocca per scoprire</option>
               <option value="type">Scrivi la parola</option>
             </select>
           </div>
@@ -592,16 +594,16 @@
 
         <div class="studio-stage">
           <div class="editorial-sheet compact">
-            <div class="cloze-head-row">
+            <div class="cloze-head-row sticky-bar">
               <div class="article-kicker">
                 <span class="code-chip" id="pClozeCode">Art. 1</span>
                 <strong id="pClozeTitle">Denominazione</strong>
               </div>
               <div class="cloze-toolbar-actions">
                 <span class="mono-meta" id="pClozeCounter" aria-live="polite">0 / 0</span>
-                <button type="button" class="btn small secondary" id="btnPClozeHint">Rivela 1</button>
-                <button type="button" class="btn small secondary" id="btnPClozeRevealAll">Rivela tutto</button>
-                <button type="button" class="btn small ghost" id="btnPClozeReset">Ripristina</button>
+                <button type="button" class="btn small secondary" id="btnPClozeHint">Suggerisci 1</button>
+                <button type="button" class="btn small secondary" id="btnPClozeRevealAll">Mostra testo</button>
+                <button type="button" class="btn small ghost" id="btnPClozeReset">Ricomincia</button>
               </div>
             </div>
             <div class="thin-bar"><div class="thin-bar-fill" id="pClozeBar"></div></div>
@@ -623,12 +625,12 @@
       </div>
     </section>
 
-    <!-- ==================== 4. SINOSSI (RAPID REFERENCE) ==================== -->
+    <!-- ==================== 4. SINOSSI ==================== -->
     <section class="view" id="view-reference" aria-labelledby="refHeading">
       <div class="ref-top">
         <div>
           <h1 class="page-title" id="refHeading">Sinossi operativa</h1>
-          <p class="muted small">Riferimento immediato per date 2026, quorum, organi, termini, formula STV e schemi PDF.</p>
+          <p class="muted small">Consultazione rapida di date 2026, quorum, organi, termini, formula STV e schemi PDF.</p>
         </div>
         <input type="search" id="csSearch" class="field sm ref-search" placeholder="Filtra tabella attiva…" aria-label="Filtra tabella sinottica" />
       </div>
@@ -646,7 +648,7 @@
     </section>
   </main>
 
-  <!-- ==================== 4-ITEM MOBILE BOTTOM BAR (< 900px) ==================== -->
+  <!-- ==================== 4-ITEM MOBILE BOTTOM BAR ==================== -->
   <nav class="bottom-bar" id="mobileNav" aria-label="Navigazione mobile">
     <button type="button" class="bnav-btn active" data-view="overview" aria-current="page">
       <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
@@ -693,19 +695,19 @@
         </button>
       </div>
       <p class="muted small">
-        I tuoi progressi restano salvati nel browser di questo dispositivo. Esporta il file JSON per trasferirli fra telefono e computer.
+        I tuoi progressi restano salvati localmente in questo browser. Esporta il file JSON per trasferirli fra telefono e computer.
       </p>
       <div class="backup-summary" id="backupSummary"></div>
       <div class="modal-actions">
         <button type="button" class="btn primary" id="btnExportProgress">Esporta JSON</button>
-        <label class="btn secondary" tabindex="0">
+        <label class="btn secondary" id="lblImportProgress" tabindex="0" role="button">
           Importa JSON
           <input type="file" id="inputImportProgress" accept=".json" class="sr-only" />
         </label>
         <button type="button" class="btn danger" id="btnResetAsk">Azzera dati</button>
       </div>
       <div class="confirm-panel hidden" id="resetConfirmBox">
-        <p><strong>Confermi l'azzeramento?</strong> Stati di studio, segnalibri, calendario SM-2 e cronologia quiz verranno rimossi da questo dispositivo.</p>
+        <p><strong>Confermi l'azzeramento?</strong> Stati di studio, segnalibri, calendario flashcards e cronologia quiz verranno rimossi da questo dispositivo.</p>
         <div class="modal-actions">
           <button type="button" class="btn small danger" id="btnResetConfirm">Sì, azzera tutto</button>
           <button type="button" class="btn small secondary" id="btnResetCancel">Annulla</button>
