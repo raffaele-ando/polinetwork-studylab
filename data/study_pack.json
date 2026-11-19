@@ -1,0 +1,1508 @@
+{
+  "flashcards": [
+    {
+      "id": "fc-st-01",
+      "doc": "statuto",
+      "ref": "statuto-art-1",
+      "refLabel": "Statuto Art. 1",
+      "tag": "Principi & Forma",
+      "q": "Qual è la denominazione, la forma giuridica e la durata di PoliNetwork? Quando è spendibile l'acronimo APS?",
+      "a": "Ente del Terzo Settore denominato «PoliNetwork APS» (D.Lgs. 117/2017 e Codice Civile). Forma giuridica: associazione non riconosciuta, apartitica e aconfessionale. Durata: illimitata. L'acronimo APS non è spendibile nei rapporti con terzi, atti, corrispondenza e comunicazioni finché non è perfezionata l'iscrizione al RUNTS."
+    },
+    {
+      "id": "fc-st-02",
+      "doc": "statuto",
+      "ref": "statuto-art-2",
+      "refLabel": "Statuto Art. 2",
+      "tag": "Scadenze & Tempi",
+      "q": "Cos'è il «limite temporale» definito dallo Statuto?",
+      "a": "30 (trenta) giorni; diventa 90 (novanta) giorni se la richiesta è presentata nei mesi di Gennaio, Febbraio, Giugno, Luglio, Agosto e Settembre."
+    },
+    {
+      "id": "fc-st-03",
+      "doc": "statuto",
+      "ref": "statuto-art-3",
+      "refLabel": "Statuto Art. 3",
+      "tag": "Principi & Forma",
+      "q": "Dove ha sede legale PoliNetwork? Trasferire la sede legale richiede modifica statutaria?",
+      "a": "Sede legale nel Comune di Milano. Il trasferimento della sede legale NON comporta modifica statutaria, ma l'obbligo di comunicazione agli uffici competenti."
+    },
+    {
+      "id": "fc-st-04",
+      "doc": "statuto",
+      "ref": "statuto-art-5",
+      "refLabel": "Statuto Art. 5",
+      "tag": "Principi & Forma",
+      "q": "Quali sono i due principi fondamentali perseguiti da PoliNetwork (Art. 5 comma 4)?",
+      "a": "(a) È libera da ogni condizionamento politico, sociale, economico e religioso; (b) I progetti di carattere tecnico informatico dovranno avere licenza open source."
+    },
+    {
+      "id": "fc-st-05",
+      "doc": "statuto",
+      "ref": "statuto-art-6",
+      "refLabel": "Statuto Art. 6",
+      "tag": "Organi & Cariche",
+      "q": "Quali sono i 3 organi dell'Associazione secondo lo Statuto?",
+      "a": "1. Il Consiglio Direttivo (Direttivo); 2. Le Assemblee dei Soci ordinaria e straordinaria; 3. Il Collegio dei Probiviri (Collegio)."
+    },
+    {
+      "id": "fc-st-06",
+      "doc": "statuto",
+      "ref": "statuto-art-8",
+      "refLabel": "Statuto Art. 8",
+      "tag": "Soci & Diritti",
+      "q": "Chi tiene il registro dei volontari non occasionali e a quale norma di legge si rinvia?",
+      "a": "Il Segretario è tenuto a iscrivere in un apposito registro i volontari che svolgono attività in modo non occasionale. Si applica l'art. 17 del D.Lgs. 3 luglio 2017, n. 117 (Codice del Terzo Settore)."
+    },
+    {
+      "id": "fc-st-07",
+      "doc": "statuto",
+      "ref": "statuto-art-9",
+      "refLabel": "Statuto Art. 9",
+      "tag": "Scadenze & Tempi",
+      "q": "Quali sono tutte le scadenze della procedura di ammissione di un nuovo Socio (Art. 9)?",
+      "a": "• Decisione Direttivo: entro il limite temporale (30 gg / 90 gg in Gen, Feb, Giu, Lug, Ago, Set).\n• Se rigetto: motivato all'Assemblea e all'aspirante entro 7 giorni; ricorso all'Assemblea entro il limite temporale (decide nella seduta successiva).\n• Se accettazione: Segretario comunica entro 10 giorni.\n• Dopo il pagamento quota: Segretario annota nel libro dei Soci entro 7 giorni dal pagamento.\n• Conferma iscrizione con codice di iscrizione: entro 7 giorni dall'iscrizione al libro dei Soci."
+    },
+    {
+      "id": "fc-st-08",
+      "doc": "statuto",
+      "ref": "statuto-art-10",
+      "refLabel": "Statuto Art. 10",
+      "tag": "Soci & Diritti",
+      "q": "Quali sono le caratteristiche della quota associativa secondo l'Art. 10 comma 2?",
+      "a": "La quota associativa è personale, non è rimborsabile e non può essere trasferita a terzi o rivalutata."
+    },
+    {
+      "id": "fc-st-09",
+      "doc": "statuto",
+      "ref": "statuto-art-11",
+      "refLabel": "Statuto Art. 11",
+      "tag": "Soci & Diritti",
+      "q": "Quali sono le 4 cause di perdita della qualità di Socio?",
+      "a": "(a) Mancato pagamento della quota sociale (decadenza decisa dall'Assemblea su proposta del Direttivo, trascorso 1 mese dal mancato versamento);\n(b) Dimissioni (comunicazione scritta al Direttivo, che la invia in CC ai Probiviri; decorrenza immediata; resta obbligo quota anno in corso se prevista);\n(c) Espulsione (deliberata dal Direttivo previa contestazione e, se possibile, sentito il Socio; comunicata all'Assemblea che può opporsi entro il limite temporale);\n(d) Decesso."
+    },
+    {
+      "id": "fc-st-10",
+      "doc": "statuto",
+      "ref": "statuto-art-11",
+      "refLabel": "Statuto Art. 11",
+      "tag": "Soci & Diritti",
+      "q": "Come funziona il libro dei Soci Emeriti (Art. 11 comma 3)?",
+      "a": "Chi perde o non ha mai avuto la qualità di Socio ma ha dato un contributo può chiederlo al Direttivo (silenzio-rigetto dopo il limite temporale). I fondatori sono inseriti di diritto. L'Assemblea può rimuovere chiunque in qualsiasi momento."
+    },
+    {
+      "id": "fc-st-11",
+      "doc": "statuto",
+      "ref": "statuto-art-12",
+      "refLabel": "Statuto Art. 12",
+      "tag": "Quorum & Maggioranze",
+      "q": "Quante volte all'anno si riunisce di diritto l'Assemblea e con quanto preavviso va convocata?",
+      "a": "Almeno 2 volte all'anno. Convocazione via canale di contatto entro 7 giorni prima della riunione, indicando orario, luogo (anche videoconferenza), ordine del giorno e orari di eventuali ulteriori convocazioni."
+    },
+    {
+      "id": "fc-st-12",
+      "doc": "statuto",
+      "ref": "statuto-art-12",
+      "refLabel": "Statuto Art. 12",
+      "tag": "Quorum & Maggioranze",
+      "q": "Quali sono i quorum costitutivi e deliberativi dell'Assemblea ORDINARIA?",
+      "a": "• Costitutivo 1ª convocazione: maggioranza assoluta degli aderenti (in proprio o per delega).\n• Costitutivo 2ª convocazione (anche nello stesso giorno): qualunque sia il numero dei presenti (in proprio o per delega).\n• Deliberativo: maggioranza dei voti dei presenti. In caso di parità prevale il voto del Presidente, TRANNE per elezione o revoca dei componenti del Direttivo."
+    },
+    {
+      "id": "fc-st-13",
+      "doc": "statuto",
+      "ref": "statuto-art-12",
+      "refLabel": "Statuto Art. 12",
+      "tag": "Quorum & Maggioranze",
+      "q": "Quali sono i quorum costitutivi e deliberativi dell'Assemblea STRAORDINARIA?",
+      "a": "• Costitutivo 1ª convocazione: più dei 2/3 degli aderenti, SOLO IN PROPRIO (niente deleghe!).\n• Costitutivo 2ª convocazione (non prima di 1 settimana dalla 1ª): maggioranza assoluta degli iscritti (in proprio o per delega).\n• Costitutivo 3ª convocazione (non prima di 3 giorni dalla 2ª): almeno 1/3 degli iscritti (in proprio o per delega).\n• Deliberativo: maggioranza dei 2/3 dei voti dei presenti."
+    },
+    {
+      "id": "fc-st-14",
+      "doc": "statuto",
+      "ref": "statuto-art-12",
+      "refLabel": "Statuto Art. 12",
+      "tag": "Organi & Cariche",
+      "q": "Chi presiede l'Assemblea in caso di (1) elezione del Direttivo e (2) revoca del Direttivo?",
+      "a": "1. Elezione del Direttivo: presieduta dal Presidente della Commissione Elettorale.\n2. Revoca del Direttivo (o singole cariche, su proposta di almeno 1/3 degli associati): convocata e presieduta dal Socio più anziano per iscrizione (e a parità, per età), che designa un verbalizzante fra i presenti."
+    },
+    {
+      "id": "fc-st-15",
+      "doc": "statuto",
+      "ref": "statuto-art-12",
+      "refLabel": "Statuto Art. 12",
+      "tag": "Soci & Diritti",
+      "q": "Quali sono le regole sulle deleghe e sul voto segreto in Assemblea (Statuto Art. 12 commi 13-14)?",
+      "a": "• Deleghe: solo ad altri Associati, scritta tramite canale di contatto; al più 3 deleghe per Associato; VIETATA in 1ª convocazione di Assemblea straordinaria; NON si possono delegare membri del Direttivo.\n• Voto: palese di default; SEGRETO per delibere riguardanti singoli o ristretti gruppi di individui, o se richiesto da Assemblea, Direttivo, Socio firmatario, o se prescritto dal regolamento interno."
+    },
+    {
+      "id": "fc-st-16",
+      "doc": "statuto",
+      "ref": "statuto-art-13",
+      "refLabel": "Statuto Art. 13",
+      "tag": "Organi & Cariche",
+      "q": "Quanti membri ha il Consiglio Direttivo, quanto dura il mandato, quante volte si è rieleggibili e quanto può durare la proroga?",
+      "a": "• Composizione: minimo 5, massimo 9 persone (7 di default per RRI 1.6.1.1).\n• Mandato: 2 anni, rieleggibili UNA SOLA volta consecutivamente.\n• Proroga: prorogabile di 6 mesi su delibera dell'Assemblea straordinaria, e automaticamente prorogato in caso di assenza di candidati. Proroga complessiva massima: 1 anno."
+    },
+    {
+      "id": "fc-st-17",
+      "doc": "statuto",
+      "ref": "statuto-art-13",
+      "refLabel": "Statuto Art. 13",
+      "tag": "Quorum & Maggioranze",
+      "q": "Come funziona il quorum del Direttivo e la maggioranza per assegnare/sostituire cariche vacanti?",
+      "a": "• Riunioni ordinarie: valide con maggioranza assoluta dei componenti; delibera a maggioranza dei presenti (in parità prevale il Presidente).\n• Cariche vacanti dopo elezione o sostituzione in corso di mandato (convocato entro 10 giorni dalla vacanza): maggioranza dei 3/4 dei componenti.\n• Incompatibilità interne: Presidente, Vicepresidente e Segretario sono fra loro incompatibili."
+    },
+    {
+      "id": "fc-st-18",
+      "doc": "statuto",
+      "ref": "statuto-art-13",
+      "refLabel": "Statuto Art. 13",
+      "tag": "Organi & Cariche",
+      "q": "Quando si considera dimissionario l'intero Consiglio Direttivo e come funziona il subentro di un singolo membro?",
+      "a": "• Intero Direttivo dimissionario: quando si dimettono almeno la metà più uno dei Consiglieri eletti originariamente dall'Assemblea (resta in carica per l'ordinaria amministrazione).\n• Subentro singolo: subentrano i Soci con più voti dopo l'ultimo eletto (a parità: maggiore anzianità di iscrizione); durano per il periodo residuo del mandato."
+    },
+    {
+      "id": "fc-st-19",
+      "doc": "statuto",
+      "ref": "statuto-art-14",
+      "refLabel": "Statuto Art. 14-15",
+      "tag": "Organi & Cariche",
+      "q": "Cosa succede se il Presidente cessa dalle sue funzioni (o è impossibilitato)?",
+      "a": "• Se cessa: il Vicepresidente diventa Presidente e il Direttivo elegge il nuovo Vicepresidente (a maggioranza 3/4 entro 10 gg).\n• Se impossibilitato: lo sostituisce il Vicepresidente; se impossibilitato anch'egli, il membro del Direttivo più anziano per iscrizione; se Direttivo dimissionario, il Socio più anziano per iscrizione (Decano).\n• Convocazione elezioni: il Presidente convoca l'Assemblea almeno 1 mese prima della scadenza del mandato."
+    },
+    {
+      "id": "fc-st-20",
+      "doc": "statuto",
+      "ref": "statuto-art-18",
+      "refLabel": "Statuto Art. 18",
+      "tag": "Organi & Cariche",
+      "q": "Chi può essere nominato nel Collegio dei Probiviri e quali poteri ha?",
+      "a": "Nominati anche tra i NON Soci, preferibilmente con adeguata esperienza giuridica/legale. Riunioni valide con maggioranza assoluta dei componenti, delibera a maggioranza dei presenti. Ha facoltà di opporsi (veto) a qualsiasi decisione interna se in conflitto con Statuto, RRI, normativa nazionale/comunitaria o altra regolamentazione."
+    },
+    {
+      "id": "fc-st-21",
+      "doc": "statuto",
+      "ref": "statuto-art-19",
+      "refLabel": "Statuto Art. 19",
+      "tag": "Scadenze & Tempi",
+      "q": "Quali sono i termini di approvazione e deposito del Bilancio (Art. 19)?",
+      "a": "Annuale dal 1° gennaio (artt. 13, 14, 87 D.Lgs. 117/2017). Predisposto dal Direttivo, approvato dall'Assemblea ordinaria entro 6 mesi dalla chiusura dell'esercizio e depositato presso il RUNTS entro il 30 giugno di ogni anno. Divieto assoluto di distribuire utili/avanzi anche indirettamente."
+    },
+    {
+      "id": "fc-st-22",
+      "doc": "statuto",
+      "ref": "statuto-art-22",
+      "refLabel": "Statuto Art. 22",
+      "tag": "Principi & Forma",
+      "q": "Quali sono i 4 libri sociali obbligatori di PoliNetwork?",
+      "a": "(a) Libro dei Soci; (b) Libro delle adunanze e deliberazioni dell'Assemblea dei Soci; (c) Libro delle adunanze e deliberazioni del Consiglio Direttivo; (d) Libro delle adunanze e deliberazioni del Collegio dei Probiviri, se nominato. Tenuti in libera visione a tutti i Soci presso sede legale e/o piattaforma digitale conforme GDPR."
+    },
+    {
+      "id": "fc-rri-01",
+      "doc": "rri",
+      "ref": "rri-1-2",
+      "refLabel": "RRI Art. 1.2 & 1.3.3",
+      "tag": "Scadenze & Tempi",
+      "q": "Qual è il termine generale per le notifiche, per notificare una nuova RRI, e per fare ricorso/parere contrario contro una RRI?",
+      "a": "• Notifiche generali (1.2): entro 30 giorni (ai Soci e ai Probiviri).\n• Notifica nuova RRI (1.3.3): entro 3 giorni dall'emanazione.\n• Ricorso ai Probiviri contro RRI: entro 10 giorni dall'emanazione.\n• Parere contrario/proposte modifica Soci su nuovi regolamenti (escluso Reg. Fondamentale): entro 10 giorni.\n• Regolamento Fondamentale: modificabile SOLO tramite voto favorevole dell'Assemblea su proposta del Direttivo."
+    },
+    {
+      "id": "fc-rri-02",
+      "doc": "rri",
+      "ref": "rri-1-3-2",
+      "refLabel": "RRI Art. 1.3.2 & 1.3.4",
+      "tag": "Principi & Forma",
+      "q": "Cos'è il «Divieto di modifica puntuale» e cos'è l'«Obbligo di aggiornamento generale» della RRI?",
+      "a": "• Divieto di modifica puntuale (1.3.2): per modificare un regolamento occorre abrogare il precedente ed emanarlo integralmente nuovo, redigendo un documento (non ufficiale) che evidenzi solo le differenze.\n• Aggiornamento generale (1.3.4): ogni 5 anni dall'Atto Costitutivo, il Direttivo (anche con tavolo di lavoro) analizza la RRI e relaziona all'Assemblea (anticipabile/posticipabile di max 6 mesi a maggioranza semplice del Direttivo)."
+    },
+    {
+      "id": "fc-rri-03",
+      "doc": "rri",
+      "ref": "rri-1-4-3",
+      "refLabel": "RRI Art. 1.4.3",
+      "tag": "Ricorsi & Sanzioni",
+      "q": "Quali sono i 4 «gravi motivi» per l'espulsione di un Socio (RRI 1.4.3)?",
+      "a": "1. Violenza anche verbale nei confronti di altre persone;\n2. Violazione del codice penale;\n3. Comportamenti che non rispettino la linea di condotta dell'associazione verso membri o entità interne/esterne;\n4. Scarsa partecipazione ingiustificata previa valutazione del Collegio dei Probiviri."
+    },
+    {
+      "id": "fc-rri-04",
+      "doc": "rri",
+      "ref": "rri-1-4-4",
+      "refLabel": "RRI Art. 1.4.4-1.4.5",
+      "tag": "Soci & Diritti",
+      "q": "Chi è il Decano dei Soci e chi definisce il Canale di contatto?",
+      "a": "• Decano dei Soci (1.4.4): il Socio più anziano per iscrizione (a parità temporale, il più anziano anagraficamente). Qualifica comunicata dal Segretario entro 2 settimane.\n• Canale di contatto (1.4.5): definito dal Team Lead di IT (ogni Socio deve avervi accesso); come supplemento è individuato Telegram."
+    },
+    {
+      "id": "fc-rri-05",
+      "doc": "rri",
+      "ref": "rri-1-4-6",
+      "refLabel": "RRI Art. 1.4.6",
+      "tag": "Scadenze & Tempi",
+      "q": "Quanto costa la quota associativa, qual è l'anno sociale, fino a quando si rinnova e chi è esentato?",
+      "a": "• Importo: €5,00.\n• Validità: dal 1° settembre al 31 agosto dell'anno successivo.\n• Rinnovi possibili: fino al 31 dicembre.\n• Esenzioni: (1) chi recede entro il 31 agosto non paga la nuova quota; (2) chi si tessera dal 1° giugno al 31 agosto è esentato dalla quota dell'anno sociale successivo."
+    },
+    {
+      "id": "fc-rri-06",
+      "doc": "rri",
+      "ref": "rri-1-5-1-2",
+      "refLabel": "RRI Art. 1.5.1.2",
+      "tag": "Quorum & Maggioranze",
+      "q": "Come funzionano le votazioni telematiche asincrone e per quali materie sono VIETATE?",
+      "a": "• Durata: aperte almeno 48 ore (24 ore se la maggioranza assoluta degli aventi diritto è già raggiunta).\n• Validità: deve rispettare il quorum costitutivo di 1ª convocazione (maggioranza assoluta) e deliberativo ordinario. Probiviri informati contestualmente.\n• VIETATE per: tutte le materie di Assemblea Straordinaria (Art. 12 c.8) + Art. 12 c.7 lettere a (bilancio), c (elezione Direttivo), d (revoca Direttivo), e (Probiviri), i (opposizione esclusione soci)."
+    },
+    {
+      "id": "fc-rri-07",
+      "doc": "rri",
+      "ref": "rri-1-5-1-1",
+      "refLabel": "RRI Art. 1.5.1.1 & 1.5.1.3",
+      "tag": "Organi & Cariche",
+      "q": "Entro quanto si chiede un punto all'OdG e la partecipazione a distanza? Come funzionano le deleghe in Assemblea?",
+      "a": "• Punto all'OdG: almeno 7 giorni prima della 1ª convocazione.\n• Partecipazione a distanza: istanza al Presidente almeno 24 ore prima (silenzio = respinta).\n• Delega in Assemblea: il delegato può esprimere voti distinti (proprio vs delegante/i); se non lo dichiara esplicitamente, si intendono coincidenti con il proprio.\n• Varie ed eventuali: sempre presente, ma vietate votazioni se non a scopo consultivo."
+    },
+    {
+      "id": "fc-rri-08",
+      "doc": "rri",
+      "ref": "rri-1-5-2",
+      "refLabel": "RRI Art. 1.5.2",
+      "tag": "Ricorsi & Sanzioni",
+      "q": "Come si svolge la procedura di espulsione di un Socio (RRI 1.5.2)?",
+      "a": "1. Delibera del Direttivo -> il Socio è immediatamente sospeso dalle funzioni.\n2. Il Segretario comunica all'Assemblea entro 7 giorni con relazione motivata.\n3. Qualunque Socio può proporre mozione di opposizione entro il limite temporale (30/90 gg), sospendendo la procedura fino alla seduta successiva.\n4. L'espulsione ha effetto solo trascorso il limite temporale senza opposizione o se la mozione di opposizione non è approvata."
+    },
+    {
+      "id": "fc-rri-09",
+      "doc": "rri",
+      "ref": "rri-1-6-1-1",
+      "refLabel": "RRI Art. 1.6.1.1",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Quali sono le finestre temporali per convocare e tenere l'Assemblea Elettiva del Direttivo?",
+      "a": "• Scadenza naturale: data tra 15 giorni prima e 20 giorni dopo la scadenza; convocazione almeno 30 giorni prima della scadenza E almeno 30 giorni prima dell'Assemblea Elettiva. (Se eletti prima della scadenza, entrano in carica alla scadenza naturale).\n• Direttivo dimissionario: data tra 15 e 30 giorni dalle dimissioni; convocazione contestuale o entro 24 ore.\n• Numero default componenti: 7 (salvo diversa delibera del Direttivo uscente)."
+    },
+    {
+      "id": "fc-rri-10",
+      "doc": "rri",
+      "ref": "rri-1-6-1-2",
+      "refLabel": "RRI Art. 1.6.1.2-1.6.1.4",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Com'è composta la Commissione Elettorale del Direttivo, entro quando si riunisce e quando si scioglie?",
+      "a": "• Sorteggiata su base volontaria dai Probiviri (se mancano volontari, tra tutti i Soci): 3 Soci (Presidente, Segretario che verbalizza l'Assemblea, 1 membro). Non candidabili al Direttivo.\n• Si riunisce entro 3 giorni dalla nomina; candidature non possono chiudere a meno di 7 giorni dall'Assemblea (nota: nel Reg. 2026 chiudono 3 gg prima per delega speciale/coordinamento).\n• In Assemblea: presentazione ≥5 min/candidato, domande, arringa max 2 min, riflessione opzionale max 2 ore.\n• Ricorsi entro 15 gg, decisi entro 30 gg, poi scioglimento automatico."
+    },
+    {
+      "id": "fc-rri-11",
+      "doc": "rri",
+      "ref": "rri-1-6-2",
+      "refLabel": "RRI Art. 1.6.2 & 1.6.3",
+      "tag": "Organi & Cariche",
+      "q": "Quali sono le incompatibilità (1.6.2) e le cause di decadenza (1.6.3) del Consiglio Direttivo?",
+      "a": "• Incompatibilità (1.6.2): Presidente e Vicepresidente incompatibili con membro della Giunta del Consiglio degli Studenti PoliMi o membro del CNSU.\n• Decadenza (1.6.3): (a) perdita qualità di Socio; (b) carica direttiva in altra associazione/gruppo/lista riconosciuta dal PoliMi; (c) carica direttiva in altra associazione/gruppo/lista operante nel contesto PoliMi anche non riconosciuta (decide l'Assemblea).\n• La sola candidatura NON fa decadere; la decadenza scatta all'assunzione della carica. Probiviri verificano entro 30 gg. Se decade l'intero Direttivo, il Decano convoca Assemblea entro 1 mese."
+    },
+    {
+      "id": "fc-rri-12",
+      "doc": "rri",
+      "ref": "rri-1-7-2-1",
+      "refLabel": "RRI Art. 1.7.2.1",
+      "tag": "Organi & Cariche",
+      "q": "Quali sono composizione, durata, quorum, potere di richiesta documenti e superamento veto del Collegio dei Probiviri?",
+      "a": "• Composizione: min 1 (fa Presidente+Segretario), max 7 membri. Mandato: 3 anni (max 2 mandati consecutivi, Art. 1.7.5.4).\n• Convocazione: almeno 3 giorni prima. Quorum: maggioranza assoluta arrotondata all'intero più vicino (in 2ª convocazione entro 7 gg: nessun quorum). In parità prevale il Presidente.\n• Richiesta documenti al Segretario Direttivo: forniti entro 10 gg; può sospendere qualsiasi decisione finché non arrivano (max 1 volta per decisione).\n• Superamento veto Probiviri: serve maggioranza assoluta SIA del Direttivo SIA dell'Assemblea. Se veto su elezioni/cariche Direttivo, Assemblea entro 30 gg (se non superato, Direttivo decade)."
+    },
+    {
+      "id": "fc-rri-13",
+      "doc": "rri",
+      "ref": "rri-1-7-2-3",
+      "refLabel": "RRI Art. 1.7.2.3-1.7.2.7",
+      "tag": "Quorum & Maggioranze",
+      "q": "Come avvengono decadenza, revoca, espulsione e scioglimento del Collegio dei Probiviri?",
+      "a": "• Decadenza (1.7.2.3): 3 assenze ingiustificate consecutive, purché decorsi 3 mesi tra 1ª e 3ª (giustificazioni entro 10 gg).\n• Revoca (1.7.2.5): Assemblea con maggioranza 2/3 dei componenti.\n• Espulsione di un Probiviro (1.7.2.6): Collegio con maggioranza 3/4 dei componenti (1 nominativo per mozione; interessato non vota; Assemblea convocata entro 3 gg).\n• Scioglimento (1.7.2.7): Assemblea con 2/3 dei Soci, oppure dimissioni contestuali maggioranza assoluta, oppure sotto numero minimo (<1). Non può opporsi al proprio scioglimento."
+    },
+    {
+      "id": "fc-rri-14",
+      "doc": "rri",
+      "ref": "rri-1-7-3-1",
+      "refLabel": "RRI Art. 1.7.3 & 1.7.5",
+      "tag": "Quorum & Maggioranze",
+      "q": "Come si eleggono (1) i membri del Collegio dei Probiviri e (2) le sue cariche interne?",
+      "a": "• Elezione Probiviri (1.7.5.1): nomina diretta Assemblea; serve almeno 2/3 dei soci votanti E più di 1/2 di tutti i soci. Entrano in carica dopo 10 giorni salvo ricorsi.\n• Cariche interne (Presidente & Segretario Collegio, 1.7.3.1): eletti dal Collegio a maggioranza dei 2/3 dei componenti; durano 12 mesi (rieleggibili, NON prorogabili).\n• Garanzia se Collegio vuoto (1.7.5.5): Commissione Elettorale Permanente nomina 1 Socio entro 5 gg (nel frattempo Direttivo fermo salvo obblighi di legge); altrimenti 1/6 dei soci può impugnare ogni decisione Direttivo."
+    },
+    {
+      "id": "fc-rri-15",
+      "doc": "rri",
+      "ref": "rri-1-7-4",
+      "refLabel": "RRI Art. 1.7.4",
+      "tag": "Organi & Cariche",
+      "q": "Quali sono le principali incompatibilità per essere membro del Collegio dei Probiviri (Art. 1.7.4)?",
+      "a": "1. Membro Direttivo PoliNetwork; 2. Admin attivo; 3. Responsabile elettorale di lista studentesca; 4. Incarichi politici nazionali o candidatura; 5. Team Lead; 6. Socio/azionista di realtà con rapporti commerciali con l'associazione; 7. Controversia legale contro l'associazione; 8. Revisore esterno; 9. Personale docente PoliMi; 10. Rappresentante studenti in Senato Accademico, CdA o CNSU (o candidato non notificato ai Soci)."
+    },
+    {
+      "id": "fc-rri-16",
+      "doc": "rri",
+      "ref": "rri-2-2-1",
+      "refLabel": "RRI Art. 2.2.1-2.2.6",
+      "tag": "Organi & Cariche",
+      "q": "Quali sono i 4 Team permanenti, quanto dura un Team Lead, quanti Team può guidare e cosa succede alle elezioni?",
+      "a": "• 4 Team: IT, HR, Design & Marketing, Events & Partnership.\n• Team Lead: mandato 1 anno; può nominare/revocare un Vicario e i membri del Team.\n• Limite: max 2 Team in contemporanea (con obbligo di Vicario in entrambi); scende a 1 per chi ha cariche sociali.\n• Vacanza Lead+Vicario: ad interim Vicepresidente del Direttivo (o delegato).\n• Alle elezioni del Direttivo: tutti i Team Lead sono dimissionari (restano fino al successore); nuovo Direttivo si riunisce entro 3 gg per eleggerli.\n• Relazione attività: almeno semestrale. Impegni verso terzi: serve sempre delibera preventiva del Direttivo.\n• Helper (2.2.6): nominati dal Direttivo fra i soci, comunicati all'Assemblea entro 7 giorni."
+    },
+    {
+      "id": "fc-rri-17",
+      "doc": "rri",
+      "ref": "rri-2-3-2",
+      "refLabel": "RRI Art. 2.3.2 & 4.3-4.5",
+      "tag": "Ricorsi & Sanzioni",
+      "q": "Come funziona il sistema delle ammonizioni (warn) e delle sanzioni nei gruppi del Network?",
+      "a": "• Ogni utente ha 3 ammonizioni; superate le 3 (cioè alla 4ª) scatta l'espulsione (ban) temporanea o permanente.\n• Scadenza ammonizioni: perdono efficacia dopo 12 mesi (previa richiesta dell'utente).\n• Spam non autorizzato (4.4): 4 ammonizioni contestuali (= ban diretto).\n• Comportamenti offensivi/bestemmie/discriminazione (4.5): da 1 a 4 ammonizioni.\n• Doxing malevolo (4.6): esclusione diretta (e cancellazione dati a prescindere dalla buona fede).\n• Messaggi elettorali vietati (4.8): 4 ammonizioni contestuali."
+    },
+    {
+      "id": "fc-rri-18",
+      "doc": "rri",
+      "ref": "rri-4-7",
+      "refLabel": "RRI Art. 4.7",
+      "tag": "Principi & Forma",
+      "q": "Come funziona il sistema dei crediti promozionali per Associazioni e Istituzioni (RRI 4.7)?",
+      "a": "• 3 crediti a semestre (non cumulabili) dopo iscrizione al registro tenuto dal Segretario.\n• Costi: 2 crediti gruppo generale CdL; 3 crediti tutti i gruppi di un CdL; 0,5 crediti gruppo esame/scaglione; 1 credito canale broadcast; 0 crediti PoliAssociazioni.\n• Sconto 0,5x per associazioni riferite a quel CdL; +1 credito se CdL < 1000 iscritti.\n• Cooldown: 15 giorni tra messaggi nello stesso gruppo.\n• Violazione: azzeramento crediti per 2 semestri."
+    },
+    {
+      "id": "fc-rri-19",
+      "doc": "rri",
+      "ref": "rri-4-8",
+      "refLabel": "RRI Art. 4.8",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Cos'è il «periodo elettorale» e quali eccezioni esistono al divieto di messaggi elettorali nei gruppi PoliNetwork?",
+      "a": "• Periodo elettorale: dall'inizio del semestre accademico delle elezioni fino alla fine del silenzio elettorale + 2 settimane.\n• Divieto: 4 ammonizioni contestuali. Vale anche per nome profilo/descrizione membro (NON immagine profilo o bio).\n• Eccezioni: messaggi neutri del Direttivo entro 7 gg da indizione/candidature; raccolta firme CCS (1 messaggio + 1 ringraziamento; se raggiunge 3x firme indugiando -> ban + grave motivo espulsione); casi isolati approvati all'unanimità da CCS e Direttivo senza branding; app PoliNetwork e canale promozionale fuori dal silenzio elettorale."
+    },
+    {
+      "id": "fc-rri-20",
+      "doc": "rri",
+      "ref": "rri-5-2",
+      "refLabel": "RRI Art. 5.2 & 5.3",
+      "tag": "Principi & Forma",
+      "q": "Qual è la regola d'oro delle Linee Guida sui Conflitti di Interesse (Reg. 5)?",
+      "a": "NON introducono incompatibilità di carica, ma l'obbligo di DICHIARARE il conflitto prima di discussione e votazione e ASTENERSI dal voto. Si applicano a TUTTI (Soci, Direttivo, Probiviri, Team Lead, volontari). Il mancato rispetto può far slittare/cancellare la votazione. Riguardano 17 aree (lista non esaustiva), incluse liste studentesche (anche avversarie o sciolte fino alla successiva elezione), parenti stretti, affari, e votazioni disciplinari su sé stessi o membri della propria lista."
+    },
+    {
+      "id": "fc-el-01",
+      "doc": "elettorale",
+      "ref": "el-a-1",
+      "refLabel": "Reg. Elettorale Art. A.1",
+      "tag": "Scadenze & Tempi",
+      "q": "Quali sono tutte le date chiave delle Elezioni Direttivo 2026 (da ottobre 2026 a gennaio 2027)?",
+      "a": "• 20/10/2026: Chiusura tesseramenti.\n• 28/10/2026 00:00: Apertura candidature.\n• 13/11/2026 23:59: Integrazione convocazione (orario, luogo, 1ª/2ª conv.).\n• 18/11/2026 23:59: Chiusura candidature, deleghe, ospiti, invio link remoto.\n• 19/11/2026 15:00: Termine cambio preferenze di carica.\n• 20/11/2026 09:00 (24h prima): Termine richiesta partecipazione a distanza.\n• 20/11/2026 12:00: Termine ricorso contro rifiuto candidatura/parere ospite.\n• 20/11/2026 23:59: Fine verifica candidature, parere ospiti, invito Direttivo, ritiro pre-scheda.\n• 21/11/2026 08:00: Lista definitiva candidati + ordine spareggio.\n• 21/11/2026 (~9:00-13:00, Campus Leonardo): ASSEMBLEA ELETTIVA.\n• 26/11/2026: Pubblicazione risultati completi + file anonimo voti.\n• 30/11/2026: Fine mandato Direttivo uscente e insediamento nuovo Direttivo.\n• 06/12/2026 23:59: Termine ricorsi (15 gg).\n• 05/01/2027: Decisione Commissione sui ricorsi (30 gg).\n• 12/01/2027: Termine appello ai Probiviri (7 gg dalla decisione, max 12/01)."
+    },
+    {
+      "id": "fc-el-02",
+      "doc": "elettorale",
+      "ref": "el-a-2",
+      "refLabel": "Reg. Elettorale Art. A.2",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Chi è INELEGGIBILE al Consiglio Direttivo (Art. A.2 comma 1)?",
+      "a": "(a) Chi ha già esaurito la rieleggibilità (2 mandati consecutivi, Art. 13 c.3 Statuto);\n(b) I membri della Commissione Elettorale;\n(c) Chi rientra nell'art. 2382 c.c. (interdizione, inabilitazione, fallimento, condanna con interdizione dai pubblici uffici o incapacità ad uffici direttivi, richiamato da art. 26 c.3 D.Lgs. 117/2017)."
+    },
+    {
+      "id": "fc-el-03",
+      "doc": "elettorale",
+      "ref": "el-a-2",
+      "refLabel": "Reg. Elettorale Art. A.2",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Come si presenta la candidatura (quante mail, a chi, da quale account) e cosa succede se ci si ritira prima vs dopo il 20/11 23:59?",
+      "a": "• 2 mail distinte dal proprio account @polinetwork.org:\n  1. Lettera aperta a soci@polinetwork.org (CC commissioneelettorale2026@polinetwork.org).\n  2. Modulo D firmato graficamente a commissioneelettorale2026@polinetwork.org (CC Probiviri).\n• Max 2 preferenze di carica (in ordine di priorità).\n• Ritiro ENTRO 20/11 23:59: non è più candidato valido e non appare in scheda.\n• Ritiro DOPO 20/11 23:59: resta sulla scheda e conta per il n. seggi, ma è escluso prima del 1° turno di scrutinio (non eleggibile, non in graduatoria non eletti)."
+    },
+    {
+      "id": "fc-el-04",
+      "doc": "elettorale",
+      "ref": "el-a-4",
+      "refLabel": "Reg. Elettorale Art. A.4",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Quali garanzie tecniche deve avere l'email della Commissione Elettorale (commissioneelettorale2026@polinetwork.org)?",
+      "a": "Deve essere una mailing list di solo inoltro (NON gruppo, team o spazio condiviso), senza archivi sul server, segreta (accessibile solo ai 3 membri). L'elenco dei destinatari è comunicato ai soci e modificabile dal team IT solo su richiesta della Commissione. Eliminata dopo scadenza e decisione di tutti i ricorsi e appelli."
+    },
+    {
+      "id": "fc-el-05",
+      "doc": "elettorale",
+      "ref": "el-a-6",
+      "refLabel": "Reg. Elettorale Art. A.6",
+      "tag": "Quorum & Maggioranze",
+      "q": "Come vota internamente la Commissione Elettorale (maggioranza, unanimità, parità, scadenza, conflitto)?",
+      "a": "• Maggioranza: favorevoli > contrari, astenuti esclusi, servono almeno 2 votanti. Parità -> voto del Presidente vale doppio (se Presidente si astiene -> voto del Segretario vale doppio).\n• Unanimità: tutti e 3 favorevoli (astensione/assenza = contrario; niente voto doppio), salvo astensione per conflitto d'interessi (basta l'unanimità degli altri, min 2 votanti).\n• A scadenza (comma 6): se non ancora presa alla scadenza, decide a maggioranza anche quando servirebbe unanimità!\n• Ammesso voto per iscritto da assenti."
+    },
+    {
+      "id": "fc-el-06",
+      "doc": "elettorale",
+      "ref": "el-a-8",
+      "refLabel": "Reg. Elettorale Art. A.8",
+      "tag": "Soci & Diritti",
+      "q": "Chi ha elettorato attivo nell'Assemblea Elettiva? Conta la chiusura tesseramenti del 20/10/2026 o il mancato rinnovo?",
+      "a": "Votano TUTTI i soci al momento dell'Assemblea Elettiva. Chi ha presentato domanda entro il 20/10/2026 e paga la quota prima dell'Assemblea VOTA (anche se non ancora annotato nel libro soci). Chi chiede ammissione dopo il 20/10 non vota. Il mancato rinnovo della quota per l'anno in corso NON fa perdere il diritto di voto finché non si perde la qualità di socio ex Art. 11 Statuto."
+    },
+    {
+      "id": "fc-el-07",
+      "doc": "elettorale",
+      "ref": "el-a-9",
+      "refLabel": "Reg. Elettorale Art. A.9",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Come vengono ammessi gli «ospiti» esterni all'Assemblea Elettiva e cosa possono fare?",
+      "a": "Possono assistere solo se invitati dal Direttivo (esclusi candidati o con legami) SU PARERE VINCOLANTE e UNANIME della Commissione Elettorale (richiesta entro 18/11 23:59; parere e invito entro 20/11 23:59). Valutati 5 criteri (altre associazioni/liste, legami candidati, interessi economici, dichiarazione scritta no conflitti, ex-soci RUNTS). L'ospite può SOLO assistere: non può intervenire, non può fare domande, non può riprendere né filmare."
+    },
+    {
+      "id": "fc-el-08",
+      "doc": "elettorale",
+      "ref": "el-a-10",
+      "refLabel": "Reg. Elettorale Art. A.10-A.12",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Quali sono le regole per ritardatari, assenza dei candidati e riprese video all'Assemblea Elettiva?",
+      "a": "• Assenza candidato: non pregiudica né candidatura né elezione (non fa domande/arringa; Commissione può leggere suo messaggio).\n• Ritardatari: possono votare se identificati PRIMA dell'apertura della votazione (dopo no, salvo delegante con delegato assente).\n• Riprese (A.12): solo Commissione o autorizzati; niente diretta pubblica; pubblicazione solo con consenso (revocabile sempre -> oscuramento/rimozione); riprese SOSPESE durante tutto il voto; da remoto videocamera obbligatoria solo per identificazione."
+    },
+    {
+      "id": "fc-el-09",
+      "doc": "elettorale",
+      "ref": "el-a-14",
+      "refLabel": "Reg. Elettorale Art. A.14",
+      "tag": "Principi & Forma",
+      "q": "Quali sono i 7 principi del voto dell'Art. A.14?",
+      "a": "1. Segretezza (eccezione: portatore di delega);\n2. Personalità e libertà (eccezione: delega);\n3. Uguaglianza (1 socio = 1 voto, stesso peso);\n4. Una sola espressione di voto (per ciascuna votazione e delegante);\n5. Trasparenza e verificabilità (software noto in diretta);\n6. Imparzialità della Commissione;\n7. Accessibilità (presenza, remoto, delega, voto di prova, supporto tecnico)."
+    },
+    {
+      "id": "fc-el-10",
+      "doc": "elettorale",
+      "ref": "el-a-15",
+      "refLabel": "Reg. Elettorale Art. A.15",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Quale piattaforma si usa per il voto, come funziona il voto di prova, come si anonimizza il file e quando si annulla il voto?",
+      "a": "• Piattaforma: Microsoft Forms con account @polinetwork.org (ordine candidati casuale; durata voto vero almeno 10 minuti, Allegato C).\n• Voto di prova: NON anonimo (verifica accessi e deleghe, es. ordinare colori).\n• Scheda unica con 2 votazioni indipendenti (scelta tra voto valido / scheda bianca / scheda nulla).\n• File anonimo (entro 26/11): rimosse data/ora e n. progressivo, righe riordinate alfabeticamente.\n• Guasto/manomissione: Commissione può annullare e ripetere (anche non telematico) con decisione UNANIME."
+    },
+    {
+      "id": "fc-el-11",
+      "doc": "elettorale",
+      "ref": "el-a-16-2",
+      "refLabel": "Reg. Elettorale Art. A.16.2",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Qual è la formula della Quota di Droop nella 1ª votazione (STV) e come si trasferisce l'eccedenza?",
+      "a": "• Formula: quota = ⌊ schede_valide / (seggi + 1) ⌋ + 1 (bianche e nulle escluse; calcoli in frazione esatta senza arrotondamenti).\n• Ogni turno: (a) se candidati in gara ≤ seggi residui -> tutti eletti; (b) se ≥1 raggiunge quota -> eletto chi ha più voti; valore sue schede moltiplicato per (eccedenza / voti_candidato) e passate al successivo; (c) altrimenti escluso chi ha meno voti (quelli a 0 esclusi insieme se restano abbastanza candidati)."
+    },
+    {
+      "id": "fc-el-12",
+      "doc": "elettorale",
+      "ref": "el-a-16-3",
+      "refLabel": "Reg. Elettorale Art. A.16.3-A.16.5",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Come funzionano (1) la Seconda Votazione per le cariche, (2) lo spareggio in caso di parità e (3) la graduatoria dei non eletti?",
+      "a": "• 2ª votazione: si tengono solo gli eletti della 1ª; si determina l'ordine di priorità una posizione alla volta applicando STV con 1 solo seggio (quota = maggioranza assoluta). Seguendo l'ordine, ciascuno ottiene la carica preferita ancora vacante.\n• Parità (A.16.4): 1° anzianità di iscrizione -> 2° il più GIOVANE -> 3° sorteggio (fatto prima dell'Assemblea).\n• Non eletti (A.16.5): prima gli eventuali rimasti in gara (per voti dopo trasferimento eccedenza ultimo eletto), poi gli esclusi in ordine inverso di esclusione. Ritirati esclusi."
+    },
+    {
+      "id": "fc-el-13",
+      "doc": "elettorale",
+      "ref": "el-a-17",
+      "refLabel": "Reg. Elettorale Art. A.17",
+      "tag": "Quorum & Maggioranze",
+      "q": "Quanti seggi sono disponibili in base al numero di candidati validi (Art. A.17) e cosa succede se sono meno di 5?",
+      "a": "• Più di 6 candidati validi (≥7) -> 7 seggi.\n• 5 o 6 candidati validi -> 5 seggi.\n• Meno di 5 candidati validi (al 20/11 23:59): Assemblea non si tiene (sospesa se ricorsi pendenti); riapertura candidature per max 14 giorni, nuova Assemblea non prima di 3 gg dalla chiusura (comunicato entro 21/11 08:00). Direttivo uscente in ordinaria amministrazione."
+    },
+    {
+      "id": "fc-el-14",
+      "doc": "elettorale",
+      "ref": "el-a-18-1",
+      "refLabel": "Reg. Elettorale Art. A.18.1-A.18.2",
+      "tag": "Elezioni & Scrutinio",
+      "q": "Quali sono tutte le regole speciali sulle DELEGHE nell'Assemblea Elettiva 2026?",
+      "a": "• Vietate a: membri del Direttivo uscente E candidati al Direttivo.\n• Limite: max 3 deleghe per portatore (Statuto + art. 24 c.3 CTS); in caso di eccesso valgono le prime ricevute.\n• Invio/revoca entro 18/11 23:59 via @polinetwork.org + Modulo E firmato graficamente (a Commissione, CC Probiviri e delegato).\n• Se il delegante arriva PRIMA dell'apertura voto -> delega annullata, vota lui.\n• Se arriva DOPO l'apertura voto -> delega resta valida (salvo portatore assente -> annullata, vota delegante).\n• Voto in unica turnazione tramite account Microsoft temporanei (1 profilo browser o dispositivo per delega)."
+    },
+    {
+      "id": "fc-el-15",
+      "doc": "elettorale",
+      "ref": "el-a-19",
+      "refLabel": "Reg. Elettorale Art. A.19",
+      "tag": "Ricorsi & Sanzioni",
+      "q": "Chi decide i vari tipi di ricorso elettorale e sospendono l'insediamento del nuovo Direttivo?",
+      "a": "• Ricorso contro svolgimento/risultati (entro 06/12 23:59): decide la Commissione Elettorale (entro 05/01/2027); appello ai Probiviri entro 7 gg (max 12/01/2027), che decidono entro 15 gg.\n• Ricorso contro rifiuto candidatura o parere contrario ospite (entro 24h e max 20/11 12:00): decide direttamente il Collegio dei Probiviri (terzietà).\n• NON sospendono MAI l'insediamento del 30/11/2026 (decadono solo in caso di annullamento)."
+    },
+    {
+      "id": "fc-el-16",
+      "doc": "elettorale",
+      "ref": "el-a-20",
+      "refLabel": "Reg. Elettorale Art. A.20 & A.21",
+      "tag": "Principi & Forma",
+      "q": "Qual è la gerarchia delle fonti (A.20) e come si correggono i refusi del Regolamento Elettorale (A.21)?",
+      "a": "• Gerarchia (A.20): Statuto > Raccolta dei Regolamenti Interni (RRI) > Regolamento Elettorale (e in scrutinio, Regolamento > Software Allegato B).\n• Refusi (A.21): solo errori materiali/date/numeri evidenti (mai cambio significato); decisione a maggioranza della Commissione fino al giorno prima dell'Assemblea; invio PDF versionato + diff a tutti i soci; atti precedenti restano validi."
+    }
+  ],
+  "quizzes": [
+    {
+      "id": "qz-01",
+      "mode": "blitz",
+      "doc": "statuto",
+      "ref": "statuto-art-2",
+      "refLabel": "Statuto Art. 2 c.2",
+      "q": "Quanto dura il «limite temporale» statutario per una richiesta presentata nel mese di Luglio?",
+      "options": [
+        "30 giorni",
+        "60 giorni",
+        "90 giorni",
+        "45 giorni"
+      ],
+      "correct": 2,
+      "explanation": "Per l'Art. 2 comma 2 dello Statuto il limite temporale è di 30 giorni, ma diventa di 90 giorni nei mesi di Gennaio, Febbraio, Giugno, Luglio, Agosto e Settembre."
+    },
+    {
+      "id": "qz-02",
+      "mode": "blitz",
+      "doc": "statuto",
+      "ref": "statuto-art-9",
+      "refLabel": "Statuto Art. 9 c.4",
+      "q": "Accettata la domanda di ammissione di un Socio, entro quanti giorni il Segretario deve comunicargli la decisione?",
+      "options": [
+        "3 giorni",
+        "7 giorni",
+        "10 giorni",
+        "15 giorni"
+      ],
+      "correct": 2,
+      "explanation": "L'Art. 9 c.4 stabilisce 10 giorni per comunicare l'accettazione, 7 giorni dal pagamento per annotarlo nel libro dei Soci, e 7 giorni dall'iscrizione per inviare la conferma con codice."
+    },
+    {
+      "id": "qz-03",
+      "mode": "blitz",
+      "doc": "statuto",
+      "ref": "statuto-art-12",
+      "refLabel": "Statuto Art. 12 c.10",
+      "q": "Qual è il quorum costitutivo in PRIMA convocazione dell'Assemblea Straordinaria?",
+      "options": [
+        "Maggioranza assoluta (in proprio o delega)",
+        "Più dei 2/3 degli aderenti, SOLO in proprio (senza deleghe)",
+        "Almeno 2/3 degli aderenti, anche per delega",
+        "Almeno 3/4 degli aderenti, solo in proprio"
+      ],
+      "correct": 1,
+      "explanation": "Art. 12 c.10 e c.13: in 1ª convocazione straordinaria serve più dei 2/3 degli aderenti PRESENTI IN PROPRIO (le deleghe non sono ammesse)."
+    },
+    {
+      "id": "qz-04",
+      "mode": "blitz",
+      "doc": "statuto",
+      "ref": "statuto-art-12",
+      "refLabel": "Statuto Art. 12 c.10",
+      "q": "Quanto tempo minimo deve trascorrere tra 1ª e 2ª convocazione e tra 2ª e 3ª convocazione di un'Assemblea Straordinaria?",
+      "options": [
+        "Stesso giorno / 3 giorni",
+        "1 settimana / 3 giorni",
+        "7 giorni / 7 giorni",
+        "3 giorni / 1 settimana"
+      ],
+      "correct": 1,
+      "explanation": "Art. 12 c.10: la 2ª convocazione straordinaria non prima di 1 settimana dalla 1ª; la 3ª convocazione non prima di 3 giorni dalla 2ª."
+    },
+    {
+      "id": "qz-05",
+      "mode": "blitz",
+      "doc": "statuto",
+      "ref": "statuto-art-12",
+      "refLabel": "Statuto Art. 12 c.13",
+      "q": "Quante deleghe al massimo può portare un singolo Associato in Assemblea?",
+      "options": [
+        "1 delega",
+        "2 deleghe",
+        "3 deleghe",
+        "5 deleghe"
+      ],
+      "correct": 2,
+      "explanation": "Art. 12 c.13 dello Statuto: ciascun Associato è portatore di al più tre deleghe (e non è possibile delegare membri del Direttivo)."
+    },
+    {
+      "id": "qz-06",
+      "mode": "blitz",
+      "doc": "statuto",
+      "ref": "statuto-art-13",
+      "refLabel": "Statuto Art. 13 c.1 & c.3",
+      "q": "Qual è il range statutario di componenti del Direttivo e la proroga complessiva massima del suo mandato?",
+      "options": [
+        "Da 3 a 7 membri; proroga max 6 mesi",
+        "Da 5 a 9 membri; proroga max 1 anno",
+        "Da 5 a 7 membri; proroga max 1 anno",
+        "Da 5 a 9 membri; proroga max 6 mesi"
+      ],
+      "correct": 1,
+      "explanation": "Art. 13 c.1: da 5 a 9 persone (default 7 per RRI 1.6.1.1). Art. 13 c.3: prorogabile di 6 mesi dall'Assemblea straordinaria o automaticamente senza candidati, ma proroga complessiva max 1 anno."
+    },
+    {
+      "id": "qz-07",
+      "mode": "blitz",
+      "doc": "statuto",
+      "ref": "statuto-art-13",
+      "refLabel": "Statuto Art. 13 c.5",
+      "q": "Con quale maggioranza il Consiglio Direttivo elegge il sostituto di una carica sociale rimasta vacante?",
+      "options": [
+        "Maggioranza semplice dei presenti",
+        "Maggioranza assoluta dei componenti",
+        "Maggioranza dei 2/3 dei componenti",
+        "Maggioranza dei 3/4 dei componenti"
+      ],
+      "correct": 3,
+      "explanation": "Art. 13 c.5(b): il Direttivo è convocato entro 10 giorni dalla vacanza ed elegge il sostituto a maggioranza dei 3/4 dei componenti (tranne il Presidente, sostituito automaticamente dal Vicepresidente)."
+    },
+    {
+      "id": "qz-08",
+      "mode": "blitz",
+      "doc": "statuto",
+      "ref": "statuto-art-19",
+      "refLabel": "Statuto Art. 19 c.2",
+      "q": "Entro quale data va depositato il bilancio annuale presso il RUNTS?",
+      "options": [
+        "30 aprile",
+        "31 maggio",
+        "30 giugno",
+        "31 agosto"
+      ],
+      "correct": 2,
+      "explanation": "Art. 19 c.2: approvato dall'Assemblea ordinaria entro 6 mesi dalla chiusura dell'esercizio e depositato al RUNTS entro il 30 giugno di ogni anno."
+    },
+    {
+      "id": "qz-09",
+      "mode": "blitz",
+      "doc": "rri",
+      "ref": "rri-1-4-6",
+      "refLabel": "RRI Art. 1.4.6",
+      "q": "A quanto ammonta la quota associativa e in quale finestra chi si tessera è esentato dalla quota dell'anno sociale successivo?",
+      "options": [
+        "€10,00; dal 1° luglio al 31 agosto",
+        "€5,00; dal 1° giugno al 31 agosto",
+        "€5,00; dal 1° luglio al 31 dicembre",
+        "€5,00; dal 1° maggio al 31 agosto"
+      ],
+      "correct": 1,
+      "explanation": "RRI Art. 1.4.6: €5,00; anno sociale 1° settembre–31 agosto; rinnovi fino al 31 dicembre; esentati dall'anno successivo i tesserati tra 1° giugno e 31 agosto."
+    },
+    {
+      "id": "qz-10",
+      "mode": "blitz",
+      "doc": "rri",
+      "ref": "rri-1-5-1-2",
+      "refLabel": "RRI Art. 1.5.1.2",
+      "q": "Per quante ore minime deve rimanere aperta una votazione telematica asincrona?",
+      "options": [
+        "Almeno 24 ore sempre",
+        "Almeno 48 ore (riducibili a 24 ore se già raggiunta la maggioranza assoluta)",
+        "Almeno 72 ore (riducibili a 48 ore)",
+        "Almeno 7 giorni"
+      ],
+      "correct": 1,
+      "explanation": "RRI Art. 1.5.1.2 c.1: almeno 48 ore, oppure 24 ore nel caso la maggioranza assoluta degli aventi diritto sia già stata raggiunta."
+    },
+    {
+      "id": "qz-11",
+      "mode": "blitz",
+      "doc": "rri",
+      "ref": "rri-1-7-2-1",
+      "refLabel": "RRI Art. 1.7.2.1 & 1.7.5.1",
+      "q": "Quale maggioranza serve all'Assemblea per eleggere un membro del Collegio dei Probiviri?",
+      "options": [
+        "Maggioranza semplice dei presenti",
+        "Almeno 2/3 dei soci votanti E più di 1/2 di tutti i soci",
+        "Almeno 3/4 dei soci votanti",
+        "Maggioranza assoluta di tutti i soci"
+      ],
+      "correct": 1,
+      "explanation": "RRI Art. 1.7.5.1 c.2: serve il consenso di almeno 2/3 dei soci votanti E più di 1/2 dei soci. Assumono le funzioni dopo 10 giorni salvo ricorsi."
+    },
+    {
+      "id": "qz-12",
+      "mode": "blitz",
+      "doc": "rri",
+      "ref": "rri-1-7-2-6",
+      "refLabel": "RRI Art. 1.7.2.6",
+      "q": "Con quale maggioranza il Collegio dei Probiviri può espellere uno dei suoi membri?",
+      "options": [
+        "Maggioranza assoluta dei componenti",
+        "2/3 dei componenti",
+        "3/4 dei componenti",
+        "Unanimità degli altri componenti"
+      ],
+      "correct": 2,
+      "explanation": "RRI Art. 1.7.2.6: il Collegio espelle un Probiviro a maggioranza dei 3/4 dei componenti (l'interessato non vota). L'Assemblea invece revoca/scioglie a maggioranza dei 2/3."
+    },
+    {
+      "id": "qz-13",
+      "mode": "blitz",
+      "doc": "rri",
+      "ref": "rri-4-3",
+      "refLabel": "RRI Art. 4.3",
+      "q": "Dopo quante ammonizioni scatta l'espulsione dai gruppi del Network e dopo quanti mesi perdono efficacia?",
+      "options": [
+        "Superate 3 ammonizioni (alla 4ª); perdono efficacia dopo 12 mesi",
+        "Superate 2 ammonizioni (alla 3ª); perdono efficacia dopo 6 mesi",
+        "Superate 3 ammonizioni; perdono efficacia dopo 6 mesi",
+        "Superate 5 ammonizioni; perdono efficacia dopo 12 mesi"
+      ],
+      "correct": 0,
+      "explanation": "RRI Art. 4.3: 3 ammonizioni a disposizione (superate le quali scatta l'espulsione); le ammonizioni più vecchie di 12 mesi perdono efficacia previa richiesta dell'utente."
+    },
+    {
+      "id": "qz-14",
+      "mode": "blitz",
+      "doc": "elettorale",
+      "ref": "el-a-1",
+      "refLabel": "Reg. Elettorale Art. A.1",
+      "q": "Entro quale data e ora precisa i candidati possono cambiare le proprie preferenze di carica per le elezioni del 21/11/2026?",
+      "options": [
+        "18/11/2026 alle 23:59",
+        "19/11/2026 alle 15:00",
+        "20/11/2026 alle 12:00",
+        "20/11/2026 alle 23:59"
+      ],
+      "correct": 1,
+      "explanation": "Art. A.1 c.9 e Art. A.3 c.1: entro le ore 15:00 (ora locale italiana) del 19/11/2026, inviando nuovamente lettera aperta e modulo D firmato."
+    },
+    {
+      "id": "qz-15",
+      "mode": "blitz",
+      "doc": "elettorale",
+      "ref": "el-a-17",
+      "refLabel": "Reg. Elettorale Art. A.17",
+      "q": "Se i candidati validi alle 23:59 del 20/11/2026 sono esattamente 6, quanti seggi sono disponibili nel Direttivo?",
+      "options": [
+        "7 seggi",
+        "6 seggi",
+        "5 seggi",
+        "L'elezione è rinviata"
+      ],
+      "correct": 2,
+      "explanation": "Art. A.17 c.1: più di 6 candidati -> 7 seggi; 5 o 6 candidati -> 5 seggi; meno di 5 candidati -> l'Assemblea non si tiene e si riaprono le candidature (max 14 giorni)."
+    },
+    {
+      "id": "qz-16",
+      "mode": "blitz",
+      "doc": "elettorale",
+      "ref": "el-a-16-2",
+      "refLabel": "Reg. Elettorale Art. A.16.2",
+      "q": "Con 40 schede valide e 7 seggi da assegnare, qual è la Quota di Droop nella prima votazione?",
+      "options": [
+        "5",
+        "6",
+        "7",
+        "21"
+      ],
+      "correct": 1,
+      "explanation": "Quota di Droop = ⌊ 40 / (7 + 1) ⌋ + 1 = ⌊ 40 / 8 ⌋ + 1 = 5 + 1 = 6."
+    },
+    {
+      "id": "qz-17",
+      "mode": "blitz",
+      "doc": "elettorale",
+      "ref": "el-a-1",
+      "refLabel": "Reg. Elettorale Art. A.1 c.14 & c.18",
+      "q": "Entro quando vanno pubblicati i risultati completi con il file anonimo dei voti, e quando scadono i ricorsi contro l'elezione?",
+      "options": [
+        "Risultati entro 23/11; ricorsi entro 30/11",
+        "Risultati entro 26/11 (5 gg); ricorsi entro 06/12 23:59 (15 gg)",
+        "Risultati entro 30/11; ricorsi entro 15/12",
+        "Risultati entro 26/11; ricorsi entro 12/01/2027"
+      ],
+      "correct": 1,
+      "explanation": "Art. A.1 c.18 e c.14(a): risultati + file anonimo entro il 26/11/2026 (5 gg dopo); ricorsi entro le 23:59 del 06/12/2026 (15 gg dopo); decisione Commissione entro 05/01/2027; appello Probiviri entro 7 gg (max 12/01/2027)."
+    },
+    {
+      "id": "qz-18",
+      "mode": "blitz",
+      "doc": "elettorale",
+      "ref": "el-c-2",
+      "refLabel": "Reg. Elettorale Art. A.13 & All. C",
+      "q": "Quali sono i tempi minimi/massimi in Assemblea Elettiva per: presentazione candidato, arringa finale, periodo di riflessione e fase di voto?",
+      "options": [
+        "Presentazione ≥5 min; arringa max 2 min; riflessione max 2 ore; voto ≥10 min",
+        "Presentazione ≥10 min; arringa max 5 min; riflessione max 1 ora; voto ≥15 min",
+        "Presentazione ≥3 min; arringa max 2 min; riflessione max 1 ora; voto ≥5 min",
+        "Presentazione ≥5 min; arringa max 3 min; riflessione max 2 ore; voto ≥20 min"
+      ],
+      "correct": 0,
+      "explanation": "Art. A.13 + RRI 1.6.1.3 + Allegato C.2: presentazione ≥5 min (rinuncia anticipata solo dopo 2 min), arringa finale max 2 min, riflessione opzionale max 2 ore, fase di voto vera e propria ≥10 min."
+    },
+    {
+      "id": "qz-19",
+      "mode": "mc",
+      "doc": "statuto",
+      "ref": "statuto-art-12",
+      "refLabel": "Statuto Art. 12 c.7-8",
+      "q": "Quale delle seguenti materie è di competenza dell'Assemblea STRAORDINARIA (e NON dell'ordinaria)?",
+      "options": [
+        "Revoca dei componenti del Consiglio Direttivo",
+        "Approvazione del bilancio annuale",
+        "Proroga del mandato del Consiglio Direttivo",
+        "Ratifica dei regolamenti emanati dal Direttivo"
+      ],
+      "correct": 2,
+      "explanation": "Art. 12 c.8(b): l'Assemblea straordinaria delibera su modifiche Statuto, proroga mandato Direttivo, scioglimento/liquidazione/devoluzione, fusione/trasformazione. Revoca, bilancio e ratifica regolamenti sono dell'Assemblea ordinaria (c.7)."
+    },
+    {
+      "id": "qz-20",
+      "mode": "mc",
+      "doc": "statuto",
+      "ref": "statuto-art-13",
+      "refLabel": "Statuto Art. 13 c.6",
+      "q": "Quali cariche sociali interne al Direttivo sono fra loro incompatibili secondo lo Statuto?",
+      "options": [
+        "Tutte e quattro (Presidente, Vicepresidente, Segretario, Tesoriere)",
+        "Solo Presidente e Vicepresidente",
+        "Presidente, Vicepresidente e Segretario",
+        "Presidente, Segretario e Tesoriere"
+      ],
+      "correct": 2,
+      "explanation": "Statuto Art. 13 c.6: «Le cariche di Presidente, Vicepresidente e Segretario sono fra loro incompatibili» (il Tesoriere non è elencato in quel comma, anche se nel Reg. Elettorale 2026 a ciascun eletto è assegnata al più una carica)."
+    },
+    {
+      "id": "qz-21",
+      "mode": "mc",
+      "doc": "statuto",
+      "ref": "statuto-art-11",
+      "refLabel": "Statuto Art. 11 c.1(b)",
+      "q": "Quando un Socio presenta le dimissioni scritte al Direttivo, da quando decorrono e a chi vanno inviate in copia conoscenza?",
+      "options": [
+        "Decorrono dopo 30 giorni; in CC all'Assemblea",
+        "Decorrenza immediata; in CC al Collegio dei Probiviri",
+        "Decorrono dopo accettazione del Direttivo; in CC al Segretario",
+        "Decorrono dal 31 agosto; in CC ai Probiviri"
+      ],
+      "correct": 1,
+      "explanation": "Statuto Art. 11 c.1(b): comunicazione scritta al Direttivo che la invia in CC al Collegio dei Probiviri; decorrenza immediata; resta fermo l'obbligo di quota per l'anno in corso ove prevista."
+    },
+    {
+      "id": "qz-22",
+      "mode": "mc",
+      "doc": "rri",
+      "ref": "rri-1-3-3",
+      "refLabel": "RRI Art. 1.3.3 c.4",
+      "q": "Chi può promulgare nuove versioni del Regolamento Fondamentale (Regolamento 1 della RRI)?",
+      "options": [
+        "Il Consiglio Direttivo con notifica entro 3 giorni",
+        "Il Segretario del Consiglio Direttivo",
+        "Esclusivamente l'Assemblea dei Soci (anche con voto telematico asincrono), su proposta del Direttivo",
+        "Il Collegio dei Probiviri a maggioranza dei 2/3"
+      ],
+      "correct": 2,
+      "explanation": "RRI Art. 1.3.3 c.4: nuove versioni del Regolamento Fondamentale possono essere promulgate esclusivamente tramite voto favorevole dell'Assemblea dei Soci su proposta del Direttivo."
+    },
+    {
+      "id": "qz-23",
+      "mode": "mc",
+      "doc": "rri",
+      "ref": "rri-1-5-1-2",
+      "refLabel": "RRI Art. 1.5.1.2 c.3",
+      "q": "Per quale di queste decisioni È AMMESSA la votazione telematica asincrona?",
+      "options": [
+        "Approvazione del bilancio (Art. 12 c.7a)",
+        "Elezione del Consiglio Direttivo (Art. 12 c.7c)",
+        "Modifica del Regolamento Fondamentale (RRI 1.3.3 c.4)",
+        "Modifica dello Statuto (Art. 12 c.8a)"
+      ],
+      "correct": 2,
+      "explanation": "RRI 1.3.3 c.4 prevede espressamente il voto telematico asincrono per il Regolamento Fondamentale. RRI 1.5.1.2 c.3 vieta invece l'asincrono per tutto l'Art. 12 c.8 (straordinaria) e per c.7 lettere a, c, d, e, i."
+    },
+    {
+      "id": "qz-24",
+      "mode": "mc",
+      "doc": "rri",
+      "ref": "rri-1-7-2-1",
+      "refLabel": "RRI Art. 1.7.2.1 c.11",
+      "q": "Come può essere superato un veto del Collegio dei Probiviri?",
+      "options": [
+        "Con voto a maggioranza dei 2/3 dell'Assemblea",
+        "Con mozione approvata a maggioranza assoluta SIA dal Direttivo SIA dall'Assemblea",
+        "Non è mai superabile",
+        "Con delibera unanime del Consiglio Direttivo"
+      ],
+      "correct": 1,
+      "explanation": "RRI Art. 1.7.2.1 c.11: il veto può essere superato se e solo se sia il Consiglio Direttivo sia l'Assemblea approvino una mozione in tal senso a maggioranza assoluta."
+    },
+    {
+      "id": "qz-25",
+      "mode": "mc",
+      "doc": "rri",
+      "ref": "rri-2-2-1",
+      "refLabel": "RRI Art. 2.2.1 c.5 & c.6",
+      "q": "Quanti Team può guidare al massimo un Socio che ricopre una carica sociale, e chi regge un Team se mancano sia Team Lead che Vicario?",
+      "options": [
+        "Max 2 Team; regge il Presidente del Direttivo",
+        "Max 1 Team; regge ad interim il Vicepresidente del Direttivo (o suo delegato)",
+        "Nessun Team; regge il Segretario",
+        "Max 1 Team; regge il Decano dei Soci"
+      ],
+      "correct": 1,
+      "explanation": "RRI 2.2.1 c.5: max 2 Team per un Socio (con Vicario in entrambi), ma scende a 1 per chi ricopre cariche sociali. Comma 6: in caso di vacanza di Lead e Vicario, regge ad interim il Vicepresidente del Direttivo o suo delegato."
+    },
+    {
+      "id": "qz-26",
+      "mode": "mc",
+      "doc": "rri",
+      "ref": "rri-3-1",
+      "refLabel": "RRI Art. 3.1 & 3.6",
+      "q": "Chi è il Titolare del trattamento dei dati personali di PoliNetwork APS e possono essere trasferiti fuori dall'UE?",
+      "options": [
+        "Il Team Lead IT; sì verso paesi adeguati",
+        "Il Segretario; no",
+        "Il Presidente (legale rappresentante); NO, non saranno trasferiti all'esterno dell'UE",
+        "Il Collegio dei Probiviri; sì con consenso"
+      ],
+      "correct": 2,
+      "explanation": "RRI Art. 3.1: il Titolare del trattamento è il legale rappresentante, ossia il Presidente. Art. 3.6: i dati personali non saranno trasferiti all'esterno dell'Unione Europea."
+    },
+    {
+      "id": "qz-27",
+      "mode": "mc",
+      "doc": "elettorale",
+      "ref": "el-a-16-4",
+      "refLabel": "Reg. Elettorale Art. A.16.4",
+      "q": "Nello scrutinio elettorale 2026, qual è l'ordine esatto dei criteri di spareggio in caso di parità di voti?",
+      "options": [
+        "1° Più anziano d'età -> 2° Anzianità d'iscrizione -> 3° Sorteggio",
+        "1° Anzianità d'iscrizione -> 2° Più giovane d'età -> 3° Sorteggio",
+        "1° Sorteggio -> 2° Anzianità d'iscrizione",
+        "1° Anzianità d'iscrizione -> 2° Più anziano d'età -> 3° Sorteggio"
+      ],
+      "correct": 1,
+      "explanation": "ATTENZIONE! Diversamente dal Decano (dove a parità prevale il più anziano anagraficamente), nell'Art. A.16.4 prevale: 1° anzianità di iscrizione, 2° il PIÙ GIOVANE, 3° sorteggio!"
+    },
+    {
+      "id": "qz-28",
+      "mode": "mc",
+      "doc": "elettorale",
+      "ref": "el-a-16-6",
+      "refLabel": "Reg. Elettorale Art. A.16.6",
+      "q": "Se durante lo scrutinio in diretta emerge una discordanza tra il software (Allegato B) e il Regolamento Elettorale, cosa prevale e cosa si fa?",
+      "options": [
+        "Prevale il software perché approvato in allegato",
+        "Prevale il regolamento: la Commissione sospende, corregge il codice in diretta davanti ai soci e riesegue lo scrutinio",
+        "Si annulla l'intera Assemblea Elettiva",
+        "Si passa allo scrutinio manuale su carta"
+      ],
+      "correct": 1,
+      "explanation": "Art. A.16.6 c.3-5: prevale sempre il regolamento. Se la Commissione riconosce la discordanza segnalata da un socio, sospende, corregge il codice a schermo, riesegue e mette tutto a verbale."
+    },
+    {
+      "id": "qz-29",
+      "mode": "mc",
+      "doc": "elettorale",
+      "ref": "el-a-15",
+      "refLabel": "Reg. Elettorale Art. A.15 c.5",
+      "q": "Come viene reso anonimo il file dei singoli voti pubblicato entro il 26/11/2026?",
+      "options": [
+        "Si pubblica solo il totale dei voti senza file dei singoli voti",
+        "Si rimuovono data/ora e numero progressivo e si riordinano i voti in ordine alfabetico in base al testo espresso",
+        "Si sostituiscono i nomi dei votanti con un hash MD5",
+        "Si mescolano le righe in ordine casuale mantenendo l'orario"
+      ],
+      "correct": 1,
+      "explanation": "Art. A.15 c.5(b): dal file sono eliminate data/ora di compilazione e numero progressivo, e i voti sono riordinati in ordine alfabetico per testo del voto (così nessuno può correlare gli orari)."
+    },
+    {
+      "id": "qz-30",
+      "mode": "mc",
+      "doc": "elettorale",
+      "ref": "el-a-6",
+      "refLabel": "Reg. Elettorale Art. A.6 c.6",
+      "q": "Una decisione della Commissione Elettorale richiede l'unanimità (es. parere su un ospite), ma alla scadenza del 20/11 23:59 non è ancora stata presa all'unanimità. Cosa succede?",
+      "options": [
+        "La richiesta è automaticamente respinta",
+        "La decisione passa al Collegio dei Probiviri",
+        "Alla scadenza la Commissione decide a maggioranza (min 2 votanti; in parità vale doppio il Presidente, o il Segretario se assente/astenuto)",
+        "La scadenza viene prorogata di 24 ore"
+      ],
+      "correct": 2,
+      "explanation": "Art. A.6 c.6: se una decisione con scadenza non è stata presa a quella data, la Commissione decide alla scadenza a maggioranza, anche quando una norma richiede l'unanimità!"
+    },
+    {
+      "id": "qz-31",
+      "mode": "scenario",
+      "doc": "elettorale",
+      "ref": "el-a-18-1",
+      "refLabel": "Reg. Elettorale Art. A.18.1 c.8-9",
+      "q": "SCENARIO: Marco ha delegato Giulia entro il 18/11. Il 21/11 la votazione è già aperta quando Marco arriva in ritardo in aula. Giulia è presente. Chi vota per Marco?",
+      "options": [
+        "Vota Marco personalmente e la delega a Giulia si annulla",
+        "Vota Giulia (la delega resta valida perché Marco è arrivato DOPO l'apertura della votazione)",
+        "Non vota nessuno dei due per Marco",
+        "Marco può votare solo se Giulia acconsente"
+      ],
+      "correct": 1,
+      "explanation": "Art. A.18.1 c.8-9: se il delegante arriva PRIMA dell'apertura del voto, la delega è annullata e vota lui. Se arriva DOPO l'apertura del voto, la delega resta valida e vota il portatore (a meno che il portatore sia assente, nel qual caso vota il delegante)."
+    },
+    {
+      "id": "qz-32",
+      "mode": "scenario",
+      "doc": "elettorale",
+      "ref": "el-a-2",
+      "refLabel": "Reg. Elettorale Art. A.2 c.15-16",
+      "q": "SCENARIO: Ci sono 7 candidati validi (quindi 7 seggi). Alle 07:30 del 21/11/2026 uno dei candidati si ritira. Quanti seggi restano disponibili e compare sulla scheda?",
+      "options": [
+        "I seggi scendono a 5 e il candidato è rimosso dalla scheda",
+        "Restano 7 seggi, compare sulla scheda, ma viene escluso prima del 1° turno di scrutinio",
+        "Restano 7 seggi e viene rimosso dalla scheda",
+        "L'elezione è rinviata"
+      ],
+      "correct": 1,
+      "explanation": "Art. A.2 c.16 e Art. A.17 c.3: il numero di seggi si fissa al 20/11 23:59 (ritiri successivi non lo cambiano). Chi si ritira dopo il 20/11 23:59 resta in scheda ma è escluso prima del 1° turno (non eleggibile, non in graduatoria non eletti)."
+    },
+    {
+      "id": "qz-33",
+      "mode": "scenario",
+      "doc": "elettorale",
+      "ref": "el-a-2",
+      "refLabel": "Reg. Elettorale Art. A.2 c.9 & RRI 1.6.2",
+      "q": "SCENARIO: Luca è membro della Giunta del Consiglio degli Studenti PoliMi. Vuole candidarsi al Direttivo PoliNetwork 2026 indicando come preferenze «1° Presidente, 2° Tesoriere». Può farlo?",
+      "options": [
+        "Sì, basta che si dimetta dalla Giunta se viene eletto",
+        "No, è totalmente ineleggibile al Direttivo",
+        "Può candidarsi al Direttivo, ma NON può indicare Presidente o Vicepresidente tra le preferenze di carica (può indicare Tesoriere o Segretario)",
+        "Sì, l'incompatibilità vale solo per il CNSU"
+      ],
+      "correct": 2,
+      "explanation": "Art. A.2 c.9(a) e RRI 1.6.2: Presidente e Vicepresidente sono incompatibili con la Giunta del CdS PoliMi e il CNSU; chi ricopre quei ruoli non può indicare Presidente o Vicepresidente tra le preferenze di carica."
+    },
+    {
+      "id": "qz-34",
+      "mode": "scenario",
+      "doc": "elettorale",
+      "ref": "el-a-19",
+      "refLabel": "Reg. Elettorale Art. A.19 c.10-13",
+      "q": "SCENARIO: Il 20/11 alle ore 18:00 la Commissione Elettorale respinge la candidatura di Sara. Sara vuole fare ricorso prima dell'Assemblea del 21/11. Cosa prevede il regolamento?",
+      "options": [
+        "Può fare ricorso ai Probiviri entro le 08:00 del 21/11",
+        "Non c'è più tempo per il ricorso pre-assembleare (scaduto alle 12:00 del 20/11): potrà presentare solo ricorso contro lo svolgimento e i risultati dell'elezione entro il 06/12",
+        "L'Assemblea viene automaticamente sospesa per 48 ore",
+        "Può fare ricorso direttamente all'Assemblea all'inizio della seduta"
+      ],
+      "correct": 1,
+      "explanation": "Art. A.19 c.10-11: il ricorso contro rifiuto candidatura va presentato entro 24h e comunque entro le 12:00 del 20/11. Per rifiuti comunicati dopo le 12:00 del 20/11 vale solo il ricorso contro l'elezione (entro il 06/12)."
+    },
+    {
+      "id": "qz-35",
+      "mode": "scenario",
+      "doc": "elettorale",
+      "ref": "el-a-1",
+      "refLabel": "Reg. Elettorale Art. A.1 c.15 & A.19 c.7-8",
+      "q": "SCENARIO: Il 28/11/2026 un Socio presenta un ricorso fondato contro i risultati dell'elezione del 21/11. Il 30/11/2026 il nuovo Direttivo entra comunque in carica?",
+      "options": [
+        "No, l'insediamento è sospeso fino alla decisione della Commissione",
+        "Sì, i ricorsi non sospendono mai l'insediamento: entrano in carica il 30/11 e decadono solo se l'elezione viene annullata",
+        "Entrano in carica solo i membri non contestati",
+        "Decide il Collegio dei Probiviri se sospendere"
+      ],
+      "correct": 1,
+      "explanation": "Art. A.1 c.15 e Art. A.19 c.7-8: né i ricorsi né gli appelli sospendono l'insediamento degli eletti del 30/11/2026; restano in carica salvo annullamento dell'elezione."
+    },
+    {
+      "id": "qz-36",
+      "mode": "scenario",
+      "doc": "statuto",
+      "ref": "statuto-art-13",
+      "refLabel": "Statuto Art. 13 c.10 & Art. 15 c.3",
+      "q": "SCENARIO: In un Direttivo di 7 membri, si dimette il Presidente. Cosa succede esattamente?",
+      "options": [
+        "Si convocano subito nuove elezioni per l'intero Direttivo",
+        "Il Vicepresidente diventa Presidente automaticamente, il Direttivo elegge il nuovo Vicepresidente (3/4 entro 10 gg) e in Direttivo subentra il 1° dei non eletti",
+        "Il Direttivo elegge un nuovo Presidente a maggioranza semplice",
+        "Il Decano dei Soci assume la Presidenza fino a fine mandato"
+      ],
+      "correct": 1,
+      "explanation": "Statuto Art. 15 c.3 (Vicepresidente diventa Presidente, Direttivo elegge nuovo Vicepresidente ex Art. 13 c.5(b) a 3/4 entro 10 gg) + Art. 13 c.11 (subentra il primo dei non eletti in Consiglio)."
+    },
+    {
+      "id": "qz-37",
+      "mode": "scenario",
+      "doc": "rri",
+      "ref": "rri-5-3",
+      "refLabel": "RRI Art. 5.3 c.2",
+      "q": "SCENARIO: Elena era candidata alle ultime elezioni studentesche per una lista che poi si è sciolta. In Assemblea PoliNetwork si vota una questione su un'altra lista studentesca. Elena deve astenersi?",
+      "options": [
+        "No, perché la sua lista si è sciolta",
+        "No, perché la votazione riguarda un'altra lista, non la sua",
+        "Sì! Gli ex-membri di liste sciolte sono considerati parte della rappresentanza fino alla successiva elezione, e il conflitto vale anche verso liste avversarie",
+        "Solo se è nel Direttivo"
+      ],
+      "correct": 2,
+      "explanation": "RRI Art. 5.3 c.2: vale il conflitto sia per la propria lista sia per una lista diversa (avversario politico), e gli ex-membri di liste sciolte restano «parte di una lista» fino a una nuova elezione in cui non si candidano."
+    },
+    {
+      "id": "qz-38",
+      "mode": "scenario",
+      "doc": "rri",
+      "ref": "rri-1-7-5-5",
+      "refLabel": "RRI Art. 1.7.5.5",
+      "q": "SCENARIO: Il Collegio dei Probiviri resta temporaneamente vuoto (0 membri). Cosa succede nei primi 5 giorni?",
+      "options": [
+        "Il Direttivo continua normalmente tutte le attività",
+        "La Commissione Elettorale Permanente nomina 1 Socio entro 5 giorni; in quei 5 giorni il Direttivo si astiene dal prendere decisioni salvo obblighi di legge",
+        "Il Presidente nomina d'ufficio 3 Probiviri",
+        "L'Associazione viene commissariata"
+      ],
+      "correct": 1,
+      "explanation": "RRI Art. 1.7.5.5: nomina entro 5 gg da parte della Commissione Elettorale Permanente (nel frattempo Direttivo fermo salvo obblighi di legge). Se non nomina entro 5 gg, 1/6 dei soci può impugnare ogni decisione Direttivo (sospendendola)."
+    },
+    {
+      "id": "qz-39",
+      "mode": "scenario",
+      "doc": "rri",
+      "ref": "rri-4-8",
+      "refLabel": "RRI Art. 4.8 c.7-8",
+      "q": "SCENARIO: In un corso dove il Direttivo ha concesso la raccolta firme CCS, un aspirante candidato chiede 10 firme ma non invia il messaggio di ringraziamento e raccoglie 30 firme (il triplo). Cosa rischia?",
+      "options": [
+        "Un semplice richiamo verbale",
+        "1 ammonizione",
+        "Esclusione dai gruppi e, se è Socio, grave motivo per la procedura di espulsione dall'Associazione",
+        "Nulla, raccogliere più firme è sempre lecito"
+      ],
+      "correct": 2,
+      "explanation": "RRI Art. 4.8 c.8: chi indugia volontariamente nell'invio del messaggio di ringraziamento e raggiunge il triplo delle firme necessarie è escluso dai gruppi e, se Socio, scatta il grave motivo per l'espulsione ex Art. 11 Statuto."
+    },
+    {
+      "id": "qz-40",
+      "mode": "scenario",
+      "doc": "elettorale",
+      "ref": "el-a-8",
+      "refLabel": "Reg. Elettorale Art. A.8 c.1-3",
+      "q": "SCENARIO: Davide è Socio dall'anno scorso ma al 21/11/2026 non ha ancora rinnovato la quota di €5 per il 2026/27. Può votare all'Assemblea Elettiva?",
+      "options": [
+        "No, senza rinnovo perde subito il diritto di voto dal 1° settembre",
+        "Sì! I rinnovi sono possibili fino al 31 dicembre e il mancato rinnovo non fa perdere il diritto di voto finché non si perde la qualità di Socio ex Art. 11 Statuto",
+        "Può votare solo per delega",
+        "Può votare solo se paga in contanti all'ingresso"
+      ],
+      "correct": 1,
+      "explanation": "Art. A.8 c.3 + RRI Art. 1.4.6: i rinnovi sono possibili fino al 31 dicembre e il mancato rinnovo non fa perdere il diritto di voto finché non interviene la perdita della qualità di Socio (Art. 11 Statuto)."
+    }
+  ],
+  "cheatsheet": {
+    "hierarchy": [
+      {
+        "rank": 1,
+        "source": "Codice Civile & D.Lgs. 117/2017 (Codice del Terzo Settore)",
+        "note": "Normativa primaria statale e regionale (es. art. 5, 8, 9, 13, 14, 17, 24, 26, 87 CTS; art. 2382 c.c.)"
+      },
+      {
+        "rank": 2,
+        "source": "Statuto PoliNetwork APS",
+        "ref": "statuto-art-4",
+        "note": "Prevale su tutti i regolamenti interni. Modificabile solo da Assemblea Straordinaria (2/3 dei presenti)."
+      },
+      {
+        "rank": 3,
+        "source": "Raccolta dei Regolamenti Interni (RRI)",
+        "ref": "rri-1-3-3",
+        "note": "Reg. 1 Fondamentale (solo Assemblea) + Reg. 2 Interno + Reg. 3 Privacy + Reg. 4 Condotta + Reg. 5 Conflitti di Interesse."
+      },
+      {
+        "rank": 4,
+        "source": "Regolamento Elettorale Direttivo 2026",
+        "ref": "el-a-20",
+        "note": "Subordinato a Statuto e RRI. Prevale sul software di scrutinio (Allegato B) e sull'ordine proposto (Allegato C)."
+      }
+    ],
+    "organs": [
+      {
+        "name": "Assemblea dei Soci (Ordinaria / Straordinaria)",
+        "ref": "statuto-art-12",
+        "composition": "Tutti i Soci (organo sovrano)",
+        "term": "Almeno 2 volte l'anno",
+        "powers": "Ordinaria: bilancio, linee programmatiche, elegge/revoca Direttivo e Probiviri, approva/ratifica regolamenti, opposizione espulsione. Straordinaria: Statuto, proroga Direttivo, scioglimento/fusione."
+      },
+      {
+        "name": "Consiglio Direttivo",
+        "ref": "statuto-art-13",
+        "composition": "5–9 membri (default 7; 5 se 5-6 candidati)",
+        "term": "2 anni (max 1 rielezione consecutiva; proroga max 1 anno)",
+        "powers": "Ordinaria e straordinaria amministrazione, bilancio, RUNTS, libri sociali, emana regolamenti, ammissione/espulsione soci, nomina Team Lead e Helper."
+      },
+      {
+        "name": "Presidente",
+        "ref": "statuto-art-14",
+        "composition": "1 membro Direttivo (incompatibile con Vice, Segretario, Giunta CdS, CNSU)",
+        "term": "2 anni (come Direttivo)",
+        "powers": "Legale rappresentante, Titolare trattamento GDPR, convoca/presiede Direttivo e Assemblea, voto decisivo in parità (salvo elezione/revoca Direttivo)."
+      },
+      {
+        "name": "Vicepresidente",
+        "ref": "statuto-art-15",
+        "composition": "1 membro Direttivo (incompatibile con Pres., Segretario, Giunta CdS, CNSU)",
+        "term": "2 anni",
+        "powers": "Sostituisce il Presidente se impossibilitato; diventa Presidente se questi cessa; convoca Assemblea se Presidente inadempiente; regge Team vacanti ad interim."
+      },
+      {
+        "name": "Segretario",
+        "ref": "statuto-art-17",
+        "composition": "1 membro Direttivo (incompatibile con Pres. e Vice)",
+        "term": "2 anni",
+        "powers": "Dirige uffici, redige verbali, tiene libro Soci e registro volontari non occasionali, redige e notifica la RRI (entro 3 gg), comunica iscrizioni/espulsioni/ruoli."
+      },
+      {
+        "name": "Tesoriere",
+        "ref": "statuto-art-16",
+        "composition": "1 membro Direttivo",
+        "term": "2 anni",
+        "powers": "Gestisce finanze e patrimonio (in accordo con Assemblea), ricerca fondi, gestisce parte economica delle iscrizioni."
+      },
+      {
+        "name": "Collegio dei Probiviri",
+        "ref": "rri-1-7-2-1",
+        "composition": "1–7 membri (anche non Soci, pref. esperienza giuridica)",
+        "term": "3 anni (max 2 mandati consecutivi); cariche interne 12 mesi",
+        "powers": "Organo di garanzia e vigilanza, potere di veto (superabile solo con magg. assoluta di Direttivo E Assemblea), sorteggia Comm. Elettorale, decide ricorsi e appelli."
+      },
+      {
+        "name": "Commissione Elettorale (Direttivo)",
+        "ref": "rri-1-6-1-2",
+        "composition": "3 Soci (Presidente, Segretario, Membro) sorteggiati dai Probiviri",
+        "term": "Fino a esaurimento ricorsi e appelli",
+        "powers": "Non candidabili. Emana Regolamento Elettorale, verifica candidature, presiede e verbalizza Assemblea Elettiva, esegue scrutinio STV in diretta, decide ricorsi 1° grado."
+      },
+      {
+        "name": "Commissione Elettorale Permanente (Probiviri)",
+        "ref": "rri-1-7-5-2",
+        "composition": "Presidente Direttivo (Pres.), Vicepresidente Direttivo, Presidente Probiviri (Segr.)",
+        "term": "Permanente",
+        "powers": "Raccoglie candidature Probiviri tutto l'anno, convoca elezioni Probiviri, gestisce ricorsi, nomina Probiviro ad interim entro 5 gg se Collegio vuoto."
+      },
+      {
+        "name": "Team (IT, HR, Design & Mktg, Events & Part.) + Helper",
+        "ref": "rri-2-2-1",
+        "composition": "Guidati da Team Lead (max 2 team; max 1 se carica sociale) + Vicario",
+        "term": "1 anno (dimissionari a convocazione elezioni Direttivo)",
+        "powers": "Agiscono su mandato del Direttivo; relazione almeno semestrale; impegni verso terzi richiedono sempre delibera preventiva del Direttivo."
+      }
+    ],
+    "quorums": [
+      {
+        "context": "Assemblea Ordinaria — 1ª convocazione",
+        "costitutivo": "Maggioranza assoluta (>50%) in proprio o delega",
+        "deliberativo": "Maggioranza dei presenti (parità: prevale Presidente, no su elez./revoca Direttivo)",
+        "ref": "statuto-art-12"
+      },
+      {
+        "context": "Assemblea Ordinaria — 2ª convocazione (anche stesso giorno)",
+        "costitutivo": "Qualunque numero di presenti",
+        "deliberativo": "Maggioranza dei presenti",
+        "ref": "statuto-art-12"
+      },
+      {
+        "context": "Assemblea Straordinaria — 1ª convocazione",
+        "costitutivo": "> 2/3 degli aderenti SOLO IN PROPRIO (no deleghe)",
+        "deliberativo": "2/3 dei voti dei presenti",
+        "ref": "statuto-art-12"
+      },
+      {
+        "context": "Assemblea Straordinaria — 2ª conv. (≥ 1 settimana dopo)",
+        "costitutivo": "Maggioranza assoluta (in proprio o delega)",
+        "deliberativo": "2/3 dei voti dei presenti",
+        "ref": "statuto-art-12"
+      },
+      {
+        "context": "Assemblea Straordinaria — 3ª conv. (≥ 3 giorni dopo)",
+        "costitutivo": "Almeno 1/3 degli iscritti (in proprio o delega)",
+        "deliberativo": "2/3 dei voti dei presenti",
+        "ref": "statuto-art-12"
+      },
+      {
+        "context": "Votazione telematica asincrona",
+        "costitutivo": "Maggioranza assoluta (come 1ª conv. ordinaria)",
+        "deliberativo": "Maggioranza dei votanti (aperta ≥48h, o 24h se >50%)",
+        "ref": "rri-1-5-1-2"
+      },
+      {
+        "context": "Consiglio Direttivo — seduta ordinaria",
+        "costitutivo": "Maggioranza assoluta dei componenti",
+        "deliberativo": "Maggioranza dei presenti (parità: prevale Presidente)",
+        "ref": "statuto-art-13"
+      },
+      {
+        "context": "Consiglio Direttivo — cariche vacanti / sostituzioni",
+        "costitutivo": "Maggioranza assoluta (convocato entro 10 gg)",
+        "deliberativo": "3/4 dei componenti",
+        "ref": "statuto-art-13"
+      },
+      {
+        "context": "Collegio dei Probiviri — seduta ordinaria",
+        "costitutivo": "Maggioranza assoluta arrotondata all'intero più vicino (2ª conv. entro 7 gg: nessun quorum)",
+        "deliberativo": "Maggioranza dei presenti (parità: prevale Presidente)",
+        "ref": "rri-1-7-2-1"
+      },
+      {
+        "context": "Elezione nuovo Probiviro (Assemblea)",
+        "costitutivo": "Quorum Assemblea ordinaria",
+        "deliberativo": "Almeno 2/3 dei votanti E più di 1/2 di tutti i Soci",
+        "ref": "rri-1-7-5-1"
+      },
+      {
+        "context": "Cariche interne Probiviri (Pres. / Segr.)",
+        "costitutivo": "Quorum Collegio",
+        "deliberativo": "2/3 dei componenti (durano 12 mesi)",
+        "ref": "rri-1-7-3-1"
+      },
+      {
+        "context": "Revoca / Scioglimento Probiviri (Assemblea)",
+        "costitutivo": "Quorum Assemblea",
+        "deliberativo": "2/3 dei componenti (revoca) / 2/3 dei Soci (scioglimento)",
+        "ref": "rri-1-7-2-5"
+      },
+      {
+        "context": "Espulsione di un Probiviro (dal Collegio)",
+        "costitutivo": "Quorum Collegio (interessato non vota)",
+        "deliberativo": "3/4 dei componenti",
+        "ref": "rri-1-7-2-6"
+      },
+      {
+        "context": "Superamento veto Probiviri",
+        "costitutivo": "Sia Direttivo sia Assemblea",
+        "deliberativo": "Maggioranza assoluta di ENTRAMBI gli organi",
+        "ref": "rri-1-7-2-1"
+      },
+      {
+        "context": "Commissione Elettorale — ordinaria / unanimità",
+        "costitutivo": "Almeno 2 votanti (ammesso voto scritto)",
+        "deliberativo": "Favorevoli > contrari (parità: Pres. x2, o Segr. x2) | Unanimità: 3/3 (a scadenza: maggioranza)",
+        "ref": "el-a-6"
+      }
+    ],
+    "timeline2026": [
+      {
+        "date": "20/10/2026",
+        "event": "Chiusura tesseramenti (chi ha già fatto domanda e paga prima del 21/11 vota comunque)",
+        "ref": "el-a-1"
+      },
+      {
+        "date": "28/10/2026 00:00",
+        "event": "Apertura presentazione candidature (lettera aperta + Modulo D firmato da @polinetwork.org)",
+        "ref": "el-a-2"
+      },
+      {
+        "date": "13/11/2026 23:59",
+        "event": "Integrazione convocazione da parte del Presidente (luogo, orario, 1ª e 2ª convocazione)",
+        "ref": "el-a-1"
+      },
+      {
+        "date": "18/11/2026 23:59",
+        "event": "Chiusura candidature, deleghe (Modulo E), richieste ospiti e invio link partecipazione a distanza",
+        "ref": "el-a-1"
+      },
+      {
+        "date": "19/11/2026 15:00",
+        "event": "Scadenza cambio preferenze di carica (nuova lettera aperta + nuovo Modulo D)",
+        "ref": "el-a-3"
+      },
+      {
+        "date": "20/11/2026 09:00",
+        "event": "Scadenza richiesta partecipazione a distanza (24h prima dell'inizio lavori; Modulo F)",
+        "ref": "el-a-10"
+      },
+      {
+        "date": "20/11/2026 12:00",
+        "event": "Scadenza ricorso pre-assembleare ai Probiviri contro rifiuto candidatura / parere ospite (entro 24h, max 12:00)",
+        "ref": "el-a-19"
+      },
+      {
+        "date": "20/11/2026 23:59",
+        "event": "Fine verifica candidature, parere unanime ospiti, invito Direttivo, ultimo termine ritiro fuori-scheda, fissazione n. seggi",
+        "ref": "el-a-1"
+      },
+      {
+        "date": "21/11/2026 08:00",
+        "event": "Comunicazione lista definitiva candidati validi, preferenze di carica, ordine di spareggio e ritiri",
+        "ref": "el-a-7"
+      },
+      {
+        "date": "21/11/2026 (~9-13)",
+        "event": "ASSEMBLEA ELETTIVA — Campus Leonardo PoliMi (appello, presentazioni ≥5', domande, arringhe ≤2', voto test, voto STV ≥10', scrutinio live, proclamazione)",
+        "ref": "el-a-13"
+      },
+      {
+        "date": "26/11/2026",
+        "event": "Pubblicazione risultati completi scrutinio + file anonimo voti (senza orari, ordinato alfabeticamente)",
+        "ref": "el-a-15"
+      },
+      {
+        "date": "30/11/2026",
+        "event": "Scadenza mandato Direttivo uscente e insediamento nuovo Direttivo (non sospeso da ricorsi)",
+        "ref": "el-a-1"
+      },
+      {
+        "date": "06/12/2026 23:59",
+        "event": "Scadenza ricorsi contro svolgimento e risultati elezione (15 giorni)",
+        "ref": "el-a-19"
+      },
+      {
+        "date": "05/01/2027",
+        "event": "Scadenza decisione della Commissione Elettorale sui ricorsi (30 giorni)",
+        "ref": "el-a-19"
+      },
+      {
+        "date": "12/01/2027",
+        "event": "Scadenza appello al Collegio dei Probiviri (entro 7 gg dalla decisione, max 12/01; decidono entro 15 gg)",
+        "ref": "el-a-19"
+      }
+    ],
+    "keyDeadlines": [
+      {
+        "term": "Limite temporale standard",
+        "value": "30 giorni (90 gg in Gen, Feb, Giu, Lug, Ago, Set)",
+        "ref": "statuto-art-2"
+      },
+      {
+        "term": "Convocazione Assemblea ordinaria/straordinaria",
+        "value": "Entro 7 giorni prima (elettiva: ≥30 giorni prima)",
+        "ref": "statuto-art-12"
+      },
+      {
+        "term": "Rigetto domanda ammissione Socio",
+        "value": "Motivato entro 7 giorni; ricorso entro limite temporale",
+        "ref": "statuto-art-9"
+      },
+      {
+        "term": "Accettazione Socio / annotazione / conferma",
+        "value": "10 gg comunicazione -> 7 gg libro soci -> 7 gg conferma",
+        "ref": "statuto-art-9"
+      },
+      {
+        "term": "Notifica nuova RRI / ricorso RRI",
+        "value": "Notifica entro 3 gg; ricorso/opposizione entro 10 gg",
+        "ref": "rri-1-3-3"
+      },
+      {
+        "term": "Revisione generale periodica RRI",
+        "value": "Ogni 5 anni (spostabile di max ±6 mesi)",
+        "ref": "rri-1-3-4"
+      },
+      {
+        "term": "Quota associativa €5,00",
+        "value": "Valida 1 Set–31 Ago; rinnovi entro 31 Dic; esenzione 1 Giu–31 Ago",
+        "ref": "rri-1-4-6"
+      },
+      {
+        "term": "Richiesta punto OdG / Partecipazione a distanza",
+        "value": "OdG: ≥7 giorni prima; Remoto: ≥24 ore prima",
+        "ref": "rri-1-5-1-1"
+      },
+      {
+        "term": "Bilancio annuale (approvazione & RUNTS)",
+        "value": "Approvato entro 6 mesi; depositato RUNTS entro 30 Giugno",
+        "ref": "statuto-art-19"
+      },
+      {
+        "term": "Sostituzione carica vacante Direttivo",
+        "value": "Direttivo convocato entro 10 giorni (voto 3/4)",
+        "ref": "statuto-art-13"
+      },
+      {
+        "term": "Consegna documenti dal Segretario ai Probiviri",
+        "value": "Entro 10 giorni (sospensione decisioni max 1 volta)",
+        "ref": "rri-1-7-2-1"
+      },
+      {
+        "term": "Decadenza Probiviro per assenze",
+        "value": "3 assenze ingiustificate di fila in almeno 3 mesi (giustif. entro 10 gg)",
+        "ref": "rri-1-7-2-3"
+      },
+      {
+        "term": "Elezione nuovi Team Lead post-elezioni Direttivo",
+        "value": "Entro 3 giorni dall'elezione del nuovo Direttivo",
+        "ref": "rri-2-2-1"
+      },
+      {
+        "term": "Scadenza ammonizioni (warn) Network",
+        "value": "12 mesi (previa richiesta dell'utente)",
+        "ref": "rri-4-3"
+      }
+    ]
+  }
+}

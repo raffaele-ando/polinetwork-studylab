@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PoliNetwork StudyLab — Statuto, RRI & Regolamento Elettorale 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand" id="brandHome" title="Torna alla Dashboard">
+        <span class="brand-badge">PN</span>
+        <div>
+          <div class="brand-title">PoliNetwork StudyLab</div>
+          <div class="brand-sub">Statuto · RRI · Elezioni 21/11/2026</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav-tabs" id="navTabs">
+      <button class="nav-tab active" data-view="dashboard">🏠 Dashboard</button>
+      <button class="nav-tab" data-view="reader">📖 Testo Integrale</button>
+      <button class="nav-tab" data-view="cloze">🧩 A Memoria</button>
+      <button class="nav-tab" data-view="flashcards">🃏 Flashcards <span class="badge-pill" id="dueBadge">0</span></button>
+      <button class="nav-tab" data-view="quiz">📝 Quiz & Casi</button>
+      <button class="nav-tab" data-view="cheatsheet">📊 Sinossi</button>
+    </nav>
+
+    <div class="topbar-right">
+      <button class="icon-btn" id="btnSearchQuick" title="Ricerca rapida (Ctrl+K)">🔍</button>
+      <button class="icon-btn" id="btnTheme" title="Cambia tema Chiaro/Scuro">☀️</button>
+      <button class="icon-btn" id="btnBackup" title="Esporta / Importa progressi">💾</button>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- ==================== VIEW 1: DASHBOARD ==================== -->
+    <section class="view active" id="view-dashboard">
+      <div class="hero-card">
+        <div class="hero-info">
+          <div class="hero-eyebrow">COPERTURA INTEGRALE 100% · 3 DOCUMENTI · 160 SEZIONI</div>
+          <h1>Studia e impara a memoria tutta la normativa PoliNetwork APS</h1>
+          <p>
+            Ogni singolo articolo, comma, scadenza, quorum, algoritmo STV e allegato di
+            <strong>Statuto</strong>, <strong>Raccolta dei Regolamenti Interni (RRI)</strong> e
+            <strong>Regolamento Elettorale Direttivo 2026</strong>, con ripetizione dilazionata (SM-2),
+            testo a scomparsa progressivo e casi pratici.
+          </p>
+          <div class="hero-actions">
+            <button class="btn primary" data-goto="cloze">🧩 Inizia a Memorizzare (Cloze)</button>
+            <button class="btn secondary" data-goto="flashcards">🃏 Ripassa Flashcards</button>
+            <button class="btn secondary" data-goto="quiz">⚡ Sfida Numeri & Quorum</button>
+            <button class="btn ghost" data-goto="reader">📖 Apri Testo Integrale</button>
+          </div>
+        </div>
+        <div class="hero-ring-wrap">
+          <svg class="progress-ring" viewBox="0 0 140 140">
+            <circle class="ring-bg" cx="70" cy="70" r="58"></circle>
+            <circle class="ring-fg" id="overallRing" cx="70" cy="70" r="58" stroke-dasharray="364.42" stroke-dashoffset="364.42"></circle>
+          </svg>
+          <div class="ring-center">
+            <div class="ring-pct" id="overallPct">0%</div>
+            <div class="ring-lbl">Padronanza</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Sezioni studiate / a memoria</div>
+          <div class="stat-value" id="statSections">0 / 160</div>
+          <div class="stat-sub" id="statMemorized">0 a memoria (100%)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Flashcards da ripassare oggi</div>
+          <div class="stat-value" id="statDue">0</div>
+          <div class="stat-sub" id="statCardsTotal">Su 58 ad alta resa + 160 articoli</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Precisione Quiz</div>
+          <div class="stat-value" id="statQuizAcc">—</div>
+          <div class="stat-sub" id="statQuizDone">0 risposte date</div>
+        </div>
+        <div class="stat-card accent-card">
+          <div class="stat-label">Assemblea Elettiva Direttivo</div>
+          <div class="stat-value">21/11/2026</div>
+          <div class="stat-sub" id="statCountdown">Campus Leonardo · ~09:00–13:00</div>
+        </div>
+      </div>
+
+      <h2 class="section-heading">Avanzamento per Documento</h2>
+      <div class="doc-cards-grid" id="docCardsGrid"></div>
+
+      <h2 class="section-heading">Piano Consigliato per Sapere Tutto a Memoria</h2>
+      <div class="method-grid">
+        <div class="method-card">
+          <div class="method-num">01</div>
+          <h3>Lettura Attiva con Evidenziazione Numeri</h3>
+          <p>Leggi ogni documento nella vista <strong>Testo Integrale</strong> con il filtro <em>Numeri &amp; Quorum</em> attivo e segna lo stato di padronanza di ciascun articolo.</p>
+        </div>
+        <div class="method-card">
+          <div class="method-num">02</div>
+          <h3>Testo a Scomparsa Progressivo (Livelli 1 → 4)</h3>
+          <p>Nella tab <strong>A Memoria</strong>, elimina prima i numeri/scadenze, poi le parole chiave, fino al <strong>Livello 4 (Solo Iniziali)</strong> per recitare gli articoli verbatim.</p>
+        </div>
+        <div class="method-card">
+          <div class="method-num">03</div>
+          <h3>Ripetizione Dilazionata (SM-2)</h3>
+          <p>Usa le <strong>Flashcards</strong> ogni giorno: l'algoritmo SM-2 ti ripropone più spesso ciò che sbagli e dilaziona ciò che sai a memoria.</p>
+        </div>
+        <div class="method-card">
+          <div class="method-num">04</div>
+          <h3>Blitz Numeri &amp; Casi Pratici</h3>
+          <p>Metti alla prova i riflessi su scadenze, quorum, STV Droop, deleghe e ricorsi nella sezione <strong>Quiz &amp; Casi</strong>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: READER INTEGRALE ==================== -->
+    <section class="view" id="view-reader">
+      <div class="reader-layout">
+        <aside class="reader-sidebar">
+          <div class="sidebar-controls">
+            <div class="doc-pills" id="readerDocPills">
+              <button class="pill active" data-doc="all">Tutti</button>
+              <button class="pill" data-doc="statuto">Statuto</button>
+              <button class="pill" data-doc="rri">RRI</button>
+              <button class="pill" data-doc="elettorale">Elettorale</button>
+            </div>
+            <input type="search" id="readerSearch" class="input-field" placeholder="Cerca articolo, numero, parola..." />
+            <div class="sidebar-meta" id="readerMatchCount">160 sezioni</div>
+          </div>
+          <div class="toc-list" id="readerTocList"></div>
+        </aside>
+
+        <article class="reader-content" id="readerContent">
+          <div class="reader-toolbar">
+            <div class="reader-breadcrumb" id="readerBreadcrumb">Statuto</div>
+            <div class="reader-tools">
+              <label class="toggle-chip">
+                <input type="checkbox" id="toggleHighlightNums" checked />
+                <span>Evidenzia Numeri &amp; Quorum</span>
+              </label>
+              <button class="btn small primary" id="btnSendToCloze">🧩 Memorizza questo articolo</button>
+            </div>
+          </div>
+
+          <div class="article-header">
+            <div class="article-code-row">
+              <span class="article-code" id="readerArtCode">Art. 1</span>
+              <span class="article-page" id="readerArtPage">Pag. 1</span>
+            </div>
+            <h1 id="readerArtTitle">Denominazione</h1>
+            <div class="mastery-bar">
+              <span class="mastery-label">Stato studio:</span>
+              <div class="mastery-btns" id="readerMasteryBtns">
+                <button class="m-btn" data-status="0">⚪ Da studiare</button>
+                <button class="m-btn" data-status="1">🟡 In corso</button>
+                <button class="m-btn" data-status="2">🟢 Imparato</button>
+                <button class="m-btn" data-status="3">💎 A memoria</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="article-body" id="readerArtBody"></div>
+          <div class="article-images" id="readerArtImages"></div>
+
+          <div class="article-footer-nav">
+            <button class="btn secondary" id="btnPrevSec">← Precedente</button>
+            <button class="btn secondary" id="btnNextSec">Successivo →</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: CLOZE / A MEMORIA ==================== -->
+    <section class="view" id="view-cloze">
+      <div class="panel-header">
+        <div>
+          <h1>🧩 Allenamento «A Memoria» (Testo a Scomparsa Progressivo)</h1>
+          <p class="muted">Scegli qualsiasi articolo dei 3 documenti e progredisci dal Livello 1 (Numeri &amp; Scadenze) al Livello 4 (Solo Iniziali 100%).</p>
+        </div>
+        <div class="panel-actions">
+          <button class="btn secondary" id="btnClozeRandom">🎲 Articolo casuale non memorizzato</button>
+        </div>
+      </div>
+
+      <div class="cloze-controls-bar">
+        <div class="control-group">
+          <label>Documento</label>
+          <select id="clozeDocSelect" class="select-field">
+            <option value="statuto">Statuto PoliNetwork APS</option>
+            <option value="rri">Raccolta Regolamenti Interni (RRI)</option>
+            <option value="elettorale">Regolamento Elettorale 2026</option>
+          </select>
+        </div>
+        <div class="control-group grow">
+          <label>Articolo / Sezione</label>
+          <select id="clozeSecSelect" class="select-field"></select>
+        </div>
+        <div class="control-group">
+          <label>Livello Difficoltà</label>
+          <select id="clozeLevelSelect" class="select-field">
+            <option value="1">Lv. 1 — Numeri, Quorum &amp; Scadenze</option>
+            <option value="2">Lv. 2 — Parole Chiave (~35%)</option>
+            <option value="3">Lv. 3 — Difficile (~65%)</option>
+            <option value="4">Lv. 4 — A Memoria (Solo Iniziali 100%)</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Modalità</label>
+          <select id="clozeInputMode" class="select-field">
+            <option value="click">Clicca per rivelare (rapido)</option>
+            <option value="type">Scrivi la parola (verifica)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="cloze-stage">
+        <div class="cloze-stage-header">
+          <div>
+            <span class="article-code" id="clozeCode">Art. 1</span>
+            <strong id="clozeTitle">Denominazione</strong>
+          </div>
+          <div class="cloze-stage-right">
+            <span class="cloze-counter" id="clozeCounter">0 / 0 rivelati</span>
+            <button class="btn small secondary" id="btnClozeHint">💡 Rivela 1</button>
+            <button class="btn small secondary" id="btnClozeRevealAll">👁️ Rivela tutto</button>
+            <button class="btn small secondary" id="btnClozeReset">↺ Nascondi tutto</button>
+            <button class="btn small primary" id="btnClozeMarkMem">💎 Segna A Memoria</button>
+          </div>
+        </div>
+        <div class="cloze-body" id="clozeBody"></div>
+        <div class="cloze-nav-bottom">
+          <button class="btn ghost" id="btnClozeOpenReader">📖 Apri in Testo Integrale</button>
+          <button class="btn primary" id="btnClozeNext">Prossimo articolo →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 4: FLASHCARDS SM-2 ==================== -->
+    <section class="view" id="view-flashcards">
+      <div class="panel-header">
+        <div>
+          <h1>🃏 Flashcards con Ripetizione Dilazionata (SM-2)</h1>
+          <p class="muted">Scorciatoie tastiera: <kbd>Spazio</kbd> gira carta · <kbd>1</kbd> Non la so · <kbd>2</kbd> Difficile · <kbd>3</kbd> Bene · <kbd>4</kbd> Perfetta</p>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <select id="fcDeckMode" class="select-field">
+          <option value="curated">Mazzo Alta Resa (58 schede chiave)</option>
+          <option value="all_articles">Tutti i 160 Articoli (Copertura 1:1)</option>
+          <option value="combined">Completo (Alta Resa + 160 Articoli)</option>
+        </select>
+        <select id="fcDocFilter" class="select-field">
+          <option value="all">Tutti i documenti</option>
+          <option value="statuto">Solo Statuto</option>
+          <option value="rri">Solo Regolamenti Interni (RRI)</option>
+          <option value="elettorale">Solo Regolamento Elettorale 2026</option>
+        </select>
+        <select id="fcTagFilter" class="select-field">
+          <option value="all">Tutti i temi</option>
+        </select>
+        <label class="toggle-chip">
+          <input type="checkbox" id="fcOnlyDue" />
+          <span>Solo da ripassare oggi</span>
+        </label>
+        <button class="btn small secondary" id="btnFcShuffle">🔀 Mescola</button>
+      </div>
+
+      <div class="fc-arena" id="fcArena">
+        <div class="fc-progress-row">
+          <span id="fcQueueInfo">Carta 1 di 58</span>
+          <span id="fcCardMeta" class="fc-meta-tag"></span>
+        </div>
+
+        <div class="flashcard" id="flashcardEl">
+          <div class="fc-face fc-front">
+            <div class="fc-top-badges">
+              <span class="fc-doc-badge" id="fcDocBadge">Statuto</span>
+              <span class="fc-tag-badge" id="fcTagBadge">Scadenze</span>
+            </div>
+            <div class="fc-question" id="fcQuestion">Caricamento...</div>
+            <div class="fc-hint-bar">Clicca la carta o premi <kbd>Spazio</kbd> per vedere la risposta</div>
+          </div>
+          <div class="fc-face fc-back hidden" id="fcBack">
+            <div class="fc-answer-label">Risposta Verificata</div>
+            <div class="fc-answer" id="fcAnswer"></div>
+            <div class="fc-source-row">
+              <button class="btn small ghost" id="btnFcSource">📖 Vai alla norma (<span id="fcRefLabel"></span>)</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="fc-rating-bar hidden" id="fcRatingBar">
+          <button class="rate-btn r1" data-q="1"><span>1</span> Non la so<small>Subito</small></button>
+          <button class="rate-btn r2" data-q="3"><span>2</span> Difficile<small id="int2">1g</small></button>
+          <button class="rate-btn r3" data-q="4"><span>3</span> Bene<small id="int3">3g</small></button>
+          <button class="rate-btn r4" data-q="5"><span>4</span> A memoria!<small id="int4">6g</small></button>
+        </div>
+        <div class="fc-reveal-wrap" id="fcRevealWrap">
+          <button class="btn primary large" id="btnFcReveal">Mostra Risposta (Spazio)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 5: QUIZ & CASI PRATICI ==================== -->
+    <section class="view" id="view-quiz">
+      <div class="panel-header">
+        <div>
+          <h1>📝 Quiz Normativo, Blitz Numeri &amp; Scenari Pratici</h1>
+          <p class="muted">Ogni domanda cita articolo e comma esatti con collegamento diretto al testo ufficiale.</p>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <select id="qzModeFilter" class="select-field">
+          <option value="all">Tutte le modalità (40 domande)</option>
+          <option value="blitz">⚡ Blitz Numeri, Quorum &amp; Scadenze (18)</option>
+          <option value="mc">📘 Scelta Multipla Normativa (12)</option>
+          <option value="scenario">🎭 Scenari Pratici &amp; Casi Reali (10)</option>
+        </select>
+        <select id="qzDocFilter" class="select-field">
+          <option value="all">Tutti i documenti</option>
+          <option value="statuto">Statuto</option>
+          <option value="rri">Regolamenti Interni (RRI)</option>
+          <option value="elettorale">Regolamento Elettorale 2026</option>
+        </select>
+        <button class="btn primary" id="btnStartQuiz">▶ Avvia / Ricomincia Quiz</button>
+        <button class="btn secondary hidden" id="btnRetryWrong">🔁 Ripeti solo gli errori</button>
+      </div>
+
+      <div class="quiz-box" id="quizBox">
+        <div class="quiz-progress">
+          <span id="qzCounter">Domanda 1 / 40</span>
+          <span id="qzScoreLive">Corrette: 0 · Errate: 0</span>
+        </div>
+        <div class="quiz-bar-track"><div class="quiz-bar-fill" id="qzBarFill"></div></div>
+
+        <div class="quiz-badges">
+          <span class="fc-doc-badge" id="qzDocBadge">Statuto</span>
+          <span class="fc-tag-badge" id="qzModeBadge">Blitz</span>
+        </div>
+
+        <h2 class="quiz-question" id="qzQuestion">Caricamento...</h2>
+        <div class="quiz-options" id="qzOptions"></div>
+
+        <div class="quiz-feedback hidden" id="qzFeedback">
+          <div class="qz-fb-title" id="qzFbTitle"></div>
+          <p id="qzFbText"></p>
+          <div class="qz-fb-actions">
+            <button class="btn small ghost" id="btnQzSource">📖 Leggi fonte (<span id="qzRefLabel"></span>)</button>
+            <button class="btn primary" id="btnQzNext">Prossima domanda →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="quiz-summary hidden" id="quizSummary">
+        <h2 id="qzSumTitle">Sessione completata!</h2>
+        <div class="qz-sum-score" id="qzSumScore">0 / 0</div>
+        <p id="qzSumMsg"></p>
+        <div class="hero-actions" style="justify-content:center; margin-top: 1rem;">
+          <button class="btn primary" id="btnQzRestart">Ricomincia</button>
+          <button class="btn secondary hidden" id="btnQzRetryWrong2">🔁 Ripeti solo gli errori</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 6: SINOSSI & CHEAT SHEET ==================== -->
+    <section class="view" id="view-cheatsheet">
+      <div class="panel-header">
+        <div>
+          <h1>📊 Sinossi Completa &amp; Mappe Rapide</h1>
+          <p class="muted">Tutte le tabelle sinottiche in un colpo d'occhio — clicca qualsiasi riferimento per aprire l'articolo esatto.</p>
+        </div>
+        <input type="search" id="csSearch" class="input-field" style="max-width:300px" placeholder="Filtra tabelle..." />
+      </div>
+
+      <div class="cs-tabs" id="csTabs">
+        <button class="pill active" data-cs="timeline">📅 Cronoprogramma 21/11/2026</button>
+        <button class="pill" data-cs="quorums">⚖️ Tutti i Quorum (15)</button>
+        <button class="pill" data-cs="organs">🏛️ Organi &amp; Cariche (10)</button>
+        <button class="pill" data-cs="deadlines">⏱️ Scadenze &amp; Termini</button>
+        <button class="pill" data-cs="hierarchy">📐 Gerarchia Fonti &amp; STV</button>
+        <button class="pill" data-cs="diagrams">🖼️ Schemi Visivi PDF (9)</button>
+      </div>
+
+      <div class="cs-content" id="csContent"></div>
+    </section>
+  </main>
+
+  <!-- ==================== MODAL: QUICK SEARCH ==================== -->
+  <div class="modal-backdrop hidden" id="searchModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>🔍 Ricerca Globale nei 3 Documenti</h3>
+        <button class="icon-btn" id="closeSearchModal">✕</button>
+      </div>
+      <input type="search" id="globalSearchInput" class="input-field" placeholder="Es: Droop, probiviri, delega, 90 giorni, 3/4, incompatibili..." autofocus />
+      <div class="global-search-results" id="globalSearchResults"></div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: BACKUP ==================== -->
+  <div class="modal-backdrop hidden" id="backupModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3>💾 Salvataggio &amp; Ripristino Progressi</h3>
+        <button class="icon-btn" id="closeBackupModal">✕</button>
+      </div>
+      <p class="muted">I tuoi progressi (articoli studiati, stato SM-2 flashcards, punteggi quiz) sono salvati automaticamente nel browser. Puoi esportarli in JSON o ripristinarli.</p>
+      <div class="hero-actions" style="margin-top:1rem;">
+        <button class="btn primary" id="btnExportProgress">⬇ Esporta Backup JSON</button>
+        <label class="btn secondary" style="cursor:pointer;">
+          ⬆ Importa Backup JSON
+          <input type="file" id="inputImportProgress" accept=".json" style="display:none" />
+        </label>
+        <button class="btn danger" id="btnResetProgress">🗑️ Azzera tutto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL: LIGHTBOX IMAGE ==================== -->
+  <div class="modal-backdrop hidden" id="lightboxModal">
+    <div class="lightbox-inner">
+      <button class="icon-btn lightbox-close" id="closeLightbox">✕</button>
+      <img id="lightboxImg" src="" alt="Schema ufficiale PDF" />
+      <div class="lightbox-cap" id="lightboxCap"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
