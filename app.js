@@ -56,6 +56,7 @@
   const DOC_SHORT = { statuto: "Statuto", rri: "RRI", elettorale: "Elettorale" };
   const STATUS_LABELS = ["Da studiare", "In corso", "Imparato", "A memoria"];
   const MODE_LABELS = { all: "Tutte", blitz: "Blitz Numeri", mc: "Normativa", scenario: "Scenari" };
+  const MODE_LABELS_FULL = { all: "Tutte le tipologie", blitz: "Blitz Numeri", mc: "Normativa", scenario: "Scenari Pratici" };
 
   const DIAGRAM_LABELS = {
     "21": "Allegato D — Modulo Candidatura Direttivo",
@@ -178,6 +179,32 @@
     return days === 1 ? "1 giorno" : `${days} giorni`;
   }
 
+  function formatSourceCitation(refId) {
+    const sec = SECTION_MAP.get(refId);
+    if (!sec) return "Apri norma";
+    return `${DOC_SHORT[sec.doc]} ${sec.code}`;
+  }
+
+  function formatOperators(str) {
+    return String(str)
+      .replace(/([≥≤><])\s*(\d)/g, "$1\u00A0$2")
+      .replace(/\([^)]{1,28}\)/g, m => m.replace(/ /g, "\u00A0"));
+  }
+
+  function highlightQuery(text, query) {
+    const safe = esc(text);
+    const q = (query || "").trim();
+    if (!q) return safe;
+    const escapedQ = esc(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return safe.replace(new RegExp(`(${escapedQ})`, "gi"), '<mark class="search-hit">$1</mark>');
+  }
+
+  function formatQuizScore() {
+    const okWord = qzCorrect === 1 ? "esatta" : "esatte";
+    const badWord = qzWrong.length === 1 ? "errata" : "errate";
+    return `<span class="score-full">${qzCorrect} ${okWord} · ${qzWrong.length} ${badWord}</span><span class="score-short" aria-hidden="true">✓ ${qzCorrect} · ✕ ${qzWrong.length}</span>`;
+  }
+
   // ==================== PURE SM-2 ENGINE ====================
   function computeNextSM2(prev, quality) {
     const base = prev || { reps: 0, interval: 0, ef: 2.5 };
@@ -186,10 +213,21 @@
       reps = 0;
       interval = 0;
     } else {
-      if (reps === 0) interval = 1;
-      else if (reps === 1) interval = 3;
-      else interval = Math.round(interval * ef);
-      if (quality === 5) interval = Math.max(interval, 6);
+      if (reps === 0) {
+        if (quality === 3) interval = 1;
+        else if (quality === 4) interval = 3;
+        else interval = 6;
+      } else if (reps === 1) {
+        if (quality === 3) interval = 2;
+        else if (quality === 4) interval = 5;
+        else interval = 9;
+      } else {
+        const hard = Math.max(interval + 1, Math.round(interval * 1.2));
+        const bene = Math.max(hard + 1, Math.round(interval * ef));
+        if (quality === 3) interval = hard;
+        else if (quality === 4) interval = bene;
+        else interval = Math.max(bene + 2, Math.round(bene * 1.3));
+      }
       reps++;
     }
     ef = Math.max(1.3, ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
@@ -258,6 +296,7 @@
     buildFcQueue(false);
     startQuiz();
     renderPracticeCloze();
+    syncCsTabs();
     renderReference();
 
     applyRouteFromHash();
@@ -522,10 +561,10 @@
     const qzMast = Object.keys(state.quizMastered).filter(k => state.quizMastered[k]).length;
     const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k] && SECTION_MAP.has(k)).length;
 
-    document.getElementById("overviewEyebrow").textContent =
-      `CORPUS UFFICIALE · 3 DOCUMENTI · ${STUDYABLE_SECTIONS.length} SEZIONI NORMATIVE`;
+    document.getElementById("overviewEyebrowMeta").textContent =
+      `3 DOCUMENTI · ${STUDYABLE_SECTIONS.length} SEZIONI`;
     document.getElementById("corpusTotalsMeta").textContent =
-      `${CORPUS.documents.reduce((a, d) => a + d.pages, 0)} pagine · ${ALL_SECTIONS.length} voci d'indice`;
+      `${CORPUS.documents.reduce((a, d) => a + d.pages, 0)} pagine · ${STUDYABLE_SECTIONS.length} sezioni normative`;
 
     document.getElementById("overallPct").textContent = `${pct}%`;
     const circ = 2 * Math.PI * 50;
@@ -540,16 +579,19 @@
 
     const nextBtn = document.getElementById("btnNextBestAction");
     const nextLbl = document.getElementById("nextBestLabel");
+    const quickFcBtn = document.getElementById("btnQuickFlashcards");
     const advice = document.getElementById("briefingAdvice");
     const hasStarted = (nWip + nLearned + nMem > 0) || state.quizStats.total > 0 || Object.keys(state.sm2).length > 0;
+    let primaryIsFlashcards = false;
 
     if (firstWipSec) {
       nextLbl.textContent = `Continua ${firstWipSec.code}`;
-      advice.textContent = `Hai in corso «${firstWipSec.code} — ${firstWipSec.title}» (${DOC_SHORT[firstWipSec.doc]}). Riprendi la lettura o passa al testo a scomparsa per fissarlo a memoria.`;
+      advice.textContent = `Hai in corso «${firstWipSec.code} — ${firstWipSec.title}» (${DOC_SHORT[firstWipSec.doc]}). Riprendi la lettura o passa al Cloze (testo a scomparsa) per fissarlo a memoria.`;
       nextBtn.onclick = () => openArticle(firstWipSec.id);
     } else if (hasStarted && due > 0) {
-      nextLbl.textContent = `Ripassa ${due} flashcards`;
-      advice.textContent = `Hai ${due} schede pronte per il ripasso programmato oggi: rivederle ora rafforza la memoria a lungo termine.`;
+      primaryIsFlashcards = true;
+      nextLbl.textContent = `Ripassa ${due} flashcard`;
+      advice.textContent = `Hai ${due} flashcard pronte per il ripasso programmato oggi: rivederle ora rafforza la memoria a lungo termine.`;
       nextBtn.onclick = () => {
         document.getElementById("fcOnlyDue").checked = true;
         buildFcQueue(false);
@@ -562,8 +604,19 @@
       nextBtn.onclick = () => openArticle(readerSecId || STUDYABLE_SECTIONS[0].id);
     } else {
       nextLbl.textContent = "Inizia dallo Statuto";
-      advice.textContent = "Consulta il testo ufficiale con numeri e quorum evidenziati, esercitati con il testo a scomparsa sullo stesso articolo e consolida con flashcards e quiz.";
+      advice.textContent = "Consulta il testo ufficiale con numeri e quorum evidenziati, esercitati con il Cloze (testo a scomparsa) sullo stesso articolo e consolida con flashcard e quiz.";
       nextBtn.onclick = () => openArticle(STUDYABLE_SECTIONS[0].id);
+    }
+
+    if (primaryIsFlashcards) {
+      quickFcBtn.textContent = "Apri Normativa";
+      quickFcBtn.onclick = () => openArticle(readerSecId || STUDYABLE_SECTIONS[0].id);
+    } else {
+      quickFcBtn.textContent = "Ripassa Flashcard";
+      quickFcBtn.onclick = () => {
+        switchPracticeMode("flashcards");
+        switchView("practice");
+      };
     }
 
     document.getElementById("statSections").textContent = `${nLearned + nMem} / ${STUDYABLE_SECTIONS.length}`;
@@ -615,8 +668,8 @@
         </div>
         <div class="doc-row-actions">
           <button type="button" class="btn small secondary" data-doc-read="${doc.id}">Leggi</button>
-          <button type="button" class="btn small secondary" data-doc-cloze="${firstCloze}">A memoria</button>
-          <button type="button" class="btn small ghost" data-doc-quiz="${doc.id}">Quiz</button>
+          <button type="button" class="btn small secondary" data-doc-cloze="${firstCloze}">Cloze</button>
+          <button type="button" class="btn small secondary" data-doc-quiz="${doc.id}">Quiz</button>
         </div>
       `;
       listEl.appendChild(row);
@@ -672,9 +725,9 @@
     });
     document.getElementById("readerReadPane").classList.toggle("hidden", readerMode !== "read");
     document.getElementById("readerClozePane").classList.toggle("hidden", readerMode !== "cloze");
-    document.getElementById("readOnlyTools").classList.toggle("hidden", readerMode !== "read");
+    document.getElementById("toggleHighlightWrap").classList.toggle("hidden", readerMode !== "read");
     document.getElementById("btnSwitchInlineCloze").textContent =
-      readerMode === "read" ? "Testo a scomparsa" : "Torna a Lettura";
+      readerMode === "read" ? "Avvia Cloze" : "Torna a Lettura";
   }
 
   function getFilteredReaderSections() {
@@ -694,7 +747,8 @@
   function renderReaderSidebar() {
     const list = document.getElementById("readerTocList");
     const secs = getFilteredReaderSections();
-    document.getElementById("readerMatchCount").textContent = `${secs.length}`;
+    const studyableCount = secs.filter(s => s.text && s.text.trim().length > 0).length;
+    document.getElementById("readerMatchCount").textContent = `${studyableCount} sez.`;
     list.innerHTML = "";
 
     if (!secs.length) {
@@ -702,8 +756,30 @@
       return;
     }
 
+    const DOC_GROUP_TITLES = {
+      statuto: "Statuto",
+      rri: "Regolamenti Interni (RRI)",
+      elettorale: "Reg. Elettorale 2026",
+    };
+    const showDocHeaders = readerDocFilter === "all";
+    const docStudyCounts = {};
+    if (showDocHeaders) {
+      for (const s of secs) {
+        if (s.text && s.text.trim().length > 0) docStudyCounts[s.doc] = (docStudyCounts[s.doc] || 0) + 1;
+      }
+    }
+
     const frag = document.createDocumentFragment();
+    let lastDoc = null;
     for (const s of secs) {
+      if (showDocHeaders && s.doc !== lastDoc) {
+        lastDoc = s.doc;
+        const hdr = document.createElement("div");
+        hdr.className = "toc-doc-header";
+        hdr.setAttribute("role", "presentation");
+        hdr.innerHTML = `<span>${esc(DOC_GROUP_TITLES[s.doc] || s.doc)}</span><span>${docStudyCounts[s.doc] || 0} sez.</span>`;
+        frag.appendChild(hdr);
+      }
       const m = state.mastery[s.id] || 0;
       const isContainer = !s.text || !s.text.trim();
       const btn = document.createElement("button");
@@ -976,7 +1052,7 @@
    * - revealed: passively shown via "Suggerisci 1", "Mostra testo", or "?" peek
    * Never falsely claims recall or auto-promotes mastery when text is merely revealed!
    */
-  function renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange }) {
+  function renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, counterMobileEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn, onMasteryChange }) {
     const sec = SECTION_MAP.get(secId);
     if (!sec) return { hintOne: () => {}, revealAll: () => {} };
     const level = Number(levelSel.value);
@@ -991,19 +1067,33 @@
     let revealed = 0;
     let tokenIndex = 0;
 
+    const restartArgs = { secId, levelSel, modeSel, bodyEl, counterEl, counterMobileEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn, onMasteryChange };
+
     const updateProgress = () => {
       const total = items.length;
       const done = recalled + revealed;
+      let txt = "";
       if (mode === "type") {
-        counterEl.textContent = revealed > 0
-          ? `Ricordate ${recalled}/${total} · Rivelate ${revealed}`
+        const revWord = revealed === 1 ? "rivelata" : "rivelate";
+        txt = revealed > 0
+          ? `Ricordate ${recalled}/${total} · ${revealed} ${revWord}`
           : `Ricordate ${recalled}/${total}`;
       } else {
-        counterEl.textContent = revealed > 0
-          ? `${recalled} verificate · ${revealed} mostrate / ${total}`
+        txt = revealed > 0
+          ? `${recalled}/${total} · ${revealed} mostrate`
           : `${recalled} / ${total}`;
       }
-      barEl.style.width = total > 0 ? `${Math.round((done / total) * 100)}%` : "0%";
+      counterEl.textContent = txt;
+      if (counterMobileEl) counterMobileEl.textContent = txt;
+
+      const recPct = total > 0 ? (recalled / total) * 100 : 0;
+      const revPct = total > 0 ? (revealed / total) * 100 : 0;
+      barEl.style.width = `${recPct.toFixed(2)}%`;
+      if (barRevEl) barRevEl.style.width = `${revPct.toFixed(2)}%`;
+
+      if (resetBtn) resetBtn.disabled = done === 0;
+      if (hintBtn) hintBtn.disabled = done >= total;
+      if (revealBtn) revealBtn.disabled = done >= total;
 
       if (total > 0 && done >= total) {
         if (recalled === 0) {
@@ -1016,7 +1106,7 @@
             </div>
           `;
           noticeEl.querySelector("[data-clz-retry]").addEventListener("click", () => {
-            renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange });
+            renderClozeInto(restartArgs);
           });
         } else {
           // Genuine active engagement -> safely promote unstudied (0) to In corso (1)
@@ -1046,7 +1136,7 @@
             levelSel.value = String(level + 1);
             state.prefs.clozeLevel = levelSel.value;
             saveState();
-            renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange });
+            renderClozeInto(restartArgs);
           });
           noticeEl.querySelector("[data-clz-mem]")?.addEventListener("click", () => {
             state.mastery[secId] = 3;
@@ -1110,6 +1200,7 @@
           });
           items.push(entry);
           p.appendChild(btn);
+          if (trail) p.appendChild(document.createTextNode(trail));
         } else {
           const wrap = document.createElement("span");
           wrap.className = "cloze-input-wrap";
@@ -1118,7 +1209,7 @@
           inp.className = "cloze-input";
           inp.placeholder = `${core[0]}…`;
           inp.setAttribute("aria-label", `Scrivi parola che inizia per ${core[0]}`);
-          inp.style.width = `${Math.max(68, Math.min(176, core.length * 9.5 + 18))}px`;
+          inp.style.width = `${Math.max(64, Math.min(172, core.length * 9.5 + 16))}px`;
 
           const peek = document.createElement("button");
           peek.type = "button";
@@ -1127,32 +1218,33 @@
           peek.title = "Mostra questa parola (conta come rivelata)";
           peek.setAttribute("aria-label", "Mostra questa parola");
 
+          const replaceWithChip = (cls, label) => {
+            const chip = document.createElement("span");
+            chip.className = cls;
+            chip.textContent = core;
+            chip.setAttribute("aria-label", `${core} (${label})`);
+            inp.replaceWith(chip);
+            peek.remove();
+          };
+
           const entry = {
             done: false,
             revealPassively: () => {
               if (entry.done) return;
               entry.done = true;
-              inp.classList.remove("bad");
-              inp.classList.add("peeked");
-              inp.value = core;
-              inp.readOnly = true;
-              peek.remove();
+              replaceWithChip("cloze-chip-peeked", "rivelata con suggerimento");
               revealed++;
               updateProgress();
-              bodyEl.querySelector(".cloze-input:not([readonly])")?.focus();
+              bodyEl.querySelector(".cloze-input")?.focus();
             },
           };
           const markRecalled = () => {
             if (entry.done) return;
             entry.done = true;
-            inp.classList.remove("bad");
-            inp.classList.add("ok");
-            inp.value = core;
-            inp.readOnly = true;
-            peek.remove();
+            replaceWithChip("cloze-chip-ok", "ricordata correttamente");
             recalled++;
             updateProgress();
-            bodyEl.querySelector(".cloze-input:not([readonly])")?.focus();
+            bodyEl.querySelector(".cloze-input")?.focus();
           };
 
           inp.addEventListener("input", () => {
@@ -1170,9 +1262,14 @@
           items.push(entry);
           wrap.appendChild(inp);
           wrap.appendChild(peek);
+          if (trail) {
+            const tr = document.createElement("span");
+            tr.className = "cloze-trail";
+            tr.textContent = trail;
+            wrap.appendChild(tr);
+          }
           p.appendChild(wrap);
         }
-        if (trail) p.appendChild(document.createTextNode(trail));
       }
       bodyEl.appendChild(p);
     }
@@ -1187,7 +1284,7 @@
         levelSel.value = "2";
         state.prefs.clozeLevel = "2";
         saveState();
-        renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange });
+        renderClozeInto(restartArgs);
       });
     }
     updateProgress();
@@ -1210,8 +1307,13 @@
       modeSel: document.getElementById("inlineClozeInput"),
       bodyEl: document.getElementById("inlineClozeBody"),
       counterEl: document.getElementById("inlineClozeCounter"),
+      counterMobileEl: document.getElementById("inlineClozeCounterMobile"),
       barEl: document.getElementById("inlineClozeBar"),
+      barRevEl: document.getElementById("inlineClozeBarRev"),
       noticeEl: document.getElementById("inlineClozeNotice"),
+      hintBtn: document.getElementById("btnInlineHint"),
+      revealBtn: document.getElementById("btnInlineRevealAll"),
+      resetBtn: document.getElementById("btnInlineReset"),
     });
   }
 
@@ -1250,8 +1352,13 @@
       modeSel: document.getElementById("clozeInputMode"),
       bodyEl: document.getElementById("pClozeBody"),
       counterEl: document.getElementById("pClozeCounter"),
+      counterMobileEl: document.getElementById("pClozeCounterMobile"),
       barEl: document.getElementById("pClozeBar"),
+      barRevEl: document.getElementById("pClozeBarRev"),
       noticeEl: document.getElementById("pClozeNotice"),
+      hintBtn: document.getElementById("btnPClozeHint"),
+      revealBtn: document.getElementById("btnPClozeRevealAll"),
+      resetBtn: document.getElementById("btnPClozeReset"),
     });
   }
 
@@ -1296,16 +1403,18 @@
   function updateFcSummaryText() {
     const clearChip = document.getElementById("btnFcClearFocus");
     clearChip.classList.toggle("hidden", !fcCustomContext);
+    const el = document.getElementById("fcActiveSummary");
+    const cardWord = fcTotalSession === 1 ? "scheda" : "schede";
     if (fcCustomContext) {
-      document.getElementById("fcActiveSummary").textContent = `Focus ${fcCustomContext} · ${fcTotalSession} schede`;
+      el.innerHTML = `<span class="sum-full">Focus ${esc(fcCustomContext)} · ${fcTotalSession} ${cardWord}</span><span class="sum-short" aria-hidden="true">${esc(fcCustomContext)} · ${fcTotalSession}</span>`;
       return;
     }
     const modeNames = { curated: "Alta Resa", all_articles: "Articoli 1:1", combined: "Completo" };
     const mode = modeNames[document.getElementById("fcDeckMode").value];
     const docVal = document.getElementById("fcDocFilter").value;
-    const docTxt = docVal === "all" ? "Tutti" : DOC_SHORT[docVal];
+    const docTxt = docVal === "all" ? "Tutti i documenti" : DOC_SHORT[docVal];
     const dueTxt = document.getElementById("fcOnlyDue").checked ? " · Solo oggi" : "";
-    document.getElementById("fcActiveSummary").textContent = `${mode} · ${docTxt}${dueTxt} · ${fcTotalSession} schede`;
+    el.innerHTML = `<span class="sum-full">${esc(mode)} · ${esc(docTxt)}${dueTxt} · ${fcTotalSession} ${cardWord}</span><span class="sum-short" aria-hidden="true">${fcTotalSession} ${cardWord} · ${esc(mode)}</span>`;
   }
 
   function buildFcQueue(shuffle = false, customCards = null, customLabel = null) {
@@ -1344,7 +1453,7 @@
     const cardEl = document.getElementById("flashcardEl");
     const emptyEl = document.getElementById("fcEmptyState");
     const revealWrap = document.getElementById("fcRevealWrap");
-    const ratingBar = document.getElementById("fcRatingBar");
+    const ratingWrap = document.getElementById("fcRatingWrap");
 
     const pct = fcTotalSession > 0 ? Math.round((fcCompletedSession / fcTotalSession) * 100) : 100;
     document.getElementById("fcBarFill").style.width = `${pct}%`;
@@ -1352,7 +1461,7 @@
     if (!fcQueue.length) {
       cardEl.classList.add("hidden");
       revealWrap.classList.add("hidden");
-      ratingBar.classList.add("hidden");
+      ratingWrap.classList.add("hidden");
       emptyEl.classList.remove("hidden");
 
       const onlyDue = document.getElementById("fcOnlyDue").checked;
@@ -1390,7 +1499,7 @@
 
     fcFlipped = false;
     document.getElementById("fcBack").classList.add("hidden");
-    ratingBar.classList.add("hidden");
+    ratingWrap.classList.add("hidden");
     revealWrap.classList.remove("hidden");
   }
 
@@ -1398,7 +1507,7 @@
     if (!fcQueue.length || fcFlipped) return;
     fcFlipped = true;
     document.getElementById("fcBack").classList.remove("hidden");
-    document.getElementById("fcRatingBar").classList.remove("hidden");
+    document.getElementById("fcRatingWrap").classList.remove("hidden");
     document.getElementById("fcRevealWrap").classList.add("hidden");
   }
 
@@ -1451,14 +1560,17 @@
 
   function updateQzSummaryText() {
     document.getElementById("btnQzClearFocus").classList.toggle("hidden", !qzCustomContext);
+    const el = document.getElementById("qzActiveSummary");
+    const qWord = qzQueue.length === 1 ? "domanda" : "domande";
     if (qzCustomContext) {
-      document.getElementById("qzActiveSummary").textContent = `Focus ${qzCustomContext} · ${qzQueue.length} domande`;
+      el.innerHTML = `<span class="sum-full">Focus ${esc(qzCustomContext)} · ${qzQueue.length} ${qWord}</span><span class="sum-short" aria-hidden="true">${esc(qzCustomContext)} · ${qzQueue.length}</span>`;
       return;
     }
-    const modeTxt = MODE_LABELS[document.getElementById("qzModeFilter").value];
+    const modeTxt = MODE_LABELS_FULL[document.getElementById("qzModeFilter").value] || "Tutte le tipologie";
     const docVal = document.getElementById("qzDocFilter").value;
-    const docTxt = docVal === "all" ? "Tutti" : DOC_SHORT[docVal];
-    document.getElementById("qzActiveSummary").textContent = `${modeTxt} · ${docTxt} · ${qzQueue.length} domande`;
+    const docTxt = docVal === "all" ? "Tutti i documenti" : DOC_SHORT[docVal];
+    const shortSuffix = docVal === "all" ? "" : ` · ${DOC_SHORT[docVal]}`;
+    el.innerHTML = `<span class="sum-full">${esc(modeTxt)} · ${esc(docTxt)} · ${qzQueue.length} ${qWord}</span><span class="sum-short" aria-hidden="true">${qzQueue.length} ${qWord}${esc(shortSuffix)}</span>`;
   }
 
   function startQuiz(customList = null, customLabel = null) {
@@ -1496,7 +1608,7 @@
     const item = qzQueue[qzIdx];
     qzAnswered = false;
     document.getElementById("qzCounter").textContent = `Domanda ${qzIdx + 1} / ${qzQueue.length}`;
-    document.getElementById("qzScoreLive").textContent = `${qzCorrect} esatte · ${qzWrong.length} errate`;
+    document.getElementById("qzScoreLive").innerHTML = formatQuizScore();
     document.getElementById("qzBarFill").style.width = `${(qzIdx / qzQueue.length) * 100}%`;
 
     document.getElementById("qzDocBadge").textContent = DOC_SHORT[item.doc] || item.doc;
@@ -1509,7 +1621,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "quiz-opt";
-      btn.innerHTML = `<span class="opt-key">${String.fromCharCode(65 + i)}</span><span>${esc(txt)}</span>`;
+      btn.innerHTML = `<span class="opt-key">${String.fromCharCode(65 + i)}</span><span class="opt-text">${esc(txt)}</span>`;
       btn.addEventListener("click", () => handleQuizAnswer(i));
       optsEl.appendChild(btn);
     });
@@ -1525,8 +1637,14 @@
     const item = qzQueue[qzIdx];
     document.querySelectorAll("#qzOptions .quiz-opt").forEach((b, i) => {
       b.disabled = true;
-      if (i === item.correct) b.classList.add("correct");
-      if (i === chosenIdx && i !== item.correct) b.classList.add("wrong");
+      if (i === item.correct) {
+        b.classList.add("correct");
+        b.insertAdjacentHTML("beforeend", '<span class="opt-status" aria-label="Risposta corretta">✓</span>');
+      }
+      if (i === chosenIdx && i !== item.correct) {
+        b.classList.add("wrong");
+        b.insertAdjacentHTML("beforeend", '<span class="opt-status" aria-label="Risposta errata">✕</span>');
+      }
     });
 
     const ok = chosenIdx === item.correct;
@@ -1541,7 +1659,8 @@
     }
     saveState();
 
-    document.getElementById("qzScoreLive").textContent = `${qzCorrect} esatte · ${qzWrong.length} errate`;
+    document.getElementById("qzScoreLive").innerHTML = formatQuizScore();
+    document.getElementById("qzBarFill").style.width = `${((qzIdx + 1) / qzQueue.length) * 100}%`;
     const fb = document.getElementById("qzFeedback");
     fb.classList.toggle("ok", ok);
     fb.classList.toggle("bad", !ok);
@@ -1558,6 +1677,7 @@
 
     document.getElementById("btnRetryWrong").classList.toggle("hidden", qzWrong.length === 0);
     document.getElementById("wrongInlineCount").textContent = qzWrong.length;
+    document.getElementById("wrongInlineCountShort").textContent = qzWrong.length;
   }
 
   function showQuizSummary() {
@@ -1594,17 +1714,32 @@
   }
 
   // ==================== 4. SINOSSI ====================
+  const CS_PLACEHOLDERS = {
+    timeline: "Filtra cronoprogramma…",
+    quorums: "Filtra quorum…",
+    organs: "Filtra organi…",
+    deadlines: "Filtra scadenze…",
+    diagrams: "Filtra schemi PDF…",
+  };
+
   function syncCsTabs() {
     document.querySelectorAll("#csTabs .rail-tab").forEach(t => {
       const act = t.dataset.cs === csTab;
       t.classList.toggle("active", act);
       t.setAttribute("aria-selected", act ? "true" : "false");
     });
+    const filterBar = document.getElementById("csFilterBar");
+    const inp = document.getElementById("csSearch");
+    if (filterBar) filterBar.classList.toggle("hidden", csTab === "hierarchy");
+    if (inp && CS_PLACEHOLDERS[csTab]) inp.placeholder = CS_PLACEHOLDERS[csTab];
   }
 
   function renderReference() {
     const wrap = document.getElementById("csContent");
-    const q = (document.getElementById("csSearch").value || "").trim().toLowerCase();
+    const inp = document.getElementById("csSearch");
+    const clearBtn = document.getElementById("btnClearCsSearch");
+    if (clearBtn) clearBtn.classList.toggle("hidden", !(inp.value || "").length);
+    const q = (inp.value || "").trim().toLowerCase();
     const cs = PACK.cheatsheet;
     const match = obj => !q || JSON.stringify(obj).toLowerCase().includes(q);
 
@@ -1614,7 +1749,7 @@
       const rows = cs.timeline2026.filter(match);
       wrap.innerHTML = rows.length ? `
         <div class="ref-table-wrap"><table class="ref-table">
-          <thead><tr><th>Data / Ora</th><th>Adempimento</th><th>Fonte</th></tr></thead>
+          <thead><tr><th>Data / Ora</th><th>Adempimento</th><th class="col-source">Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => {
               const dt = parseItalianDate(r.date);
@@ -1629,7 +1764,7 @@
               return `<tr class="${cls}">
                 <td data-label="Data / Ora"><span class="num-hl">${esc(r.date)}</span>${badge}</td>
                 <td data-label="Adempimento">${esc(r.event)}</td>
-                <td data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">Apri →</button></td>
+                <td class="col-source" data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} →</button></td>
               </tr>`;
             }).join("")}
           </tbody>
@@ -1638,13 +1773,13 @@
       const rows = cs.quorums.filter(match);
       wrap.innerHTML = rows.length ? `
         <div class="ref-table-wrap"><table class="ref-table">
-          <thead><tr><th>Organo / Seduta</th><th>Costitutivo</th><th>Deliberativo</th><th>Fonte</th></tr></thead>
+          <thead><tr><th>Organo / Seduta</th><th>Costitutivo</th><th>Deliberativo</th><th class="col-source">Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
-              <td data-label="Organo / Seduta"><strong>${esc(r.context)}</strong></td>
-              <td data-label="Costitutivo">${esc(r.costitutivo)}</td>
-              <td data-label="Deliberativo">${esc(r.deliberativo)}</td>
-              <td data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">Apri →</button></td>
+              <td data-label="Organo / Seduta"><strong>${esc(formatOperators(r.context))}</strong></td>
+              <td data-label="Costitutivo">${esc(formatOperators(r.costitutivo))}</td>
+              <td data-label="Deliberativo">${esc(formatOperators(r.deliberativo))}</td>
+              <td class="col-source" data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} →</button></td>
             </tr>`).join("")}
           </tbody>
         </table></div>` : `<p class="muted">Nessun quorum trovato.</p>`;
@@ -1652,14 +1787,14 @@
       const rows = cs.organs.filter(match);
       wrap.innerHTML = rows.length ? `
         <div class="ref-table-wrap"><table class="ref-table">
-          <thead><tr><th>Organo / Carica</th><th>Composizione</th><th>Durata</th><th>Poteri Chiave</th><th>Fonte</th></tr></thead>
+          <thead><tr><th>Organo / Carica</th><th>Composizione</th><th>Durata</th><th>Poteri Chiave</th><th class="col-source">Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
-              <td data-label="Organo"><strong>${esc(r.name)}</strong></td>
-              <td data-label="Composizione">${esc(r.composition)}</td>
-              <td data-label="Durata">${esc(r.term)}</td>
-              <td data-label="Poteri">${esc(r.powers)}</td>
-              <td data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">Apri →</button></td>
+              <td data-label="Organo"><strong>${esc(formatOperators(r.name))}</strong></td>
+              <td data-label="Composizione">${esc(formatOperators(r.composition))}</td>
+              <td data-label="Durata">${esc(formatOperators(r.term))}</td>
+              <td data-label="Poteri">${esc(formatOperators(r.powers))}</td>
+              <td class="col-source" data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} →</button></td>
             </tr>`).join("")}
           </tbody>
         </table></div>` : `<p class="muted">Nessun organo trovato.</p>`;
@@ -1667,12 +1802,12 @@
       const rows = cs.keyDeadlines.filter(match);
       wrap.innerHTML = rows.length ? `
         <div class="ref-table-wrap"><table class="ref-table">
-          <thead><tr><th>Istituto / Procedura</th><th>Termine / Regola</th><th>Fonte</th></tr></thead>
+          <thead><tr><th>Istituto / Procedura</th><th>Termine / Regola</th><th class="col-source">Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
-              <td data-label="Istituto"><strong>${esc(r.term)}</strong></td>
-              <td data-label="Termine">${esc(r.value)}</td>
-              <td data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">Apri →</button></td>
+              <td data-label="Istituto"><strong>${esc(formatOperators(r.term))}</strong></td>
+              <td data-label="Termine">${esc(formatOperators(r.value))}</td>
+              <td class="col-source" data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} →</button></td>
             </tr>`).join("")}
           </tbody>
         </table></div>` : `<p class="muted">Nessun termine trovato.</p>`;
@@ -1684,7 +1819,7 @@
             ${cs.hierarchy.map(r => `<tr>
               <td data-label="Grado"><span class="code-chip">#${r.rank}</span></td>
               <td data-label="Fonte"><strong>${esc(r.source)}</strong></td>
-              <td data-label="Note">${esc(r.note)} ${r.ref ? `<button type="button" class="link-btn" data-ref-jump="${r.ref}">Apri →</button>` : ""}</td>
+              <td data-label="Note">${esc(r.note)} ${r.ref ? `<button type="button" class="link-btn" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} →</button>` : ""}</td>
             </tr>`).join("")}
           </tbody>
         </table></div>
@@ -1769,8 +1904,27 @@
     document.getElementById("btnLbNext").disabled = lbGallery.length <= 1;
   }
 
+  function sliceCleanSnippet(text, matchPos) {
+    const clean = text.replace(/\s+/g, " ").trim();
+    if (!clean) return "Sezione contenitore";
+    let start = matchPos >= 0 ? Math.max(0, matchPos - 48) : 0;
+    if (start > 0) {
+      const nextSpace = clean.indexOf(" ", start);
+      if (nextSpace !== -1 && nextSpace < matchPos) start = nextSpace + 1;
+    }
+    let end = Math.min(clean.length, start + 155);
+    if (end < clean.length) {
+      const lastSpace = clean.lastIndexOf(" ", end);
+      if (lastSpace > start + 40) end = lastSpace;
+    }
+    return (start > 0 ? "…" : "") + clean.slice(start, end).trim() + (end < clean.length ? "…" : "");
+  }
+
   function renderGlobalSearch(query) {
     const res = document.getElementById("globalSearchResults");
+    const clearBtn = document.getElementById("btnClearGlobalSearch");
+    if (clearBtn) clearBtn.classList.toggle("hidden", !query.length);
+
     const q = query.trim().toLowerCase();
     gsResults = [];
     gsActiveIdx = -1;
@@ -1784,12 +1938,9 @@
       .filter(s => s.code.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || (s.text && s.text.toLowerCase().includes(q)))
       .slice(0, 24)
       .map(s => {
-        const pos = s.text ? s.text.toLowerCase().indexOf(q) : -1;
-        let snip = s.text ? s.text.slice(0, 140) : "Sezione contenitore";
-        if (pos >= 0) {
-          const st = Math.max(0, pos - 48);
-          snip = (st > 0 ? "…" : "") + s.text.slice(st, st + 160) + "…";
-        }
+        const flat = s.text ? s.text.replace(/\s+/g, " ").trim() : "";
+        const pos = flat ? flat.toLowerCase().indexOf(q) : -1;
+        const snip = flat ? sliceCleanSnippet(flat, pos) : "Sezione contenitore";
         return { kind: "article", badge: DOC_SHORT[s.doc], code: s.code, title: s.title, snip, target: s.id };
       });
 
@@ -1819,12 +1970,12 @@
       btn.type = "button";
       btn.className = `sr-item ${idx === 0 ? "active" : ""}`;
       btn.innerHTML = `
-        <div class="sr-item-head">
+        <div class="sr-item-meta">
           <span class="doc-tag">${esc(item.badge)}</span>
           <span class="code-chip">${esc(item.code)}</span>
-          <span>${esc(item.title)}</span>
         </div>
-        <div class="sr-item-snip">${esc(item.snip)}</div>
+        <div class="sr-item-title">${highlightQuery(item.title, query)}</div>
+        <div class="sr-item-snip">${highlightQuery(item.snip, query)}</div>
       `;
       btn.addEventListener("click", () => executeSearchResult(item));
       res.appendChild(btn);
@@ -1848,7 +1999,7 @@
     const sm2Count = Object.keys(state.sm2).length;
     const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k]).length;
     document.getElementById("backupSummary").textContent =
-      `Consolidate: ${studied}/${STUDYABLE_SECTIONS.length} (${mem} a memoria) · Flashcards valutate: ${sm2Count} · Segnalibri: ${bmCount} · Risposte quiz: ${state.quizStats.total}`;
+      `Consolidate: ${studied}/${STUDYABLE_SECTIONS.length} (${mem} a memoria) · Flashcard valutate: ${sm2Count} · Segnalibri: ${bmCount} · Risposte quiz: ${state.quizStats.total}`;
   }
 
   // ==================== EVENT WIRING ====================
@@ -1858,10 +2009,6 @@
       btn.addEventListener("click", () => switchView(btn.dataset.view));
     });
 
-    document.getElementById("btnQuickFlashcards").addEventListener("click", () => {
-      switchPracticeMode("flashcards");
-      switchView("practice");
-    });
     document.getElementById("btnQuickBlitz").addEventListener("click", () => {
       qzCustomContext = null;
       document.getElementById("qzModeFilter").value = "blitz";
@@ -2016,17 +2163,18 @@
       b.addEventListener("click", () => switchPracticeMode(b.dataset.pmode));
     });
 
-    const wireTrayToggle = (btnId, trayId) => {
+    const wireTrayToggle = (btnId, trayId, baseLabel) => {
       const btn = document.getElementById(btnId);
       const tray = document.getElementById(trayId);
       btn.addEventListener("click", () => {
         const open = tray.classList.toggle("hidden") === false;
         btn.setAttribute("aria-expanded", open ? "true" : "false");
+        btn.textContent = open ? `${baseLabel} ▴` : `${baseLabel} ▾`;
       });
     };
-    wireTrayToggle("btnToggleFcFilters", "fcFilterTray");
-    wireTrayToggle("btnToggleQzFilters", "qzFilterTray");
-    wireTrayToggle("btnToggleClozeFilters", "clozeFilterTray");
+    wireTrayToggle("btnToggleFcFilters", "fcFilterTray", "Filtri");
+    wireTrayToggle("btnToggleQzFilters", "qzFilterTray", "Filtri");
+    wireTrayToggle("btnToggleClozeFilters", "clozeFilterTray", "Seleziona");
 
     // Flashcards controls
     document.getElementById("fcDeckMode").addEventListener("change", e => {
@@ -2047,7 +2195,7 @@
       const card = fcQueue[0];
       if (card?.ref) {
         openArticle(card.ref, {
-          returnTo: { type: "practice", sub: "flashcards", label: "Flashcards", reason: "Verifica norma della scheda" },
+          returnTo: { type: "practice", sub: "flashcards", label: "Flashcard", reason: "Verifica norma della scheda" },
         });
       }
     });
@@ -2137,6 +2285,12 @@
       });
     });
     document.getElementById("csSearch").addEventListener("input", renderReference);
+    document.getElementById("btnClearCsSearch").addEventListener("click", () => {
+      const inp = document.getElementById("csSearch");
+      inp.value = "";
+      renderReference();
+      inp.focus();
+    });
 
     // Search Modal
     document.getElementById("btnSearchQuick").addEventListener("click", () => {
@@ -2149,6 +2303,12 @@
     document.getElementById("closeSearchModal").addEventListener("click", closeAllModals);
     document.getElementById("searchModal").addEventListener("click", e => { if (e.target.id === "searchModal") closeAllModals(); });
     document.getElementById("globalSearchInput").addEventListener("input", e => renderGlobalSearch(e.target.value));
+    document.getElementById("btnClearGlobalSearch").addEventListener("click", () => {
+      const inp = document.getElementById("globalSearchInput");
+      inp.value = "";
+      renderGlobalSearch("");
+      inp.focus();
+    });
     document.getElementById("globalSearchInput").addEventListener("keydown", e => {
       if (!gsResults.length) return;
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
