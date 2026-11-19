@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=4.1.0" />
+  <link rel="stylesheet" href="styles.css?v=4.2.0" />
 </head>
 <body>
   <a href="#mainContent" class="skip-link">Salta al contenuto principale</a>
@@ -182,7 +182,10 @@
                 <span class="cloud-home-sub">Sincronizza progressi, flashcard e quiz con Google</span>
               </div>
             </div>
-            <button type="button" class="btn-apple primary sm" id="btnHomeGoogleLogin">Accedi</button>
+            <div class="cloud-home-actions">
+              <button type="button" class="btn-apple soft sm" id="btnHomeOpenLogOut" title="Apri console di verifica">Log</button>
+              <button type="button" class="btn-apple primary sm" id="btnHomeGoogleLogin">Accedi</button>
+            </div>
           </div>
 
           <div class="cloud-home-row hidden" id="cloudHomeIn">
@@ -193,7 +196,10 @@
                 <span class="cloud-home-sub" id="cloudHomeSub">● Sincronizzato nel Cloud in tempo reale</span>
               </div>
             </div>
-            <button type="button" class="btn-apple soft sm" id="btnHomeCloudManage">Cloud ›</button>
+            <div class="cloud-home-actions">
+              <button type="button" class="btn-apple soft sm" id="btnHomeOpenLogIn" title="Apri console di verifica">Log</button>
+              <button type="button" class="btn-apple soft sm" id="btnHomeCloudManage">Cloud ›</button>
+            </div>
           </div>
         </div>
 
@@ -824,6 +830,25 @@
           <button type="button" class="btn-apple soft sm" id="btnResetCancel">Annulla</button>
         </div>
       </div>
+
+      <!-- In-App Diagnostic & Cloud Telemetry Console -->
+      <div class="diag-console-section" id="diagConsoleSection">
+        <div class="diag-console-head">
+          <div class="diag-head-left">
+            <span class="modal-divider-label">Console diagnostica (App &amp; Cloud)</span>
+            <span class="diag-count-pill" id="diagCountBadge">0 eventi</span>
+          </div>
+          <div class="diag-head-actions">
+            <button type="button" class="btn-apple soft sm" id="btnDiagTestCloud">⚡ Testa Cloud</button>
+            <button type="button" class="btn-apple primary sm" id="btnDiagCopyAll">Copia tutto</button>
+          </div>
+        </div>
+        <textarea id="diagConsoleOutput" class="diag-console-textarea" readonly spellcheck="false" aria-label="Log diagnostico completo"></textarea>
+        <div class="diag-console-foot">
+          <span class="muted small" id="diagStatusHint">Registra ogni azione, stato locale, Auth e lettura/scrittura Firestore.</span>
+          <button type="button" class="text-action" id="btnDiagClear">Svuota log</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -851,6 +876,6 @@
   <!-- ==================== TOAST ==================== -->
   <div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=4.1.0"></script>
+  <script src="app.js?v=4.2.0"></script>
 </body>
 </html>
