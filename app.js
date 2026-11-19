@@ -261,8 +261,8 @@
     applySavedPrefsToControls();
 
     const [corpusRes, packRes] = await Promise.all([
-      fetch("data/corpus.json"),
-      fetch("data/study_pack.json"),
+      fetch("data/corpus.json?v=4.0.1"),
+      fetch("data/study_pack.json?v=4.0.1"),
     ]);
     CORPUS = await corpusRes.json();
     PACK = await packRes.json();
