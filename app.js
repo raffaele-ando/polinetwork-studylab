@@ -87,7 +87,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.2.0";
+  const APP_VERSION = "v4.2.1";
   let diagEvents = loadDiagEvents();
   let diagSeq = diagEvents.length;
 
@@ -222,24 +222,57 @@
       diagLog("SELF-TEST", "4/4 Test Cloud Firestore R/W", "SKIP — Effettua prima 'Accedi con Google' per testare lettura/scrittura Cloud sul tuo documento utente.");
       showToast("Test locale OK · Accedi con Google per il test Cloud");
     } else {
+      // 4. Cloud Firestore Live Round-Trip R/W Probe (with 4500ms timeout + direct REST diagnosis)
       const t0 = performance.now();
+      diagLog("SELF-TEST", "4/4 Test Cloud Firestore R/W", "Avvio test SDK + REST API diretta su Firestore…");
+      refreshDiagConsoleUI();
       try {
-        await pushStateToCloud(false);
+        const token = await fbUser.getIdToken();
+        const restUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/${fbCollectionName}/${fbUser.uid}`;
+        const restRes = await fetch(restUrl, {
+          method: "GET",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const restMs = Math.round(performance.now() - t0);
+        if (restRes.status === 200 || restRes.status === 404) {
+          diagLog("SELF-TEST", "4a/4 Firestore REST API", `HTTP ${restRes.status} OK in ${restMs}ms — Database raggiungibile e permessi validi`);
+        } else {
+          const errBody = await restRes.text();
+          let errReason = errBody.slice(0, 260);
+          try {
+            const parsed = JSON.parse(errBody);
+            errReason = `${parsed?.error?.status || ""} — ${parsed?.error?.message || errReason}`;
+          } catch (_) {}
+          diagLog("SELF-TEST", "4a/4 Firestore REST API", `HTTP ${restRes.status} in ${restMs}ms — ${errReason}`);
+          if (restRes.status === 403 || restRes.status === 404) {
+            setCloudNotice(
+              `Firestore restituisce HTTP ${restRes.status} (${errReason}). Vai su Firebase Console → progetto "polinetwork" → Firestore Database → Crea database (o nella scheda "Regole" imposta: allow read, write: if request.auth != null;).`,
+              true
+            );
+          }
+        }
+      } catch (restErr) {
+        diagLog("SELF-TEST", "4a/4 Firestore REST API", `ERRORE RETE — ${restErr?.message || restErr}`);
+      }
+
+      try {
+        const sdkT0 = performance.now();
+        await withCloudTimeout(pushStateToCloud(false), 4500, "pushStateToCloud");
         const ref = fbModules.doc(fbDb, fbCollectionName, fbUser.uid);
-        const snap = await fbModules.getDoc(ref);
-        const ms = Math.round(performance.now() - t0);
-        if (snap.exists()) {
+        const snap = await withCloudTimeout(fbModules.getDoc(ref), 4500, "getDoc");
+        const ms = Math.round(performance.now() - sdkT0);
+        if (snap && snap.exists()) {
           const data = snap.data();
           const remoteSummary = summarizeStateForLog(data?.studylab_v1);
-          diagLog("SELF-TEST", "4/4 Test Cloud Firestore R/W", `PASS in ${ms}ms — Documento '${fbCollectionName}/${fbUser.uid}' letto e verificato nel Cloud (${remoteSummary})`);
+          diagLog("SELF-TEST", "4b/4 Firestore SDK Round-Trip", `PASS in ${ms}ms — Documento '${fbCollectionName}/${fbUser.uid}' scritto e riletto dal Cloud (${remoteSummary})`);
           showToast(`Test Cloud PASS (${ms}ms) ✓`);
         } else {
-          diagLog("SELF-TEST", "4/4 Test Cloud Firestore R/W", `WARN in ${ms}ms — Scrittura inviata ma documento '${fbCollectionName}/${fbUser.uid}' non trovato alla rilettura.`);
+          diagLog("SELF-TEST", "4b/4 Firestore SDK Round-Trip", `WARN in ${ms}ms — Documento '${fbCollectionName}/${fbUser.uid}' non trovato o bloccato dalle regole Firestore.`);
         }
       } catch (err) {
         const ms = Math.round(performance.now() - t0);
-        diagLog("SELF-TEST", "4/4 Test Cloud Firestore R/W", `FAIL in ${ms}ms — code=${err?.code || "unknown"} msg=${err?.message || err}`);
-        showToast("Errore test Cloud (vedi log)");
+        diagLog("SELF-TEST", "4b/4 Firestore SDK Round-Trip", `FAIL in ${ms}ms — code=${err?.code || "timeout"} msg=${err?.message || err}`);
+        showToast("Verifica regole/creazione Firestore (vedi log)");
       }
     }
     refreshDiagConsoleUI();
@@ -587,6 +620,18 @@
     updateDueBadges();
   }
 
+  function withCloudTimeout(promise, ms = 5000, opName = "firestore") {
+    let timer = null;
+    const timeoutPromise = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        const err = new Error(`Timeout ${ms}ms superato durante ${opName} (verifica che Firestore Database sia creato e le regole consentano request.auth != null)`);
+        err.code = "timeout";
+        reject(err);
+      }, ms);
+    });
+    return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
+  }
+
   async function resolveCloudDocRef(uid) {
     const { doc } = fbModules;
     return doc(fbDb, fbCollectionName, uid);
@@ -622,7 +667,7 @@
       const t0 = performance.now();
       try {
         const ref = fbModules.doc(fbDb, col, fbUser.uid);
-        await fbModules.setDoc(ref, payload, { merge: true });
+        await withCloudTimeout(fbModules.setDoc(ref, payload, { merge: true }), 4500, `setDoc(${col})`);
         const ms = Math.round(performance.now() - t0);
         fbCollectionName = col;
         cloudPendingPush = false;
@@ -639,6 +684,10 @@
       } catch (err) {
         const ms = Math.round(performance.now() - t0);
         diagLog("CLOUD-PUSH", `WARN tentativo '${col}/${fbUser.uid}' (${ms}ms)`, `code=${err?.code || "err"} msg=${err?.message || err}`);
+        if (err?.code === "unavailable" || err?.code === "timeout") {
+          // If Firestore backend is unreachable/uncreated or offline, don't waste 3x timeout on other collection names
+          break;
+        }
         if (err?.code === "permission-denied") continue;
         console.warn("Cloud push warning:", err);
       }
@@ -676,7 +725,7 @@
       const t0 = performance.now();
       try {
         const ref = fbModules.doc(fbDb, col, uid);
-        const snap = await fbModules.getDoc(ref);
+        const snap = await withCloudTimeout(fbModules.getDoc(ref), 4500, `getDoc(${col})`);
         const ms = Math.round(performance.now() - t0);
         fbCollectionName = col;
         if (snap.exists()) {
@@ -694,6 +743,7 @@
       } catch (err) {
         const ms = Math.round(performance.now() - t0);
         diagLog("CLOUD-PULL", `WARN lettura '${col}/${uid}' (${ms}ms)`, `code=${err?.code || "err"} msg=${err?.message || err}`);
+        if (err?.code === "unavailable" || err?.code === "timeout") break;
         if (err?.code === "permission-denied") continue;
       }
     }
@@ -774,7 +824,13 @@
         }).catch(() => {});
       }
       fbAuth = authMod.getAuth(fbApp);
-      fbDb = fsMod.getFirestore(fbApp);
+      try {
+        fbDb = fsMod.initializeFirestore(fbApp, {
+          experimentalAutoDetectLongPolling: true,
+        });
+      } catch (_) {
+        fbDb = fsMod.getFirestore(fbApp);
+      }
       fbModules = { ...authMod, ...fsMod };
       diagLog("FIREBASE-INIT", `SDK inizializzato in ${Math.round(performance.now() - t0)}ms`, "App + Auth + Firestore pronti");
 
