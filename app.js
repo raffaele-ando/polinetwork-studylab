@@ -11,16 +11,16 @@
   let SECTION_MAP = new Map();
 
   let state = loadState();
-  let currentView = "dashboard";
+  let currentView = "overview";
   let readerDocFilter = "all";
   let readerStatusFilter = "all";
   let readerSecId = null;
-  let xrefReturnStack = [];
+  let readerMode = "read"; // "read" | "cloze"
+  let returnStack = []; // [{ type: 'article'|'view', target, label, reason, sub }]
 
-  // Cloze state
-  let clozeSecId = null;
-  let clozeBlanksTotal = 0;
-  let clozeBlanksRevealed = 0;
+  // Practice hub state
+  let practiceMode = "flashcards"; // "flashcards" | "quiz" | "cloze"
+  let practiceClozeSecId = null;
 
   // Flashcards state
   let fcQueue = [];
@@ -28,6 +28,7 @@
   let fcCompletedSession = 0;
   let fcFlipped = false;
   let fcLastAction = null;
+  let fcCustomContext = null; // e.g. "Art. 12" when launched from an article
 
   // Quiz state
   let qzQueue = [];
@@ -35,30 +36,26 @@
   let qzCorrect = 0;
   let qzWrong = [];
   let qzAnswered = false;
+  let qzCustomContext = null;
 
-  // Cheatsheet & Lightbox state
+  // Reference & Lightbox state
   let csTab = "timeline";
   let lbGallery = [];
   let lbIdx = 0;
 
-  // Global search keyboard navigation
+  // Search modal state
   let gsResults = [];
   let gsActiveIdx = -1;
-  let lastFocusedBeforeModal = null;
+  let lastFocusedEl = null;
 
   const DOC_LABELS = {
-    statuto: "Statuto",
-    rri: "Regolamenti Interni (RRI)",
-    elettorale: "Reg. Elettorale 2026",
+    statuto: "Statuto PoliNetwork APS",
+    rri: "Raccolta dei Regolamenti Interni (RRI)",
+    elettorale: "Regolamento Elettorale Direttivo 2026",
   };
-
-  const DOC_SHORT = {
-    statuto: "Statuto",
-    rri: "RRI",
-    elettorale: "Elettorale",
-  };
-
+  const DOC_SHORT = { statuto: "Statuto", rri: "RRI", elettorale: "Elettorale" };
   const STATUS_LABELS = ["Da studiare", "In corso", "Imparato", "A memoria"];
+  const MODE_LABELS = { all: "Tutte", blitz: "Blitz Numeri", mc: "Normativa", scenario: "Scenari" };
 
   const DIAGRAM_LABELS = {
     "21": "Allegato D — Modulo Candidatura Direttivo",
@@ -92,7 +89,7 @@
       sm2: {},
       quizStats: { total: 0, correct: 0 },
       quizMastered: {},
-      theme: "dark",
+      theme: "light",
       readerScale: 1,
       lastSecId: null,
     };
@@ -113,18 +110,18 @@
           quizMastered: p.quizMastered || {},
         };
       }
-    } catch (_) { /* fallback to defaults */ }
+    } catch (_) { /* ignore */ }
     return defaultState();
   }
 
   function saveState() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (_) { /* ignore quota errors */ }
+    } catch (_) { /* ignore */ }
   }
 
   // ==================== UTILITIES ====================
-  function escapeHtml(str) {
+  function esc(str) {
     return String(str)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
@@ -132,55 +129,45 @@
       .replace(/"/g, "&quot;");
   }
 
-  function normalizeText(s) {
-    return String(s)
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[’'“”".,;:()]/g, "")
-      .trim();
+  function norm(s) {
+    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[’'“”".,;:()]/g, "").trim();
   }
 
-  function showToast(message, variant = "info") {
+  function showToast(msg, kind = "info") {
     const region = document.getElementById("toastRegion");
-    const toast = document.createElement("div");
-    toast.className = `toast ${variant}`;
-    toast.textContent = message;
-    region.appendChild(toast);
+    const el = document.createElement("div");
+    el.className = `toast ${kind}`;
+    el.textContent = msg;
+    region.appendChild(el);
     setTimeout(() => {
-      toast.style.opacity = "0";
-      toast.style.transition = "opacity 0.2s";
-      setTimeout(() => toast.remove(), 220);
-    }, 2800);
+      el.style.opacity = "0";
+      el.style.transition = "opacity 0.2s";
+      setTimeout(() => el.remove(), 220);
+    }, 2600);
   }
 
   function parseItalianDate(str) {
-    // Supports "DD/MM/YYYY", "DD/MM/YYYY HH:MM", "21/11/2026 (~9-13)"
     const m = str.match(/(\d{2})\/(\d{2})\/(\d{4})(?:\s+(?:~)?(\d{1,2})(?::(\d{2}))?)?/);
     if (!m) return null;
-    const day = Number(m[1]);
-    const month = Number(m[2]) - 1;
-    const year = Number(m[3]);
     const hour = m[4] !== undefined ? Number(m[4]) : 23;
     const min = m[5] !== undefined ? Number(m[5]) : (m[4] !== undefined ? 0 : 59);
-    return new Date(year, month, day, hour, min, 0);
+    return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), hour, min, 0);
   }
 
   function formatCountdown(ms) {
     if (ms <= 0) return "Scaduta";
-    const totalMin = Math.floor(ms / 60000);
-    const days = Math.floor(totalMin / 1440);
-    const hours = Math.floor((totalMin % 1440) / 60);
-    const mins = totalMin % 60;
-    if (days > 0) return `Tra ${days}g ${hours}h`;
-    if (hours > 0) return `Tra ${hours}h ${mins}m`;
-    return `Tra ${Math.max(1, mins)} min`;
+    const mins = Math.floor(ms / 60000);
+    const d = Math.floor(mins / 1440);
+    const h = Math.floor((mins % 1440) / 60);
+    const m = mins % 60;
+    if (d > 0) return `Tra ${d}g ${h}h`;
+    if (h > 0) return `Tra ${h}h ${m}m`;
+    return `Tra ${Math.max(1, m)} min`;
   }
 
-  function formatIntervalLabel(days) {
+  function formatInterval(days) {
     if (days <= 0) return "Rivedi ora";
-    if (days === 1) return "1 giorno";
-    return `${days} giorni`;
+    return days === 1 ? "1 giorno" : `${days} giorni`;
   }
 
   // ==================== PURE SM-2 ENGINE ====================
@@ -198,12 +185,7 @@
       reps++;
     }
     ef = Math.max(1.3, ef + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
-    return {
-      reps,
-      interval,
-      ef: Number(ef.toFixed(2)),
-      nextReview: Date.now() + interval * 86400000,
-    };
+    return { reps, interval, ef: Number(ef.toFixed(2)), nextReview: Date.now() + interval * 86400000 };
   }
 
   // ==================== INIT ====================
@@ -232,31 +214,32 @@
     readerSecId = (state.lastSecId && SECTION_MAP.has(state.lastSecId))
       ? state.lastSecId
       : (STUDYABLE_SECTIONS[0]?.id || ALL_SECTIONS[0]?.id);
-    clozeSecId = CLOZEABLE_SECTIONS[0]?.id || readerSecId;
+    practiceClozeSecId = CLOZEABLE_SECTIONS[0]?.id || readerSecId;
 
     syncDynamicOptionLabels();
     populateFcTagFilter();
-    populateClozeSecSelect(document.getElementById("clozeDocSelect").value);
-    bindGlobalEvents();
+    populatePracticeClozeSecSelect(document.getElementById("clozeDocSelect").value);
+    bindAllEvents();
 
-    renderDashboard();
+    renderOverview();
     renderReaderSidebar();
     if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
-    renderCloze();
     buildFcQueue(false);
     startQuiz();
-    renderCheatsheet();
+    renderPracticeCloze();
+    renderReference();
 
     applyRouteFromHash();
     window.addEventListener("hashchange", applyRouteFromHash);
+    setInterval(renderDeadlineStrip, 60000);
   }
 
   function syncDynamicOptionLabels() {
     const nCur = PACK.flashcards.length;
     const nArt = CLOZEABLE_SECTIONS.length;
     const deckSel = document.getElementById("fcDeckMode");
-    deckSel.options[0].textContent = `Alta Resa (${nCur} schede chiave)`;
-    deckSel.options[1].textContent = `Tutti gli Articoli (${nArt} sezioni 1:1)`;
+    deckSel.options[0].textContent = `Alta Resa (${nCur} schede)`;
+    deckSel.options[1].textContent = `Tutti gli Articoli (${nArt} sezioni)`;
     deckSel.options[2].textContent = `Mazzo Completo (${nCur + nArt} schede)`;
 
     const nAll = PACK.quizzes.length;
@@ -265,25 +248,25 @@
     const nScen = PACK.quizzes.filter(q => q.mode === "scenario").length;
     const qzSel = document.getElementById("qzModeFilter");
     qzSel.options[0].textContent = `Tutte le modalità (${nAll})`;
-    qzSel.options[1].textContent = `Blitz Numeri, Quorum & Scadenze (${nBlitz})`;
-    qzSel.options[2].textContent = `Scelta Multipla Normativa (${nMc})`;
-    qzSel.options[3].textContent = `Scenari Pratici & Casi Reali (${nScen})`;
+    qzSel.options[1].textContent = `Blitz Numeri & Quorum (${nBlitz})`;
+    qzSel.options[2].textContent = `Normativa (${nMc})`;
+    qzSel.options[3].textContent = `Scenari Pratici (${nScen})`;
 
     const cs = PACK.cheatsheet;
-    const tabMap = {
+    const map = {
       quorums: `Quorum (${cs.quorums.length})`,
       organs: `Organi (${cs.organs.length})`,
       deadlines: `Scadenze (${cs.keyDeadlines.length})`,
     };
-    document.querySelectorAll("#csTabs .pill").forEach(p => {
-      if (tabMap[p.dataset.cs]) p.textContent = tabMap[p.dataset.cs];
+    document.querySelectorAll("#csTabs .rail-tab").forEach(t => {
+      if (map[t.dataset.cs]) t.textContent = map[t.dataset.cs];
     });
   }
 
   function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", theme === "dark" ? "#090e1a" : "#f4f6fa");
+    if (meta) meta.setAttribute("content", theme === "dark" ? "#0d1017" : "#f6f5f0");
     const icon = document.getElementById("iconTheme");
     if (icon) {
       icon.innerHTML = theme === "dark"
@@ -293,72 +276,102 @@
   }
 
   function applyReaderScale(scale) {
-    const clamped = Math.max(0.85, Math.min(1.3, Number(scale) || 1));
-    state.readerScale = Number(clamped.toFixed(2));
+    state.readerScale = Number(Math.max(0.85, Math.min(1.3, Number(scale) || 1)).toFixed(2));
     document.documentElement.style.setProperty("--reader-scale", state.readerScale);
   }
 
   // ==================== ROUTING & NAVIGATION ====================
   function setHash(path) {
     const target = `#${path}`;
-    if (location.hash !== target) {
-      history.replaceState(null, "", target);
-    }
+    if (location.hash !== target) history.replaceState(null, "", target);
   }
 
   function switchView(viewName, opts = {}) {
-    const valid = ["dashboard", "reader", "cloze", "flashcards", "quiz", "cheatsheet"];
-    if (!valid.includes(viewName)) viewName = "dashboard";
+    if (!["overview", "reader", "practice", "reference"].includes(viewName)) viewName = "overview";
     currentView = viewName;
 
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(`view-${viewName}`)?.classList.add("active");
 
-    document.querySelectorAll("#desktopNav .nav-item, #bottomNav .bnav-item").forEach(btn => {
-      const isAct = btn.dataset.view === viewName;
-      btn.classList.toggle("active", isAct);
-      if (isAct) btn.setAttribute("aria-current", "page");
+    document.querySelectorAll("#desktopNav .nav-tab, #mobileNav .bnav-btn").forEach(btn => {
+      const act = btn.dataset.view === viewName;
+      btn.classList.toggle("active", act);
+      if (act) btn.setAttribute("aria-current", "page");
       else btn.removeAttribute("aria-current");
     });
 
-    if (viewName === "dashboard") renderDashboard();
+    if (viewName === "overview") renderOverview();
     if (!opts.skipHash) {
-      if (viewName === "reader" && readerSecId) setHash(`reader/${readerSecId}`);
-      else if (viewName === "cloze" && clozeSecId) setHash(`cloze/${clozeSecId}`);
-      else if (viewName === "cheatsheet") setHash(`cheatsheet/${csTab}`);
-      else setHash(viewName);
+      if (viewName === "reader" && readerSecId) setHash(`reader/${readerSecId}${readerMode === "cloze" ? "/cloze" : ""}`);
+      else if (viewName === "practice") setHash(`practice/${practiceMode}${practiceMode === "cloze" && practiceClozeSecId ? `/${practiceClozeSecId}` : ""}`);
+      else if (viewName === "reference") setHash(`reference/${csTab}`);
+      else setHash("overview");
     }
     if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  function switchPracticeMode(mode, opts = {}) {
+    if (!["flashcards", "quiz", "cloze"].includes(mode)) mode = "flashcards";
+    practiceMode = mode;
+    document.querySelectorAll("#practiceModeSwitch .seg-btn").forEach(b => {
+      const act = b.dataset.pmode === mode;
+      b.classList.toggle("active", act);
+      b.setAttribute("aria-selected", act ? "true" : "false");
+    });
+    ["flashcards", "quiz", "cloze"].forEach(m => {
+      document.getElementById(`pane-${m}`).classList.toggle("hidden", m !== mode);
+    });
+    if (!opts.skipHash && currentView === "practice") {
+      setHash(`practice/${practiceMode}${practiceMode === "cloze" && practiceClozeSecId ? `/${practiceClozeSecId}` : ""}`);
+    }
   }
 
   function applyRouteFromHash() {
     const raw = (location.hash || "").replace(/^#/, "");
     if (!raw) return;
-    const [view, param] = raw.split("/");
-    if (view === "reader" && param && SECTION_MAP.has(param)) {
-      openSectionInReader(param, { skipHash: true });
-    } else if (view === "cloze" && param && SECTION_MAP.has(param)) {
-      openSectionInCloze(param, { skipHash: true });
-    } else if (view === "cheatsheet" && param) {
-      const tabBtn = document.querySelector(`#csTabs .pill[data-cs="${param}"]`);
-      if (tabBtn) {
-        csTab = param;
-        syncCsTabs();
-        renderCheatsheet();
+    const parts = raw.split("/");
+    const [head, p1, p2] = parts;
+
+    // Support both new v3 routes and legacy v2 routes gracefully
+    if (head === "overview" || head === "dashboard") {
+      switchView("overview", { skipHash: true });
+    } else if (head === "reader") {
+      if (p1 && SECTION_MAP.has(p1)) {
+        openArticle(p1, { mode: p2 === "cloze" ? "cloze" : "read", skipHash: true });
+      } else {
+        switchView("reader", { skipHash: true });
       }
-      switchView("cheatsheet", { skipHash: true });
-    } else if (["dashboard", "reader", "cloze", "flashcards", "quiz", "cheatsheet"].includes(view)) {
-      switchView(view, { skipHash: true });
+    } else if (head === "practice") {
+      switchPracticeMode(p1 || "flashcards", { skipHash: true });
+      if (p1 === "cloze" && p2 && SECTION_MAP.has(p2)) {
+        openPracticeClozeArticle(p2, { skipHash: true });
+      } else {
+        switchView("practice", { skipHash: true });
+      }
+    } else if (head === "reference" || head === "cheatsheet") {
+      if (p1 && document.querySelector(`#csTabs .rail-tab[data-cs="${p1}"]`)) {
+        csTab = p1;
+        syncCsTabs();
+        renderReference();
+      }
+      switchView("reference", { skipHash: true });
+    } else if (head === "cloze") {
+      if (p1 && SECTION_MAP.has(p1)) openArticle(p1, { mode: "cloze", skipHash: true });
+      else { switchPracticeMode("cloze", { skipHash: true }); switchView("practice", { skipHash: true }); }
+    } else if (head === "flashcards" || head === "quiz") {
+      switchPracticeMode(head, { skipHash: true });
+      switchView("practice", { skipHash: true });
     }
   }
 
-  function openSectionInReader(secId, opts = {}) {
+  function openArticle(secId, opts = {}) {
     if (!SECTION_MAP.has(secId)) return;
-    if (opts.fromXref && readerSecId && readerSecId !== secId) {
-      xrefReturnStack.push(readerSecId);
-    } else if (!opts.fromXref) {
-      xrefReturnStack = [];
+    if (opts.returnTo) {
+      returnStack.push(opts.returnTo);
+    } else if (!opts.keepReturn) {
+      returnStack = [];
     }
+
     if (readerDocFilter !== "all" && SECTION_MAP.get(secId).doc !== readerDocFilter) {
       readerDocFilter = "all";
       syncReaderDocPills();
@@ -369,202 +382,238 @@
     }
     const searchInp = document.getElementById("readerSearch");
     if (searchInp.value) searchInp.value = "";
+
+    const desiredMode = opts.mode === "cloze" && CLOZEABLE_SECTIONS.some(s => s.id === secId) ? "cloze" : "read";
+    readerMode = desiredMode;
     renderReaderSidebar();
     renderReaderArticle(secId, opts);
     switchView("reader", opts);
   }
 
-  function openSectionInCloze(secId, opts = {}) {
+  function openPracticeClozeArticle(secId, opts = {}) {
     const sec = SECTION_MAP.get(secId);
     if (!sec || !CLOZEABLE_SECTIONS.some(s => s.id === secId)) {
-      showToast("Questa sezione è un contenitore o codice sorgente: seleziona un articolo normativo.", "warn");
+      showToast("Seleziona un articolo normativo (non un titolo contenitore).", "warn");
       return;
     }
-    clozeSecId = secId;
+    practiceClozeSecId = secId;
     document.getElementById("clozeDocSelect").value = sec.doc;
-    populateClozeSecSelect(sec.doc);
+    populatePracticeClozeSecSelect(sec.doc);
     document.getElementById("clozeSecSelect").value = secId;
-    renderCloze();
-    switchView("cloze", opts);
+    renderPracticeCloze();
+    switchPracticeMode("cloze", opts);
+    switchView("practice", opts);
   }
 
-  // ==================== DASHBOARD ====================
+  // ==================== 1. PANORAMICA ====================
   function updateDueBadges() {
     const due = countDueCards("curated");
-    document.getElementById("dueBadge").textContent = due;
+    document.getElementById("navDueBadge").textContent = due;
+    document.getElementById("practiceDuePill").textContent = due;
     const mb = document.getElementById("mobileDueBadge");
     mb.textContent = due;
     mb.classList.toggle("hidden", due === 0);
     return due;
   }
 
-  function renderDeadlineBanner() {
+  function renderDeadlineStrip() {
     const now = Date.now();
-    const timeline = PACK.cheatsheet.timeline2026;
+    const list = PACK.cheatsheet.timeline2026;
     let nextItem = null;
-    for (const item of timeline) {
+    for (const item of list) {
       const dt = parseItalianDate(item.date);
       if (dt && dt.getTime() > now) {
         nextItem = { ...item, dt };
         break;
       }
     }
-
-    const eyebrow = document.getElementById("deadlineEyebrow");
-    const title = document.getElementById("deadlineTitle");
+    const kicker = document.getElementById("deadlineKicker");
+    const text = document.getElementById("deadlineText");
     const cd = document.getElementById("deadlineCountdown");
-
     if (nextItem) {
-      const isElection = nextItem.date.startsWith("21/11/2026") && nextItem.event.includes("ASSEMBLEA");
-      eyebrow.textContent = isElection ? "ASSEMBLEA ELETTIVA IMMINENTE" : `PROSSIMA SCADENZA · ${nextItem.date}`;
-      title.textContent = nextItem.event;
+      const isElec = nextItem.date.startsWith("21/11/2026") && nextItem.event.includes("ASSEMBLEA");
+      kicker.textContent = isElec ? "ASSEMBLEA ELETTIVA · 21/11/2026" : `PROSSIMA SCADENZA · ${nextItem.date}`;
+      text.textContent = nextItem.event;
       cd.textContent = formatCountdown(nextItem.dt.getTime() - now);
     } else {
-      eyebrow.textContent = "CRONOPROGRAMMA ELEZIONI 2026";
-      title.textContent = "Tutte le scadenze del ciclo elettorale 2026 risultano concluse.";
+      kicker.textContent = "CRONOPROGRAMMA ELEZIONI 2026";
+      text.textContent = "Ciclo elettorale 2026 concluso.";
       cd.textContent = "Archiviato";
     }
   }
 
-  function renderDashboard() {
-    let scoreSum = 0;
-    let cWip = 0, cOk = 0, cMem = 0;
+  function renderOverview() {
+    let scoreSum = 0, nTodo = 0, nWip = 0, nLearned = 0, nMem = 0;
+    let firstWipSec = null;
     for (const s of STUDYABLE_SECTIONS) {
       const m = state.mastery[s.id] || 0;
       scoreSum += m;
-      if (m === 1) cWip++;
-      else if (m === 2) cOk++;
-      else if (m === 3) cMem++;
+      if (m === 0) nTodo++;
+      else if (m === 1) { nWip++; if (!firstWipSec) firstWipSec = s; }
+      else if (m === 2) nLearned++;
+      else nMem++;
     }
-    const maxScore = STUDYABLE_SECTIONS.length * 3 || 1;
-    const pct = Math.round((scoreSum / maxScore) * 100);
-    const masteredOrLearned = cOk + cMem;
+    const pct = Math.round((scoreSum / (STUDYABLE_SECTIONS.length * 3 || 1)) * 100);
+    const due = updateDueBadges();
+    const qzMast = Object.keys(state.quizMastered).filter(k => state.quizMastered[k]).length;
+    const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k] && SECTION_MAP.has(k)).length;
 
-    document.getElementById("heroEyebrow").textContent =
-      `3 DOCUMENTI UFFICIALI · ${STUDYABLE_SECTIONS.length} SEZIONI NORMATIVE (${ALL_SECTIONS.length} VOCI D'INDICE)`;
+    document.getElementById("overviewEyebrow").textContent =
+      `CORPUS UFFICIALE · 3 DOCUMENTI · ${STUDYABLE_SECTIONS.length} SEZIONI NORMATIVE`;
+    document.getElementById("corpusTotalsMeta").textContent =
+      `${CORPUS.documents.reduce((a, d) => a + d.pages, 0)} pagine · ${ALL_SECTIONS.length} voci d'indice`;
 
-    // Contextual primary CTA
-    const lastSec = state.lastSecId ? SECTION_MAP.get(state.lastSecId) : null;
-    const continueLabel = document.getElementById("btnHeroContinueLabel");
-    if (lastSec && (cWip + cOk + cMem > 0)) {
-      continueLabel.textContent = `Riprendi: ${lastSec.code}`;
-    } else {
-      continueLabel.textContent = "Inizia dallo Statuto";
-    }
-
+    // Ring & Legend
     document.getElementById("overallPct").textContent = `${pct}%`;
-    const circ = 2 * Math.PI * 54;
-    document.getElementById("overallRing").style.strokeDashoffset = circ * (1 - pct / 100);
+    const circ = 2 * Math.PI * 50;
+    const ringEl = document.getElementById("overallRing");
+    ringEl.style.strokeDashoffset = circ * (1 - pct / 100);
+    ringEl.style.opacity = pct === 0 ? "0" : "1";
+    document.getElementById("legMem").textContent = nMem;
+    document.getElementById("legLearned").textContent = nLearned;
+    document.getElementById("legWip").textContent = nWip;
+    document.getElementById("legTodo").textContent = nTodo;
 
-    document.getElementById("heroBreakdown").innerHTML = `
-      <span><i class="dot s3"></i>${cMem} mem.</span>
-      <span><i class="dot s2"></i>${cOk} imp.</span>
-      <span><i class="dot s1"></i>${cWip} corso</span>
-    `;
+    // Smart Next Best Action recommendation
+    const nextBtn = document.getElementById("btnNextBestAction");
+    const nextLbl = document.getElementById("nextBestLabel");
+    const advice = document.getElementById("briefingAdvice");
+    const hasStarted = (nWip + nLearned + nMem > 0) || state.quizStats.total > 0 || Object.keys(state.sm2).length > 0;
 
-    const dueCount = updateDueBadges();
-    document.getElementById("kpiSecBadge").textContent = `${pct}%`;
-    document.getElementById("statSections").textContent = `${masteredOrLearned} / ${STUDYABLE_SECTIONS.length}`;
-    document.getElementById("statMemorized").textContent = `${cMem} a memoria · ${cWip} in corso`;
+    if (firstWipSec) {
+      nextLbl.textContent = `Continua ${firstWipSec.code}`;
+      advice.textContent = `Hai lasciato in corso «${firstWipSec.code} — ${firstWipSec.title}» (${DOC_SHORT[firstWipSec.doc]}). Riprendi la lettura o passa subito a Cloze per fissarlo a memoria.`;
+      nextBtn.onclick = () => openArticle(firstWipSec.id);
+    } else if (hasStarted && due > 0) {
+      nextLbl.textContent = `Ripassa ${due} flashcards`;
+      advice.textContent = `Hai ${due} schede pronte per il ripasso SM-2 oggi: consolidarle ora massimizza la ritenzione prima dell'Assemblea.`;
+      nextBtn.onclick = () => {
+        document.getElementById("fcOnlyDue").checked = true;
+        buildFcQueue(false);
+        switchPracticeMode("flashcards");
+        switchView("practice");
+      };
+    } else if (hasStarted) {
+      nextLbl.textContent = "Apri Normativa";
+      advice.textContent = `Ottimo ritmo: ${nLearned + nMem} sezioni consolidate e ${qzMast}/${PACK.quizzes.length} quiz padroneggiati.`;
+      nextBtn.onclick = () => openArticle(readerSecId || STUDYABLE_SECTIONS[0].id);
+    } else {
+      nextLbl.textContent = "Inizia dallo Statuto";
+      advice.textContent = "Leggi ogni disposizione verbatim con numeri e quorum evidenziati, poi attiva Cloze sullo stesso articolo e consolida con SM-2 e Quiz.";
+      nextBtn.onclick = () => openArticle(STUDYABLE_SECTIONS[0].id);
+    }
 
-    document.getElementById("statDue").textContent = dueCount;
-    document.getElementById("statCardsTotal").textContent =
-      `Su ${PACK.flashcards.length} alta resa + ${CLOZEABLE_SECTIONS.length} articoli`;
+    // Metric Strip
+    document.getElementById("statSections").textContent = `${nLearned + nMem} / ${STUDYABLE_SECTIONS.length}`;
+    document.getElementById("statSectionsHint").textContent = `${nMem} a memoria · ${nWip} in corso`;
 
-    const qzMastCount = Object.keys(state.quizMastered).filter(id => state.quizMastered[id]).length;
-    document.getElementById("kpiQzMastered").textContent = `${qzMastCount}/${PACK.quizzes.length}`;
+    document.getElementById("statDue").textContent = due;
+    document.getElementById("statDueHint").textContent = `Su ${PACK.flashcards.length} chiave + ${CLOZEABLE_SECTIONS.length} articoli`;
+
+    document.getElementById("statQuizMastered").textContent = `${qzMast} / ${PACK.quizzes.length}`;
     if (state.quizStats.total > 0) {
       const acc = Math.round((state.quizStats.correct / state.quizStats.total) * 100);
-      document.getElementById("statQuizAcc").textContent = `${acc}%`;
-      document.getElementById("statQuizDone").textContent = `${state.quizStats.correct}/${state.quizStats.total} risposte esatte`;
+      document.getElementById("statQuizAcc").textContent = `Precisione ${acc}% (${state.quizStats.correct}/${state.quizStats.total})`;
     } else {
-      document.getElementById("statQuizAcc").textContent = "—";
-      document.getElementById("statQuizDone").textContent = "0 risposte registrate";
+      document.getElementById("statQuizAcc").textContent = "0 risposte registrate";
     }
 
-    const bmCount = Object.keys(state.bookmarks).filter(id => state.bookmarks[id] && SECTION_MAP.has(id)).length;
     document.getElementById("statBookmarks").textContent = bmCount;
-    document.getElementById("statBookmarksSub").textContent = bmCount > 0
-      ? "Clicca per aprire gli articoli salvati"
-      : "Segna gli articoli chiave mentre leggi";
+    document.getElementById("statBookmarksHint").textContent = bmCount > 0
+      ? "Apri gli articoli salvati"
+      : "Segna gli articoli chiave";
 
-    document.getElementById("corpusStatsLabel").textContent =
-      `${CORPUS.documents.reduce((a, d) => a + d.pages, 0)} pagine totali verificate`;
+    renderDeadlineStrip();
 
-    renderDeadlineBanner();
-
-    // Per-document cards
-    const grid = document.getElementById("docCardsGrid");
-    grid.innerHTML = "";
+    // Structured Document List
+    const listEl = document.getElementById("docList");
+    listEl.innerHTML = "";
     for (const doc of CORPUS.documents) {
       const secs = doc.sections.filter(s => s.text && s.text.trim().length > 0);
-      const nWip = secs.filter(s => (state.mastery[s.id] || 0) === 1).length;
-      const nOk = secs.filter(s => (state.mastery[s.id] || 0) === 2).length;
-      const nMem = secs.filter(s => (state.mastery[s.id] || 0) === 3).length;
-      const dScore = nWip + nOk * 2 + nMem * 3;
-      const dPct = Math.round((dScore / (secs.length * 3 || 1)) * 100);
-      const firstCloze = secs.find(s => s.text.trim().length > 20 && s.id !== "el-b-1")?.id || secs[0]?.id;
+      const dWip = secs.filter(s => (state.mastery[s.id] || 0) === 1).length;
+      const dOk = secs.filter(s => (state.mastery[s.id] || 0) === 2).length;
+      const dMem = secs.filter(s => (state.mastery[s.id] || 0) === 3).length;
+      const dPct = Math.round(((dWip + dOk * 2 + dMem * 3) / (secs.length * 3 || 1)) * 100);
+      const firstSec = secs[0]?.id;
+      const firstCloze = secs.find(s => s.text.trim().length > 20 && s.id !== "el-b-1")?.id || firstSec;
 
-      const card = document.createElement("div");
-      card.className = "doc-card";
-      card.innerHTML = `
+      const row = document.createElement("div");
+      row.className = "doc-row";
+      row.innerHTML = `
         <div>
-          <div class="doc-card-head">
-            <div>
-              <h3>${escapeHtml(doc.title)}</h3>
-              <div class="doc-card-meta">${doc.pages} pagine · ${secs.length} sezioni normative · ${nMem} a memoria</div>
-            </div>
-            <span class="code-badge">${dPct}%</span>
-          </div>
-          <div class="stacked-bar" style="margin-top:0.75rem;" aria-label="Avanzamento ${dPct}%">
-            <div class="seg-mem" style="width:${(nMem / secs.length) * 100}%"></div>
-            <div class="seg-ok" style="width:${(nOk / secs.length) * 100}%"></div>
-            <div class="seg-wip" style="width:${(nWip / secs.length) * 100}%"></div>
+          <div class="doc-row-title">${esc(doc.title)}</div>
+          <div class="doc-row-meta">${doc.pages} pagine · ${secs.length} sezioni normative · ${dMem} a memoria</div>
+        </div>
+        <div class="doc-row-prog">
+          <div class="doc-prog-head"><span>Padronanza</span><strong>${dPct}%</strong></div>
+          <div class="stacked-bar">
+            <div class="seg-mem" style="width:${(dMem / secs.length) * 100}%"></div>
+            <div class="seg-ok" style="width:${(dOk / secs.length) * 100}%"></div>
+            <div class="seg-wip" style="width:${(dWip / secs.length) * 100}%"></div>
           </div>
         </div>
-        <div class="doc-card-actions">
-          <button type="button" class="btn small secondary" data-open-doc="${doc.id}">Leggi</button>
-          <button type="button" class="btn small primary" data-cloze-doc="${firstCloze}">A Memoria</button>
-          <button type="button" class="btn small ghost" data-quiz-doc="${doc.id}">Quiz</button>
+        <div class="doc-row-actions">
+          <button type="button" class="btn small secondary" data-doc-read="${doc.id}">Leggi</button>
+          <button type="button" class="btn small secondary" data-doc-cloze="${firstCloze}">Cloze</button>
+          <button type="button" class="btn small ghost" data-doc-quiz="${doc.id}">Quiz</button>
         </div>
       `;
-      grid.appendChild(card);
+      listEl.appendChild(row);
     }
 
-    grid.querySelectorAll("[data-open-doc]").forEach(b => {
+    listEl.querySelectorAll("[data-doc-read]").forEach(b => {
       b.addEventListener("click", () => {
-        const docId = b.dataset.openDoc;
+        const docId = b.dataset.docRead;
         readerDocFilter = docId;
         readerStatusFilter = "all";
         document.getElementById("readerStatusFilter").value = "all";
         syncReaderDocPills();
         renderReaderSidebar();
-        const first = ALL_SECTIONS.find(s => s.doc === docId && s.text && s.text.trim()) || ALL_SECTIONS.find(s => s.doc === docId);
-        if (first) renderReaderArticle(first.id);
-        switchView("reader");
+        const first = ALL_SECTIONS.find(s => s.doc === docId && s.text?.trim()) || ALL_SECTIONS.find(s => s.doc === docId);
+        if (first) openArticle(first.id, { mode: "read" });
       });
     });
-    grid.querySelectorAll("[data-cloze-doc]").forEach(b => {
-      b.addEventListener("click", () => openSectionInCloze(b.dataset.clozeDoc));
+    listEl.querySelectorAll("[data-doc-cloze]").forEach(b => {
+      b.addEventListener("click", () => openArticle(b.dataset.docCloze, { mode: "cloze" }));
     });
-    grid.querySelectorAll("[data-quiz-doc]").forEach(b => {
+    listEl.querySelectorAll("[data-doc-quiz]").forEach(b => {
       b.addEventListener("click", () => {
-        document.getElementById("qzDocFilter").value = b.dataset.quizDoc;
+        qzCustomContext = null;
+        document.getElementById("qzDocFilter").value = b.dataset.docQuiz;
         document.getElementById("qzModeFilter").value = "all";
         document.getElementById("qzOnlyUnmastered").checked = false;
         startQuiz();
-        switchView("quiz");
+        switchPracticeMode("quiz");
+        switchView("practice");
       });
     });
   }
 
-  // ==================== READER ====================
+  // ==================== 2. NORMATIVA (READER + INLINE CLOZE) ====================
   function syncReaderDocPills() {
-    document.querySelectorAll("#readerDocPills .pill").forEach(p => {
-      const act = p.dataset.doc === readerDocFilter;
-      p.classList.toggle("active", act);
-      p.setAttribute("aria-selected", act ? "true" : "false");
+    document.querySelectorAll("#readerDocPills .seg-btn").forEach(b => {
+      const act = b.dataset.doc === readerDocFilter;
+      b.classList.toggle("active", act);
+      b.setAttribute("aria-selected", act ? "true" : "false");
     });
+  }
+
+  function syncReaderModeTabs() {
+    const canCloze = CLOZEABLE_SECTIONS.some(s => s.id === readerSecId);
+    const clozeTab = document.getElementById("tabInlineCloze");
+    clozeTab.disabled = !canCloze;
+    if (!canCloze) readerMode = "read";
+
+    document.querySelectorAll("#readerModeSwitch .seg-btn").forEach(b => {
+      const act = b.dataset.rmode === readerMode;
+      b.classList.toggle("active", act);
+      b.setAttribute("aria-selected", act ? "true" : "false");
+    });
+    document.getElementById("readerReadPane").classList.toggle("hidden", readerMode !== "read");
+    document.getElementById("readerClozePane").classList.toggle("hidden", readerMode !== "cloze");
+    document.getElementById("readOnlyTools").classList.toggle("hidden", readerMode !== "read");
+    document.getElementById("btnSwitchInlineCloze").textContent =
+      readerMode === "read" ? "Allenati A Memoria" : "Torna a Lettura";
   }
 
   function getFilteredReaderSections() {
@@ -577,22 +626,18 @@
       if (readerStatusFilter === "inprogress" && m !== 1) return false;
       if (readerStatusFilter === "memorized" && m !== 3) return false;
       if (!q) return true;
-      return (
-        s.code.toLowerCase().includes(q) ||
-        s.title.toLowerCase().includes(q) ||
-        (s.text && s.text.toLowerCase().includes(q))
-      );
+      return s.code.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || (s.text && s.text.toLowerCase().includes(q));
     });
   }
 
   function renderReaderSidebar() {
     const list = document.getElementById("readerTocList");
     const secs = getFilteredReaderSections();
-    document.getElementById("readerMatchCount").textContent = `${secs.length} ${secs.length === 1 ? "voce" : "voci"}`;
+    document.getElementById("readerMatchCount").textContent = `${secs.length}`;
     list.innerHTML = "";
 
     if (!secs.length) {
-      list.innerHTML = `<p class="muted small-text" style="padding:1rem;">Nessun articolo corrisponde ai filtri attivi.</p>`;
+      list.innerHTML = `<p class="muted small" style="padding:1rem;">Nessun articolo corrisponde ai filtri attivi.</p>`;
       return;
     }
 
@@ -606,12 +651,12 @@
       btn.className = `toc-item lvl-${s.level} ${s.id === readerSecId ? "active" : ""}`;
       btn.innerHTML = `
         <span class="${isContainer ? "dot" : `dot s${m}`}" aria-hidden="true"></span>
-        <span class="toc-code">${escapeHtml(s.num || s.code)}</span>
-        <span class="toc-title" title="${escapeHtml(s.title)}">${escapeHtml(s.title)}</span>
+        <span class="toc-code">${esc(s.num || s.code)}</span>
+        <span class="toc-title" title="${esc(s.title)}">${esc(s.title)}</span>
         ${state.bookmarks[s.id] ? '<span class="toc-star" aria-label="Segnalibro">★</span>' : ""}
       `;
       btn.addEventListener("click", () => {
-        xrefReturnStack = [];
+        returnStack = [];
         renderReaderArticle(s.id);
         closeTocDrawer();
       });
@@ -658,46 +703,36 @@
     document.getElementById("btnOpenTocDrawer").setAttribute("aria-expanded", "false");
   }
 
-  function highlightNumbersAndRefs(rawText, currentDoc) {
-    let html = escapeHtml(rawText);
-    const hlNums = document.getElementById("toggleHighlightNums")?.checked;
-
-    if (hlNums) {
+  function formatLegalText(rawText, currentDoc) {
+    let html = esc(rawText);
+    if (document.getElementById("toggleHighlightNums")?.checked) {
       const numPattern = /(\b\d{1,2}\/\d{1,2}\/\d{4}\b|\b\d{1,2}:\d{2}\b|€\s?\d+(?:,\d{2})?|\b\d+(?:,\d+)?\s*(?:giorni|giorno|ore|ora|mesi|mese|anni|anno|minuti|minuto|settimane|settimana|crediti|credito|ammonizioni|deleghe|seggi|membri|persone|candidati|semestri|semestre|volte)\b|\b(?:maggioranza assoluta|maggioranza semplice|unanimità|tre quarti|due terzi|un terzo|un sesto|metà più uno|⅔|½|⅙|3\/4|2\/3|1\/3|1\/2)\b|\b(?:trenta|novanta|sette|dieci|quindici|ventiquattro|quarantotto|cinque|sei|nove|dodici|quattro|tre|due)\s+(?:giorni|ore|mesi|anni|minuti|settimane|ammonizioni|deleghe|crediti)\b)/gi;
       html = html.replace(numPattern, '<span class="num-hl">$1</span>');
     }
 
-    // Elettorale A.x references
     html = html.replace(/\b(articolo|art\.)\s+(A\.\d+(?:\.\d+)?)\b/gi, (m, _p1, code) => {
       const id = `el-${code.toLowerCase().replace(/\./g, "-")}`;
       return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${id}">${m}</button>` : m;
     });
-
-    // Statuto references written as "articolo 13.10 dello Statuto" or "articolo 9.4 dello Statuto"
     html = html.replace(/\b(articolo|art\.)\s+(\d{1,2})(?:\.\d+)?\b(?=[^.;]{0,45}\b(?:dello Statuto|del presente Statuto)\b)/gi, (m, _p1, num) => {
       const id = `statuto-art-${num}`;
       return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${id}">${m}</button>` : m;
     });
-
-    // RRI multi-dot references like "articolo 1.6.1.1"
     html = html.replace(/\b(articolo|art\.)\s+(\d+\.\d+(?:\.\d+)*)\b/gi, (m, _p1, code) => {
       const id = `rri-${code.replace(/\./g, "-")}`;
       return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${id}">${m}</button>` : m;
     });
-
-    // Same-document Statuto plain "articolo 19"
     if (currentDoc === "statuto") {
       html = html.replace(/\b(articolo|art\.)\s+(\d{1,2})\b(?![^<]*<\/button>)/gi, (m, _p1, num) => {
         const id = `statuto-art-${num}`;
         return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${id}">${m}</button>` : m;
       });
     }
-
     return html;
   }
 
   function buildBreadcrumb(sec) {
-    const parts = [DOC_LABELS[sec.doc] || sec.doc];
+    const parts = [DOC_SHORT[sec.doc] || sec.doc];
     const chain = [];
     let pId = sec.parent;
     while (pId && SECTION_MAP.has(pId)) {
@@ -716,17 +751,20 @@
     saveState();
 
     syncReaderSidebarSelection(secId);
-    if (!opts.skipHash && currentView === "reader") setHash(`reader/${secId}`);
+    syncReaderModeTabs();
+    if (!opts.skipHash && currentView === "reader") {
+      setHash(`reader/${secId}${readerMode === "cloze" ? "/cloze" : ""}`);
+    }
 
-    // Cross-reference return chip
-    const xrefBar = document.getElementById("xrefReturnBar");
-    if (xrefReturnStack.length > 0) {
-      const prevId = xrefReturnStack[xrefReturnStack.length - 1];
-      const prevSec = SECTION_MAP.get(prevId);
-      document.getElementById("xrefBackLabel").textContent = prevSec ? `${prevSec.code} (${DOC_SHORT[prevSec.doc]})` : "articolo precedente";
-      xrefBar.classList.remove("hidden");
+    // Context return bar
+    const retBar = document.getElementById("returnBanner");
+    if (returnStack.length > 0) {
+      const top = returnStack[returnStack.length - 1];
+      document.getElementById("returnReason").textContent = top.reason;
+      document.getElementById("returnLabel").textContent = top.label;
+      retBar.classList.remove("hidden");
     } else {
-      xrefBar.classList.add("hidden");
+      retBar.classList.add("hidden");
     }
 
     document.getElementById("readerBreadcrumb").textContent = buildBreadcrumb(sec);
@@ -739,60 +777,58 @@
     document.getElementById("readerReadTime").textContent = words ? `~${mins} min · ${words} parole` : "Indice sezione";
     document.getElementById("readerArtTitle").textContent = sec.title;
 
-    // Bookmark button
-    const bmBtn = document.getElementById("btnBookmarkSec");
-    bmBtn.setAttribute("aria-pressed", state.bookmarks[sec.id] ? "true" : "false");
+    document.getElementById("btnBookmarkSec").setAttribute("aria-pressed", state.bookmarks[sec.id] ? "true" : "false");
 
-    // Mastery buttons (hide on empty container sections)
     const isStudyable = !!(sec.text && sec.text.trim().length > 0);
     document.getElementById("readerMasteryWrap").classList.toggle("hidden", !isStudyable);
     const curStatus = state.mastery[sec.id] || 0;
-    document.querySelectorAll("#readerMasteryBtns .m-btn").forEach(b => {
-      const isAct = Number(b.dataset.status) === curStatus;
-      b.classList.toggle("active", isAct);
-      b.setAttribute("aria-pressed", isAct ? "true" : "false");
+    document.querySelectorAll("#readerMasteryBtns .m-chip").forEach(b => {
+      const act = Number(b.dataset.status) === curStatus;
+      b.classList.toggle("active", act);
+      b.setAttribute("aria-pressed", act ? "true" : "false");
     });
 
-    // Body
+    // Editorial prose rendering
     const bodyEl = document.getElementById("readerArtBody");
     bodyEl.innerHTML = "";
     if (!isStudyable) {
       const children = ALL_SECTIONS.filter(s => s.parent === sec.id);
       const intro = document.createElement("p");
-      intro.className = "muted";
-      intro.style.marginBottom = "0.85rem";
-      intro.textContent = "Sezione strutturale. Scegli un articolo o sottosezione qui sotto:";
+      intro.className = "muted small";
+      intro.style.marginBottom = "0.75rem";
+      intro.textContent = "Sezione strutturale. Seleziona un articolo o sottosezione:";
       bodyEl.appendChild(intro);
       for (const ch of children) {
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = "article-block";
-        btn.style.width = "100%";
-        btn.style.textAlign = "left";
-        btn.style.cursor = "pointer";
-        btn.innerHTML = `<span class="code-badge">${escapeHtml(ch.code)}</span> <strong>${escapeHtml(ch.title)}</strong>`;
+        btn.className = "prose-child-link";
+        btn.innerHTML = `<span class="code-chip">${esc(ch.code)}</span><strong>${esc(ch.title)}</strong>`;
         btn.addEventListener("click", () => renderReaderArticle(ch.id));
         bodyEl.appendChild(btn);
       }
     } else if (sec.id === "el-b-1") {
       const pre = document.createElement("div");
-      pre.className = "article-block code-block";
+      pre.className = "prose-block code-block";
       pre.textContent = sec.text;
       bodyEl.appendChild(pre);
     } else {
       for (const blk of sec.blocks) {
         const div = document.createElement("div");
-        div.className = `article-block ${blk.type}`;
-        div.innerHTML = highlightNumbersAndRefs(blk.text, sec.doc);
+        div.className = `prose-block ${blk.type}`;
+        div.innerHTML = formatLegalText(blk.text, sec.doc);
         bodyEl.appendChild(div);
       }
     }
 
     bodyEl.querySelectorAll(".xref-link").forEach(btn => {
-      btn.addEventListener("click", () => openSectionInReader(btn.dataset.jump, { fromXref: true }));
+      btn.addEventListener("click", () => {
+        openArticle(btn.dataset.jump, {
+          returnTo: { type: "article", target: sec.id, label: `${sec.code} (${DOC_SHORT[sec.doc]})`, reason: "Rimando normativo" },
+        });
+      });
     });
 
-    // Diagrams / PDF pages
+    // PDF visual diagrams if attached
     const imgWrap = document.getElementById("readerArtImages");
     imgWrap.innerHTML = "";
     if (sec.images && sec.images.length) {
@@ -800,24 +836,35 @@
       sec.images.forEach((src, i) => {
         const card = document.createElement("button");
         card.type = "button";
-        card.className = "pdf-page-card";
-        card.innerHTML = `<img src="${src}" alt="Schema pagina PDF ${sec.code}" loading="lazy" /><div class="pdf-page-cap">Ingrandisci schema — ${src.split("/").pop()}</div>`;
+        card.className = "pdf-card";
+        card.innerHTML = `<img src="${src}" alt="Schema pagina PDF ${sec.code}" loading="lazy" /><div class="pdf-card-cap">Ingrandisci schema — ${src.split("/").pop()}</div>`;
         card.addEventListener("click", () => openLightbox(gallery, i));
         imgWrap.appendChild(card);
       });
     }
 
-    // Study bridge (Cloze + related flashcards)
-    const bridge = document.getElementById("readerStudyBridge");
-    const isClozeable = CLOZEABLE_SECTIONS.some(s => s.id === sec.id);
-    const relatedFcs = PACK.flashcards.filter(c => c.ref === sec.id);
-    bridge.classList.toggle("hidden", !isClozeable && relatedFcs.length === 0);
-    document.getElementById("btnSendToCloze").classList.toggle("hidden", !isClozeable);
-    const fcRelBtn = document.getElementById("btnArticleFlashcards");
-    fcRelBtn.classList.toggle("hidden", relatedFcs.length === 0);
-    document.getElementById("artFcCount").textContent = relatedFcs.length;
+    // Inline Cloze pane
+    if (readerMode === "cloze" && CLOZEABLE_SECTIONS.some(s => s.id === sec.id)) {
+      renderInlineCloze();
+    }
 
-    // Prev / Next navigation (within current filtered list if present, else ALL_SECTIONS)
+    // Related Connections (Cloze + Flashcards + Quiz on this article)
+    const canCloze = CLOZEABLE_SECTIONS.some(s => s.id === sec.id);
+    const relFcs = PACK.flashcards.filter(c => c.ref === sec.id);
+    const relQzs = PACK.quizzes.filter(q => q.ref === sec.id);
+    const connBox = document.getElementById("articleConnections");
+    connBox.classList.toggle("hidden", !canCloze && !relFcs.length && !relQzs.length);
+    document.getElementById("btnSwitchInlineCloze").classList.toggle("hidden", !canCloze);
+
+    const fcBtn = document.getElementById("btnArticleFlashcards");
+    fcBtn.classList.toggle("hidden", relFcs.length === 0);
+    document.getElementById("artFcCount").textContent = relFcs.length;
+
+    const qzBtn = document.getElementById("btnArticleQuiz");
+    qzBtn.classList.toggle("hidden", relQzs.length === 0);
+    document.getElementById("artQzCount").textContent = relQzs.length;
+
+    // Prev / Next
     const navList = getFilteredReaderSections();
     const pool = navList.some(s => s.id === secId) ? navList : ALL_SECTIONS;
     const idx = pool.findIndex(s => s.id === secId);
@@ -828,7 +875,6 @@
     const btnNext = document.getElementById("btnNextSec");
     const btnMPrev = document.getElementById("btnMobilePrev");
     const btnMNext = document.getElementById("btnMobileNext");
-
     btnPrev.disabled = btnMPrev.disabled = !prev;
     btnNext.disabled = btnMNext.disabled = !next;
     btnPrev.dataset.target = btnMPrev.dataset.target = prev ? prev.id : "";
@@ -837,8 +883,195 @@
     document.getElementById("nextSecTitle").textContent = next ? `${next.code} · ${next.title}` : "Fine";
   }
 
-  // ==================== CLOZE / A MEMORIA ====================
-  function populateClozeSecSelect(docId) {
+  // ==================== UNIFIED CLOZE ENGINE ====================
+  function shouldBlankToken(word, level, idx) {
+    const clean = word.replace(/^[^\p{L}\p{N}€]+|[^\p{L}\p{N}%]+$/gu, "");
+    if (!clean) return false;
+    const low = clean.toLowerCase();
+    const isKey =
+      /\d/.test(clean) ||
+      /^(trenta|novanta|sette|dieci|quindici|ventiquattro|quarantotto|cinque|sei|nove|dodici|quattro|tre|due|primo|seconda|terza|unanimità|assoluta|semplice|segreto|palese|decano|probiviri|direttivo|assemblea|presidente|vicepresidente|segretario|tesoriere|droop|delega|deleghe|ricorso|ricorsi|quorum|scadenza|proroga|incompatibili|decadenza|espulsione|ammonizioni)$/i.test(clean);
+
+    if (level === 1) return isKey;
+    if (level === 2) return isKey || (clean.length >= 5 && !STOPWORDS.has(low) && idx % 3 === 0);
+    if (level === 3) return isKey || (clean.length >= 3 && !STOPWORDS.has(low) && idx % 3 !== 1);
+    if (level === 4) return clean.length >= 2;
+    return false;
+  }
+
+  function renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange }) {
+    const sec = SECTION_MAP.get(secId);
+    if (!sec) return;
+    const level = Number(levelSel.value);
+    const mode = modeSel.value;
+
+    bodyEl.innerHTML = "";
+    noticeEl.classList.add("hidden");
+    noticeEl.classList.remove("ok");
+
+    let total = 0;
+    let solved = 0;
+    let tokenIndex = 0;
+
+    const updateProgress = () => {
+      counterEl.textContent = `${solved} / ${total}`;
+      barEl.style.width = total > 0 ? `${Math.round((solved / total) * 100)}%` : "0%";
+
+      if (total > 0 && solved >= total) {
+        // Synchronize unstudied article automatically to "In corso" (never downgrades!)
+        if ((state.mastery[secId] || 0) === 0) {
+          state.mastery[secId] = 1;
+          saveState();
+          if (onMasteryChange) onMasteryChange();
+        }
+        noticeEl.classList.add("ok");
+        noticeEl.classList.remove("hidden");
+        const nextLvHtml = level < 4 ? `<button type="button" class="btn small secondary" data-clz-lvup>Livello ${level + 1}</button>` : "";
+        noticeEl.innerHTML = `
+          <span><strong>Completato!</strong> ${level < 4 ? `Prova il Livello ${level + 1} per fissare ancora meglio.` : "Richiamo completo riuscito."}</span>
+          <div class="notice-actions">
+            ${nextLvHtml}
+            <button type="button" class="btn small primary" data-clz-mem>Segna A Memoria</button>
+          </div>
+        `;
+        noticeEl.querySelector("[data-clz-lvup]")?.addEventListener("click", () => {
+          levelSel.value = String(level + 1);
+          renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange });
+        });
+        noticeEl.querySelector("[data-clz-mem]")?.addEventListener("click", () => {
+          state.mastery[secId] = 3;
+          saveState();
+          if (onMasteryChange) onMasteryChange();
+          showToast(`${sec.code} segnato A MEMORIA.`, "ok");
+        });
+      }
+    };
+
+    for (const blk of sec.blocks) {
+      const p = document.createElement("div");
+      p.className = "cloze-para";
+      const tokens = blk.text.split(/(\s+)/);
+      let paraWordIdx = 0;
+
+      for (const tok of tokens) {
+        if (/^\s+$/.test(tok)) { p.appendChild(document.createTextNode(tok)); continue; }
+        tokenIndex++;
+        paraWordIdx++;
+        // Never blank leading comma/subitem index ("1.", "2.", "(a)")
+        if (paraWordIdx === 1 && (/^\d+\.$/.test(tok) || /^\([a-z]\)$/.test(tok))) {
+          p.appendChild(document.createTextNode(tok));
+          continue;
+        }
+        const m = tok.match(/^([^\p{L}\p{N}€]*)([\p{L}\p{N}€.,\/:%'-]+?)([^\p{L}\p{N}%]*)$/u);
+        if (!m || !shouldBlankToken(m[2], level, tokenIndex)) {
+          p.appendChild(document.createTextNode(tok));
+          continue;
+        }
+        const [, lead, core, trail] = m;
+        if (lead) p.appendChild(document.createTextNode(lead));
+
+        total++;
+        if (mode === "click") {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "cloze-blank";
+          btn.textContent = level === 4 ? `${core[0]}${"·".repeat(Math.min(core.length - 1, 5))}` : `${core[0]}___`;
+          btn.setAttribute("aria-label", `Rivela parola che inizia con ${core[0]}`);
+          btn.addEventListener("click", () => {
+            if (!btn.classList.contains("revealed")) {
+              btn.classList.add("revealed");
+              btn.textContent = core;
+              btn.disabled = true;
+              solved++;
+              updateProgress();
+            }
+          });
+          p.appendChild(btn);
+        } else {
+          const wrap = document.createElement("span");
+          wrap.className = "cloze-input-wrap";
+          const inp = document.createElement("input");
+          inp.type = "text";
+          inp.className = "cloze-input";
+          inp.placeholder = `${core[0]}…`;
+          inp.setAttribute("aria-label", `Completa parola che inizia con ${core[0]}`);
+          inp.style.width = `${Math.max(68, Math.min(176, core.length * 9.5 + 18))}px`;
+
+          const peek = document.createElement("button");
+          peek.type = "button";
+          peek.className = "cloze-peek";
+          peek.textContent = "?";
+          peek.title = "Rivela parola";
+
+          const markOk = () => {
+            if (inp.classList.contains("ok")) return;
+            inp.classList.remove("bad");
+            inp.classList.add("ok");
+            inp.value = core;
+            inp.readOnly = true;
+            peek.remove();
+            solved++;
+            updateProgress();
+            bodyEl.querySelector(".cloze-input:not(.ok)")?.focus();
+          };
+          inp.addEventListener("input", () => {
+            if (norm(inp.value) === norm(core)) markOk();
+            else inp.classList.toggle("bad", inp.value.length >= core.length);
+          });
+          inp.addEventListener("keydown", e => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (norm(inp.value) === norm(core)) markOk();
+              else inp.classList.add("bad");
+            }
+          });
+          peek.addEventListener("click", markOk);
+
+          wrap.appendChild(inp);
+          wrap.appendChild(peek);
+          p.appendChild(wrap);
+        }
+        if (trail) p.appendChild(document.createTextNode(trail));
+      }
+      bodyEl.appendChild(p);
+    }
+
+    if (total === 0) {
+      noticeEl.classList.remove("hidden");
+      noticeEl.innerHTML = `
+        <span>Nessun numero o termine chiave in questa sezione per il Livello 1.</span>
+        <button type="button" class="btn small primary" data-jump-lv2>Passa al Livello 2</button>
+      `;
+      noticeEl.querySelector("[data-jump-lv2]").addEventListener("click", () => {
+        levelSel.value = "2";
+        renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, noticeEl, onMasteryChange });
+      });
+    }
+    updateProgress();
+  }
+
+  function renderInlineCloze() {
+    renderClozeInto({
+      secId: readerSecId,
+      levelSel: document.getElementById("inlineClozeLevel"),
+      modeSel: document.getElementById("inlineClozeInput"),
+      bodyEl: document.getElementById("inlineClozeBody"),
+      counterEl: document.getElementById("inlineClozeCounter"),
+      barEl: document.getElementById("inlineClozeBar"),
+      noticeEl: document.getElementById("inlineClozeNotice"),
+      onMasteryChange: () => {
+        const cur = state.mastery[readerSecId] || 0;
+        document.querySelectorAll("#readerMasteryBtns .m-chip").forEach(b => {
+          const act = Number(b.dataset.status) === cur;
+          b.classList.toggle("active", act);
+          b.setAttribute("aria-pressed", act ? "true" : "false");
+        });
+        syncReaderSidebarSelection(readerSecId);
+      },
+    });
+  }
+
+  function populatePracticeClozeSecSelect(docId) {
     const sel = document.getElementById("clozeSecSelect");
     const secs = CLOZEABLE_SECTIONS.filter(s => s.doc === docId);
     sel.innerHTML = "";
@@ -849,204 +1082,40 @@
       opt.textContent = `[${STATUS_LABELS[m]}] ${s.code} — ${s.title}`;
       sel.appendChild(opt);
     }
-    if (!secs.some(s => s.id === clozeSecId) && secs.length) {
-      clozeSecId = secs[0].id;
-    }
-    sel.value = clozeSecId;
+    if (!secs.some(s => s.id === practiceClozeSecId) && secs.length) practiceClozeSecId = secs[0].id;
+    sel.value = practiceClozeSecId;
   }
 
-  function shouldBlankToken(word, level, idx) {
-    const clean = word.replace(/^[^\p{L}\p{N}€]+|[^\p{L}\p{N}%]+$/gu, "");
-    if (!clean) return false;
-    const low = clean.toLowerCase();
-
-    const isNumOrKey =
-      /\d/.test(clean) ||
-      /^(trenta|novanta|sette|dieci|quindici|ventiquattro|quarantotto|cinque|sei|nove|dodici|quattro|tre|due|primo|seconda|terza|unanimità|assoluta|semplice|segreto|palese|decano|probiviri|direttivo|assemblea|presidente|vicepresidente|segretario|tesoriere|droop|delega|deleghe|ricorso|ricorsi|quorum|scadenza|proroga|incompatibili|decadenza|espulsione|ammonizioni)$/i.test(clean);
-
-    if (level === 1) return isNumOrKey;
-    if (level === 2) {
-      if (isNumOrKey) return true;
-      if (clean.length < 5 || STOPWORDS.has(low)) return false;
-      return idx % 3 === 0;
-    }
-    if (level === 3) {
-      if (isNumOrKey) return true;
-      if (clean.length < 3 || STOPWORDS.has(low)) return false;
-      return idx % 3 !== 1;
-    }
-    if (level === 4) return clean.length >= 2;
-    return false;
-  }
-
-  function renderCloze() {
-    const sec = SECTION_MAP.get(clozeSecId);
+  function renderPracticeCloze() {
+    const sec = SECTION_MAP.get(practiceClozeSecId);
     if (!sec) return;
-    const level = Number(document.getElementById("clozeLevelSelect").value);
-    const mode = document.getElementById("clozeInputMode").value;
+    document.getElementById("pClozeCode").textContent = sec.code;
+    document.getElementById("pClozeTitle").textContent = sec.title;
 
-    document.getElementById("clozeCode").textContent = sec.code;
-    document.getElementById("clozeTitle").textContent = sec.title;
+    const lv = document.getElementById("clozeLevelSelect").value;
+    const im = document.getElementById("clozeInputMode").value === "click" ? "Tocca" : "Scrivi";
+    document.getElementById("clozeQueueSummary").textContent = `${DOC_SHORT[sec.doc]} · ${sec.code} · Lv. ${lv} · ${im}`;
 
-    const body = document.getElementById("clozeBody");
-    body.innerHTML = "";
-    clozeBlanksTotal = 0;
-    clozeBlanksRevealed = 0;
+    const idx = CLOZEABLE_SECTIONS.findIndex(s => s.id === practiceClozeSecId);
+    document.getElementById("btnPClozePrev").disabled = idx <= 0;
+    document.getElementById("btnPClozeNext").disabled = idx >= CLOZEABLE_SECTIONS.length - 1;
 
-    let tokenIndex = 0;
-    for (const blk of sec.blocks) {
-      const p = document.createElement("div");
-      p.className = "cloze-para";
-      const tokens = blk.text.split(/(\s+)/);
-      let paraWordIdx = 0;
-
-      for (const tok of tokens) {
-        if (/^\s+$/.test(tok)) {
-          p.appendChild(document.createTextNode(tok));
-          continue;
-        }
-        tokenIndex++;
-        paraWordIdx++;
-        // Never blank leading comma/subitem index (e.g. "1.", "2.", "(a)")
-        if (paraWordIdx === 1 && (/^\d+\.$/.test(tok) || /^\([a-z]\)$/.test(tok))) {
-          p.appendChild(document.createTextNode(tok));
-          continue;
-        }
-        const match = tok.match(/^([^\p{L}\p{N}€]*)([\p{L}\p{N}€.,\/:%'-]+?)([^\p{L}\p{N}%]*)$/u);
-        if (!match || !shouldBlankToken(match[2], level, tokenIndex)) {
-          p.appendChild(document.createTextNode(tok));
-          continue;
-        }
-
-        const [, lead, core, trail] = match;
-        if (lead) p.appendChild(document.createTextNode(lead));
-
-        clozeBlanksTotal++;
-        if (mode === "click") {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "cloze-blank";
-          btn.dataset.answer = core;
-          btn.textContent = level === 4 ? `${core[0]}${"·".repeat(Math.min(core.length - 1, 5))}` : `${core[0]}___`;
-          btn.setAttribute("aria-label", `Rivela parola che inizia per ${core[0]}`);
-          btn.addEventListener("click", () => {
-            if (!btn.classList.contains("revealed")) {
-              btn.classList.add("revealed");
-              btn.textContent = core;
-              btn.disabled = true;
-              clozeBlanksRevealed++;
-              updateClozeProgress();
-            }
-          });
-          p.appendChild(btn);
-        } else {
-          const wrap = document.createElement("span");
-          wrap.className = "cloze-input-wrap";
-          const inp = document.createElement("input");
-          inp.type = "text";
-          inp.className = "cloze-input";
-          inp.dataset.answer = core;
-          inp.placeholder = `${core[0]}…`;
-          inp.setAttribute("aria-label", `Completa parola che inizia per ${core[0]}`);
-          inp.style.width = `${Math.max(70, Math.min(180, core.length * 9.5 + 18))}px`;
-
-          const peek = document.createElement("button");
-          peek.type = "button";
-          peek.className = "cloze-peek";
-          peek.textContent = "?";
-          peek.title = "Rivela questa parola";
-          peek.setAttribute("aria-label", "Rivela questa parola");
-
-          const markSolved = () => {
-            if (inp.classList.contains("ok")) return;
-            inp.classList.remove("bad");
-            inp.classList.add("ok");
-            inp.value = core;
-            inp.readOnly = true;
-            peek.remove();
-            clozeBlanksRevealed++;
-            updateClozeProgress();
-            // Auto-focus next unsolved input
-            const nextInp = body.querySelector(".cloze-input:not(.ok)");
-            if (nextInp) nextInp.focus();
-          };
-
-          inp.addEventListener("input", () => {
-            if (normalizeText(inp.value) === normalizeText(core)) {
-              markSolved();
-            } else if (inp.value.length >= core.length) {
-              inp.classList.add("bad");
-            } else {
-              inp.classList.remove("bad");
-            }
-          });
-          inp.addEventListener("keydown", e => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (normalizeText(inp.value) === normalizeText(core)) markSolved();
-              else inp.classList.add("bad");
-            }
-          });
-          peek.addEventListener("click", markSolved);
-
-          wrap.appendChild(inp);
-          wrap.appendChild(peek);
-          p.appendChild(wrap);
-        }
-
-        if (trail) p.appendChild(document.createTextNode(trail));
-      }
-      body.appendChild(p);
-    }
-
-    // Handle 0 blanks on Level 1 gracefully
-    const emptyBanner = document.getElementById("clozeEmptyBanner");
-    if (clozeBlanksTotal === 0) {
-      emptyBanner.innerHTML = `
-        <span>Questa sezione non contiene numeri o termini chiave per il Livello 1.</span>
-        <button type="button" class="btn small primary" id="btnJumpLv2">Passa al Livello 2</button>
-      `;
-      emptyBanner.classList.remove("hidden");
-      document.getElementById("btnJumpLv2").addEventListener("click", () => {
-        document.getElementById("clozeLevelSelect").value = "2";
-        renderCloze();
-      });
-    } else {
-      emptyBanner.classList.add("hidden");
-    }
-
-    // Prev / Next buttons
-    const cIdx = CLOZEABLE_SECTIONS.findIndex(s => s.id === clozeSecId);
-    document.getElementById("btnClozePrev").disabled = cIdx <= 0;
-    document.getElementById("btnClozeNext").disabled = cIdx >= CLOZEABLE_SECTIONS.length - 1;
-
-    updateClozeProgress();
+    renderClozeInto({
+      secId: practiceClozeSecId,
+      levelSel: document.getElementById("clozeLevelSelect"),
+      modeSel: document.getElementById("clozeInputMode"),
+      bodyEl: document.getElementById("pClozeBody"),
+      counterEl: document.getElementById("pClozeCounter"),
+      barEl: document.getElementById("pClozeBar"),
+      noticeEl: document.getElementById("pClozeNotice"),
+      onMasteryChange: () => populatePracticeClozeSecSelect(sec.doc),
+    });
   }
 
-  function updateClozeProgress() {
-    document.getElementById("clozeCounter").textContent = `${clozeBlanksRevealed} / ${clozeBlanksTotal}`;
-    const pct = clozeBlanksTotal > 0 ? Math.round((clozeBlanksRevealed / clozeBlanksTotal) * 100) : 0;
-    document.getElementById("clozeBarFill").style.width = `${pct}%`;
-
-    const doneBanner = document.getElementById("clozeDoneBanner");
-    const isDone = clozeBlanksTotal > 0 && clozeBlanksRevealed >= clozeBlanksTotal;
-    doneBanner.classList.toggle("hidden", !isDone);
-    if (isDone) {
-      const lv = Number(document.getElementById("clozeLevelSelect").value);
-      const lvBtn = document.getElementById("btnClozeLevelUp");
-      lvBtn.classList.toggle("hidden", lv >= 4);
-      document.getElementById("clozeDoneHint").textContent = lv < 4
-        ? `Ottimo! Prova ora il Livello ${lv + 1} per fissare la norma ancora più a fondo.`
-        : "Livello 4 completato: puoi segnare questa sezione come imparata a memoria!";
-    }
-  }
-
-  // ==================== FLASHCARDS (SM-2) ====================
+  // ==================== 3A. FLASHCARDS (SM-2) ====================
   function getArticleFlashcards() {
     return CLOZEABLE_SECTIONS.map(s => ({
-      id: `auto-${s.id}`,
-      doc: s.doc,
-      ref: s.id,
+      id: `auto-${s.id}`, doc: s.doc, ref: s.id,
       refLabel: `${DOC_SHORT[s.doc]} ${s.code}`,
       tag: "Articoli 1:1",
       q: `[${DOC_SHORT[s.doc]}] Cosa dispone ${s.code} — «${s.title}»?`,
@@ -1060,8 +1129,8 @@
     return [...PACK.flashcards, ...getArticleFlashcards()];
   }
 
-  function isCardDue(cardId) {
-    const rec = state.sm2[cardId];
+  function isCardDue(id) {
+    const rec = state.sm2[id];
     return !rec || Date.now() >= rec.nextReview;
   }
 
@@ -1081,7 +1150,21 @@
     }
   }
 
-  function buildFcQueue(shuffle = false, customCards = null) {
+  function updateFcSummaryText() {
+    if (fcCustomContext) {
+      document.getElementById("fcActiveSummary").textContent = `Focus ${fcCustomContext} · ${fcTotalSession} schede`;
+      return;
+    }
+    const modeNames = { curated: "Alta Resa", all_articles: "Articoli 1:1", combined: "Completo" };
+    const mode = modeNames[document.getElementById("fcDeckMode").value];
+    const docVal = document.getElementById("fcDocFilter").value;
+    const docTxt = docVal === "all" ? "Tutti" : DOC_SHORT[docVal];
+    const dueTxt = document.getElementById("fcOnlyDue").checked ? " · Solo scadute" : "";
+    document.getElementById("fcActiveSummary").textContent = `${mode} · ${docTxt}${dueTxt} · ${fcTotalSession} schede`;
+  }
+
+  function buildFcQueue(shuffle = false, customCards = null, customLabel = null) {
+    fcCustomContext = customLabel;
     const mode = document.getElementById("fcDeckMode").value;
     const docF = document.getElementById("fcDocFilter").value;
     const tagF = document.getElementById("fcTagFilter").value;
@@ -1108,6 +1191,7 @@
     fcFlipped = false;
     fcLastAction = null;
     document.getElementById("btnFcUndo").classList.add("hidden");
+    updateFcSummaryText();
     renderFlashcard();
   }
 
@@ -1127,15 +1211,13 @@
       emptyEl.classList.remove("hidden");
 
       const onlyDue = document.getElementById("fcOnlyDue").checked;
-      document.getElementById("fcQueueInfo").textContent =
-        fcTotalSession > 0 ? `Completate ${fcCompletedSession} / ${fcTotalSession}` : "0 carte";
+      document.getElementById("fcQueueInfo").textContent = fcTotalSession > 0 ? `Completate ${fcCompletedSession}/${fcTotalSession}` : "0 schede";
       document.getElementById("fcCardMeta").textContent = "Sessione conclusa";
-      document.getElementById("fcEmptyTitle").textContent =
-        fcTotalSession > 0 ? "Ottimo lavoro! Sessione completata" : "Nessuna carta da ripassare";
+      document.getElementById("fcEmptyTitle").textContent = fcTotalSession > 0 ? "Sessione completata" : "Nessuna scheda in scadenza";
       document.getElementById("fcEmptyDesc").textContent = onlyDue
         ? "Sei in pari con il calendario SM-2 per questi filtri."
-        : "Modifica i filtri o ricomincia la sessione.";
-      document.getElementById("btnFcShowAll").classList.toggle("hidden", !onlyDue);
+        : "Modifica i filtri o avvia un nuovo ciclo di ripasso.";
+      document.getElementById("btnFcShowAll").classList.toggle("hidden", !onlyDue && !fcCustomContext);
       return;
     }
 
@@ -1144,24 +1226,20 @@
 
     const card = fcQueue[0];
     const rec = state.sm2[card.id];
-    document.getElementById("fcQueueInfo").textContent =
-      `Rimanenti: ${fcQueue.length} · Completate: ${fcCompletedSession}/${fcTotalSession}`;
-    document.getElementById("fcCardMeta").textContent = rec
-      ? `Ripetizioni: ${rec.reps} · Int. ${rec.interval}g`
-      : "Nuova scheda";
+    document.getElementById("fcQueueInfo").textContent = `Rimanenti: ${fcQueue.length} · Completate: ${fcCompletedSession}/${fcTotalSession}`;
+    document.getElementById("fcCardMeta").textContent = rec ? `Rip. ${rec.reps} · Int. ${rec.interval}g` : "Nuova";
 
-    document.getElementById("fcDocBadge").textContent = DOC_LABELS[card.doc] || card.doc;
+    document.getElementById("fcDocBadge").textContent = DOC_SHORT[card.doc] || card.doc;
     document.getElementById("fcTagBadge").textContent = card.tag;
     document.getElementById("fcRetryBadge").classList.toggle("hidden", !card._retry);
     document.getElementById("fcQuestion").textContent = card.q;
     document.getElementById("fcAnswer").textContent = card.a;
     document.getElementById("fcRefLabel").textContent = card.refLabel;
 
-    // Live exact SM-2 interval previews
     document.getElementById("int1").textContent = "Rivedi ora";
-    document.getElementById("int2").textContent = formatIntervalLabel(computeNextSM2(rec, 3).interval);
-    document.getElementById("int3").textContent = formatIntervalLabel(computeNextSM2(rec, 4).interval);
-    document.getElementById("int4").textContent = formatIntervalLabel(computeNextSM2(rec, 5).interval);
+    document.getElementById("int2").textContent = formatInterval(computeNextSM2(rec, 3).interval);
+    document.getElementById("int3").textContent = formatInterval(computeNextSM2(rec, 4).interval);
+    document.getElementById("int4").textContent = formatInterval(computeNextSM2(rec, 5).interval);
 
     fcFlipped = false;
     document.getElementById("fcBack").classList.add("hidden");
@@ -1182,25 +1260,16 @@
     const card = fcQueue.shift();
     const prevRec = state.sm2[card.id] ? { ...state.sm2[card.id] } : null;
 
-    fcLastAction = {
-      card,
-      prevRec,
-      wasFailed: quality < 3,
-      prevCompleted: fcCompletedSession,
-      queueSnapshot: [...fcQueue],
-    };
-
+    fcLastAction = { card, prevRec, prevCompleted: fcCompletedSession, queueSnapshot: [...fcQueue] };
     state.sm2[card.id] = computeNextSM2(prevRec, quality);
     saveState();
     updateDueBadges();
 
     if (quality < 3) {
-      const insertAt = Math.min(fcQueue.length, 3);
-      fcQueue.splice(insertAt, 0, { ...card, _retry: true });
+      fcQueue.splice(Math.min(fcQueue.length, 3), 0, { ...card, _retry: true });
     } else {
       fcCompletedSession++;
     }
-
     document.getElementById("btnFcUndo").classList.remove("hidden");
     renderFlashcard();
   }
@@ -1212,7 +1281,6 @@
     else delete state.sm2[card.id];
     saveState();
     updateDueBadges();
-
     fcQueue = [card, ...queueSnapshot];
     fcCompletedSession = prevCompleted;
     fcLastAction = null;
@@ -1221,12 +1289,11 @@
     showToast("Ultima valutazione annullata.");
   }
 
-  // ==================== QUIZ ====================
+  // ==================== 3B. QUIZ & SCENARI ====================
   function getFilteredQuizPool() {
     const modeF = document.getElementById("qzModeFilter").value;
     const docF = document.getElementById("qzDocFilter").value;
     const onlyUnm = document.getElementById("qzOnlyUnmastered").checked;
-
     return PACK.quizzes.filter(q => {
       if (modeF !== "all" && q.mode !== modeF) return false;
       if (docF !== "all" && q.doc !== docF) return false;
@@ -1235,7 +1302,19 @@
     });
   }
 
-  function startQuiz(customList = null) {
+  function updateQzSummaryText() {
+    if (qzCustomContext) {
+      document.getElementById("qzActiveSummary").textContent = `Focus ${qzCustomContext} · ${qzQueue.length} domande`;
+      return;
+    }
+    const modeTxt = MODE_LABELS[document.getElementById("qzModeFilter").value];
+    const docVal = document.getElementById("qzDocFilter").value;
+    const docTxt = docVal === "all" ? "Tutti" : DOC_SHORT[docVal];
+    document.getElementById("qzActiveSummary").textContent = `${modeTxt} · ${docTxt} · ${qzQueue.length} domande`;
+  }
+
+  function startQuiz(customList = null, customLabel = null) {
+    qzCustomContext = customLabel;
     const list = customList || getFilteredQuizPool();
     qzQueue = [...list].sort(() => Math.random() - 0.5);
     qzIdx = 0;
@@ -1246,6 +1325,7 @@
     document.getElementById("btnRetryWrong").classList.add("hidden");
     document.getElementById("quizSummary").classList.add("hidden");
     document.getElementById("quizBox").classList.remove("hidden");
+    updateQzSummaryText();
     renderQuizQuestion();
   }
 
@@ -1254,8 +1334,7 @@
       document.getElementById("qzCounter").textContent = "0 domande";
       document.getElementById("qzScoreLive").textContent = "—";
       document.getElementById("qzBarFill").style.width = "100%";
-      document.getElementById("qzQuestion").textContent =
-        "Nessuna domanda da completare con questi filtri (hai già consolidato tutto in questa categoria!).";
+      document.getElementById("qzQuestion").textContent = "Hai già consolidato tutte le domande con questi filtri.";
       document.getElementById("qzOptions").innerHTML = "";
       document.getElementById("qzFeedback").classList.add("hidden");
       return;
@@ -1268,21 +1347,20 @@
     const item = qzQueue[qzIdx];
     qzAnswered = false;
     document.getElementById("qzCounter").textContent = `Domanda ${qzIdx + 1} / ${qzQueue.length}`;
-    document.getElementById("qzScoreLive").textContent = `Corrette: ${qzCorrect} · Errate: ${qzWrong.length}`;
+    document.getElementById("qzScoreLive").textContent = `${qzCorrect} esatte · ${qzWrong.length} errate`;
     document.getElementById("qzBarFill").style.width = `${(qzIdx / qzQueue.length) * 100}%`;
 
-    document.getElementById("qzDocBadge").textContent = DOC_LABELS[item.doc] || item.doc;
-    const modeNames = { blitz: "Blitz Numeri & Quorum", mc: "Normativa", scenario: "Scenario Pratico" };
-    document.getElementById("qzModeBadge").textContent = modeNames[item.mode] || item.mode;
+    document.getElementById("qzDocBadge").textContent = DOC_SHORT[item.doc] || item.doc;
+    document.getElementById("qzModeBadge").textContent = MODE_LABELS[item.mode] || item.mode;
     document.getElementById("qzQuestion").textContent = item.q;
 
     const optsEl = document.getElementById("qzOptions");
     optsEl.innerHTML = "";
-    item.options.forEach((optText, i) => {
+    item.options.forEach((txt, i) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "quiz-opt";
-      btn.innerHTML = `<span class="quiz-opt-key">${String.fromCharCode(65 + i)}</span><span>${escapeHtml(optText)}</span>`;
+      btn.innerHTML = `<span class="opt-key">${String.fromCharCode(65 + i)}</span><span>${esc(txt)}</span>`;
       btn.addEventListener("click", () => handleQuizAnswer(i));
       optsEl.appendChild(btn);
     });
@@ -1296,8 +1374,7 @@
     if (qzAnswered || !qzQueue[qzIdx]) return;
     qzAnswered = true;
     const item = qzQueue[qzIdx];
-    const buttons = document.querySelectorAll("#qzOptions .quiz-opt");
-    buttons.forEach((b, i) => {
+    document.querySelectorAll("#qzOptions .quiz-opt").forEach((b, i) => {
       b.disabled = true;
       if (i === item.correct) b.classList.add("correct");
       if (i === chosenIdx && i !== item.correct) b.classList.add("wrong");
@@ -1315,15 +1392,19 @@
     }
     saveState();
 
-    document.getElementById("qzScoreLive").textContent = `Corrette: ${qzCorrect} · Errate: ${qzWrong.length}`;
+    document.getElementById("qzScoreLive").textContent = `${qzCorrect} esatte · ${qzWrong.length} errate`;
     const fb = document.getElementById("qzFeedback");
     fb.classList.toggle("ok", ok);
     fb.classList.toggle("bad", !ok);
     document.getElementById("qzFbTitle").textContent = ok ? "Risposta corretta" : "Risposta errata";
     document.getElementById("qzFbText").textContent = item.explanation;
     document.getElementById("qzRefLabel").textContent = item.refLabel;
-    document.getElementById("btnQzSource").onclick = () => openSectionInReader(item.ref);
-    document.getElementById("btnQzNext").textContent = qzIdx + 1 >= qzQueue.length ? "Vedi riepilogo →" : "Prossima domanda →";
+    document.getElementById("btnQzSource").onclick = () => {
+      openArticle(item.ref, {
+        returnTo: { type: "practice", sub: "quiz", label: "Quiz in corso", reason: "Verifica fonte domanda" },
+      });
+    };
+    document.getElementById("btnQzNext").textContent = qzIdx + 1 >= qzQueue.length ? "Vedi riepilogo →" : "Prossima →";
     fb.classList.remove("hidden");
 
     const retryBtn = document.getElementById("btnRetryWrong");
@@ -1338,169 +1419,165 @@
     const pct = Math.round((qzCorrect / (qzQueue.length || 1)) * 100);
     document.getElementById("qzSumScore").textContent = `${qzCorrect} / ${qzQueue.length} (${pct}%)`;
     document.getElementById("qzSumMsg").textContent =
-      pct >= 90 ? "Padronanza eccellente: sei pronto a ricordare questi dettagli senza incertezze." :
-      pct >= 70 ? "Buona preparazione: ripeti subito le domande sbagliate per chiudere le lacune." :
-      "Conviene ripassare gli articoli collegati agli errori qui sotto e ripetere la sessione.";
+      pct >= 90 ? "Padronanza solida: questi punti sono ormai acquisiti." :
+      pct >= 70 ? "Buona base: ripeti subito gli errori per arrivare al 100%." :
+      "Conviene rivedere gli articoli collegati agli errori qui sotto e ripetere.";
 
-    const missedWrap = document.getElementById("qzMissedList");
-    missedWrap.innerHTML = "";
-    if (qzWrong.length > 0) {
-      missedWrap.classList.remove("hidden");
-      const h = document.createElement("h3");
-      h.textContent = `Da ripassare (${qzWrong.length})`;
-      h.style.fontSize = "0.92rem";
-      missedWrap.appendChild(h);
+    const missed = document.getElementById("qzMissedList");
+    missed.innerHTML = "";
+    if (qzWrong.length) {
+      missed.classList.remove("hidden");
       for (const w of qzWrong) {
         const row = document.createElement("div");
-        row.className = "qz-missed-item";
+        row.className = "missed-row";
         row.innerHTML = `
-          <span><strong>${escapeHtml(w.refLabel)}:</strong> ${escapeHtml(w.q)}</span>
-          <button type="button" class="btn small ghost" data-jump="${w.ref}">Apri norma</button>
+          <span><strong>${esc(w.refLabel)}:</strong> ${esc(w.q)}</span>
+          <button type="button" class="link-btn">Apri norma →</button>
         `;
-        row.querySelector("button").addEventListener("click", () => openSectionInReader(w.ref));
-        missedWrap.appendChild(row);
+        row.querySelector("button").addEventListener("click", () => {
+          openArticle(w.ref, { returnTo: { type: "practice", sub: "quiz", label: "Riepilogo Quiz", reason: "Approfondimento errore" } });
+        });
+        missed.appendChild(row);
       }
     } else {
-      missedWrap.classList.add("hidden");
+      missed.classList.add("hidden");
     }
-
     document.getElementById("btnQzRetryWrong2").classList.toggle("hidden", qzWrong.length === 0);
   }
 
-  // ==================== CHEATSHEET / SINOSSI ====================
+  // ==================== 4. SINOSSI ====================
   function syncCsTabs() {
-    document.querySelectorAll("#csTabs .pill").forEach(p => {
-      const act = p.dataset.cs === csTab;
-      p.classList.toggle("active", act);
-      p.setAttribute("aria-selected", act ? "true" : "false");
+    document.querySelectorAll("#csTabs .rail-tab").forEach(t => {
+      const act = t.dataset.cs === csTab;
+      t.classList.toggle("active", act);
+      t.setAttribute("aria-selected", act ? "true" : "false");
     });
   }
 
-  function renderCheatsheet() {
+  function renderReference() {
     const wrap = document.getElementById("csContent");
     const q = (document.getElementById("csSearch").value || "").trim().toLowerCase();
     const cs = PACK.cheatsheet;
-    const matchRow = obj => !q || JSON.stringify(obj).toLowerCase().includes(q);
+    const match = obj => !q || JSON.stringify(obj).toLowerCase().includes(q);
 
     if (csTab === "timeline") {
       const now = Date.now();
-      let foundNext = false;
-      const rows = cs.timeline2026.filter(matchRow);
+      let markedNext = false;
+      const rows = cs.timeline2026.filter(match);
       wrap.innerHTML = rows.length ? `
-        <div class="cs-table-wrap"><table class="cs-table">
+        <div class="ref-table-wrap"><table class="ref-table">
           <thead><tr><th>Data / Ora</th><th>Adempimento</th><th>Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => {
               const dt = parseItalianDate(r.date);
-              let cls = "";
-              let tag = "";
+              let cls = "", badge = "";
               if (r.date.startsWith("21/11/2026") && r.event.includes("ASSEMBLEA")) {
-                cls = "tl-election";
-                tag = ' <span class="tag-pill warn">Assemblea</span>';
+                cls = "tl-election"; badge = ' <span class="soft-tag warn">Assemblea</span>';
               } else if (dt && dt.getTime() < now) {
                 cls = "tl-past";
-              } else if (dt && !foundNext) {
-                foundNext = true;
-                cls = "tl-next";
-                tag = ' <span class="doc-pill">Prossima</span>';
+              } else if (dt && !markedNext) {
+                markedNext = true; cls = "tl-next"; badge = ' <span class="doc-tag">Prossima</span>';
               }
               return `<tr class="${cls}">
-                <td data-label="Data / Ora"><span class="num-hl">${escapeHtml(r.date)}</span>${tag}</td>
-                <td data-label="Adempimento">${escapeHtml(r.event)}</td>
-                <td data-label="Fonte"><button type="button" class="xref-link" data-jump="${r.ref}">Apri norma</button></td>
+                <td data-label="Data / Ora"><span class="num-hl">${esc(r.date)}</span>${badge}</td>
+                <td data-label="Adempimento">${esc(r.event)}</td>
+                <td data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">Apri →</button></td>
               </tr>`;
             }).join("")}
           </tbody>
-        </table></div>` : `<p class="muted">Nessuna scadenza trovata per «${escapeHtml(q)}».</p>`;
+        </table></div>` : `<p class="muted">Nessuna scadenza corrisponde a «${esc(q)}».</p>`;
     } else if (csTab === "quorums") {
-      const rows = cs.quorums.filter(matchRow);
+      const rows = cs.quorums.filter(match);
       wrap.innerHTML = rows.length ? `
-        <div class="cs-table-wrap"><table class="cs-table">
-          <thead><tr><th>Organo / Seduta</th><th>Quorum Costitutivo</th><th>Quorum Deliberativo</th><th>Fonte</th></tr></thead>
+        <div class="ref-table-wrap"><table class="ref-table">
+          <thead><tr><th>Organo / Seduta</th><th>Costitutivo</th><th>Deliberativo</th><th>Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
-              <td data-label="Organo / Seduta"><strong>${escapeHtml(r.context)}</strong></td>
-              <td data-label="Costitutivo">${escapeHtml(r.costitutivo)}</td>
-              <td data-label="Deliberativo">${escapeHtml(r.deliberativo)}</td>
-              <td data-label="Fonte"><button type="button" class="xref-link" data-jump="${r.ref}">Apri</button></td>
+              <td data-label="Organo / Seduta"><strong>${esc(r.context)}</strong></td>
+              <td data-label="Costitutivo">${esc(r.costitutivo)}</td>
+              <td data-label="Deliberativo">${esc(r.deliberativo)}</td>
+              <td data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">Apri →</button></td>
             </tr>`).join("")}
           </tbody>
-        </table></div>` : `<p class="muted">Nessun quorum trovato per «${escapeHtml(q)}».</p>`;
+        </table></div>` : `<p class="muted">Nessun quorum trovato.</p>`;
     } else if (csTab === "organs") {
-      const rows = cs.organs.filter(matchRow);
+      const rows = cs.organs.filter(match);
       wrap.innerHTML = rows.length ? `
-        <div class="cs-table-wrap"><table class="cs-table">
+        <div class="ref-table-wrap"><table class="ref-table">
           <thead><tr><th>Organo / Carica</th><th>Composizione</th><th>Durata</th><th>Poteri Chiave</th><th>Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
-              <td data-label="Organo / Carica"><strong>${escapeHtml(r.name)}</strong></td>
-              <td data-label="Composizione">${escapeHtml(r.composition)}</td>
-              <td data-label="Durata">${escapeHtml(r.term)}</td>
-              <td data-label="Poteri Chiave">${escapeHtml(r.powers)}</td>
-              <td data-label="Fonte"><button type="button" class="xref-link" data-jump="${r.ref}">Apri</button></td>
+              <td data-label="Organo"><strong>${esc(r.name)}</strong></td>
+              <td data-label="Composizione">${esc(r.composition)}</td>
+              <td data-label="Durata">${esc(r.term)}</td>
+              <td data-label="Poteri">${esc(r.powers)}</td>
+              <td data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">Apri →</button></td>
             </tr>`).join("")}
           </tbody>
-        </table></div>` : `<p class="muted">Nessun organo trovato per «${escapeHtml(q)}».</p>`;
+        </table></div>` : `<p class="muted">Nessun organo trovato.</p>`;
     } else if (csTab === "deadlines") {
-      const rows = cs.keyDeadlines.filter(matchRow);
+      const rows = cs.keyDeadlines.filter(match);
       wrap.innerHTML = rows.length ? `
-        <div class="cs-table-wrap"><table class="cs-table">
+        <div class="ref-table-wrap"><table class="ref-table">
           <thead><tr><th>Istituto / Procedura</th><th>Termine / Regola</th><th>Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
-              <td data-label="Istituto"><strong>${escapeHtml(r.term)}</strong></td>
-              <td data-label="Termine">${escapeHtml(r.value)}</td>
-              <td data-label="Fonte"><button type="button" class="xref-link" data-jump="${r.ref}">Apri</button></td>
+              <td data-label="Istituto"><strong>${esc(r.term)}</strong></td>
+              <td data-label="Termine">${esc(r.value)}</td>
+              <td data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">Apri →</button></td>
             </tr>`).join("")}
           </tbody>
-        </table></div>` : `<p class="muted">Nessun termine trovato per «${escapeHtml(q)}».</p>`;
+        </table></div>` : `<p class="muted">Nessun termine trovato.</p>`;
     } else if (csTab === "hierarchy") {
       wrap.innerHTML = `
-        <div class="cs-table-wrap"><table class="cs-table">
+        <div class="ref-table-wrap"><table class="ref-table">
           <thead><tr><th>Grado</th><th>Fonte Normativa</th><th>Prevalenza &amp; Note</th></tr></thead>
           <tbody>
             ${cs.hierarchy.map(r => `<tr>
-              <td data-label="Grado"><span class="code-badge">#${r.rank}</span></td>
-              <td data-label="Fonte"><strong>${escapeHtml(r.source)}</strong></td>
-              <td data-label="Note">${escapeHtml(r.note)} ${r.ref ? `(<button type="button" class="xref-link" data-jump="${r.ref}">Apri</button>)` : ""}</td>
+              <td data-label="Grado"><span class="code-chip">#${r.rank}</span></td>
+              <td data-label="Fonte"><strong>${esc(r.source)}</strong></td>
+              <td data-label="Note">${esc(r.note)} ${r.ref ? `<button type="button" class="link-btn" data-ref-jump="${r.ref}">Apri →</button>` : ""}</td>
             </tr>`).join("")}
           </tbody>
         </table></div>
-        <div class="stv-card">
-          <h3>Sistema Elettorale STV — Sintesi Operativa (Art. A.16 – A.17)</h3>
+        <div class="stv-box">
+          <h3 class="section-title" style="font-size:1.08rem;">Sistema Elettorale STV — Sintesi Operativa (Art. A.16 – A.17)</h3>
           <div class="stv-formula">Quota di Droop = ⌊ schede_valide / (seggi + 1) ⌋ + 1</div>
-          <p class="muted" style="font-size:0.9rem; line-height:1.7;">
-            <strong>Seggi disponibili (Art. A.17):</strong> più di 6 candidati validi → 7 seggi · 5 o 6 candidati → 5 seggi · meno di 5 candidati → rinvio e riapertura (max 14 giorni).<br/>
-            <strong>1ª Votazione (STV):</strong> Ogni scheda vale 1; calcoli in forma frazionaria esatta. Al raggiungimento della quota l'eccedenza si trasferisce moltiplicando il valore delle schede per <code>(voti − quota) / voti</code>. Altrimenti si esclude il meno votato.<br/>
-            <strong>2ª Votazione (Cariche):</strong> Solo tra gli eletti della 1ª; STV a 1 seggio alla volta (quota = maggioranza assoluta) per l'ordine di priorità delle cariche.<br/>
-            <strong>Parità (Art. A.16.4):</strong> 1° Anzianità d'iscrizione → 2° Il più <strong>giovane</strong> → 3° Sorteggio pre-assemblea.
+          <p class="muted small" style="line-height:1.72;">
+            <strong>Seggi disponibili (Art. A.17):</strong> &gt;6 candidati validi → 7 seggi · 5 o 6 candidati → 5 seggi · &lt;5 candidati → rinvio e riapertura (max 14 giorni).<br/>
+            <strong>1ª Votazione (STV):</strong> Ogni scheda vale 1; calcoli esatti in frazione. Al raggiungimento della quota l'eccedenza passa al candidato successivo con fattore <code>(voti − quota) / voti</code>; altrimenti si esclude il meno votato.<br/>
+            <strong>2ª Votazione (Cariche):</strong> Solo fra gli eletti della 1ª; STV a 1 seggio per posizione (quota = maggioranza assoluta) per l'ordine di assegnazione delle preferenze.<br/>
+            <strong>Spareggio parità (Art. A.16.4):</strong> 1° Anzianità d'iscrizione → 2° Il più <strong>giovane</strong> → 3° Sorteggio pre-assemblea.
           </p>
         </div>`;
     } else if (csTab === "diagrams") {
       const elDoc = CORPUS.documents.find(d => d.id === "elettorale");
-      const vp = elDoc?.visualPagesRendered || {};
-      const entries = Object.entries(vp)
+      const entries = Object.entries(elDoc?.visualPagesRendered || {})
         .map(([p, src]) => ({ p, src, cap: `${DIAGRAM_LABELS[p] || `Pagina ${p}`} (Pag. ${p})` }))
         .filter(item => !q || item.cap.toLowerCase().includes(q));
-      wrap.innerHTML = entries.length ? `<div class="article-images">${entries.map((item, i) => `
-        <button type="button" class="pdf-page-card" data-lb-idx="${i}">
-          <img src="${item.src}" alt="${escapeHtml(item.cap)}" loading="lazy" />
-          <div class="pdf-page-cap">${escapeHtml(item.cap)}</div>
+      wrap.innerHTML = entries.length ? `<div class="pdf-gallery">${entries.map((it, i) => `
+        <button type="button" class="pdf-card" data-lb-idx="${i}">
+          <img src="${it.src}" alt="${esc(it.cap)}" loading="lazy" />
+          <div class="pdf-card-cap">${esc(it.cap)}</div>
         </button>
-      `).join("")}</div>` : `<p class="muted">Nessuno schema trovato per «${escapeHtml(q)}».</p>`;
+      `).join("")}</div>` : `<p class="muted">Nessuno schema trovato.</p>`;
       wrap.querySelectorAll("[data-lb-idx]").forEach(el => {
         el.addEventListener("click", () => openLightbox(entries, Number(el.dataset.lbIdx)));
       });
     }
 
-    wrap.querySelectorAll("[data-jump]").forEach(a => {
-      a.addEventListener("click", () => openSectionInReader(a.dataset.jump));
+    wrap.querySelectorAll("[data-ref-jump]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        openArticle(btn.dataset.refJump, {
+          returnTo: { type: "reference", sub: csTab, label: "Sinossi", reason: "Consultazione da Sinossi" },
+        });
+      });
     });
   }
 
   // ==================== MODALS, SEARCH & LIGHTBOX ====================
   function openModal(id) {
-    lastFocusedBeforeModal = document.activeElement;
+    lastFocusedEl = document.activeElement;
     document.getElementById(id).classList.remove("hidden");
   }
 
@@ -1509,9 +1586,9 @@
       document.getElementById(id).classList.add("hidden");
     });
     document.getElementById("resetConfirmBox").classList.add("hidden");
-    if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === "function") {
-      lastFocusedBeforeModal.focus();
-      lastFocusedBeforeModal = null;
+    if (lastFocusedEl && typeof lastFocusedEl.focus === "function") {
+      lastFocusedEl.focus();
+      lastFocusedEl = null;
     }
   }
 
@@ -1539,48 +1616,72 @@
     gsActiveIdx = -1;
 
     if (!q) {
-      res.innerHTML = `<p class="muted small-text">Digita una parola, un numero o un articolo per cercare su Statuto, RRI e Regolamento Elettorale 2026.</p>`;
+      res.innerHTML = `<p class="muted small">Cerca un articolo, un quorum, una data (es. <em>20/11</em>, <em>Droop</em>, <em>delega</em>, <em>90 giorni</em>) su tutti i 3 documenti e le sinossi.</p>`;
       return;
     }
 
-    const matches = ALL_SECTIONS.filter(s =>
-      s.code.toLowerCase().includes(q) ||
-      s.title.toLowerCase().includes(q) ||
-      (s.text && s.text.toLowerCase().includes(q))
-    ).slice(0, 30);
+    // Search both articles and synoptic quorums/deadlines
+    const artMatches = ALL_SECTIONS
+      .filter(s => s.code.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || (s.text && s.text.toLowerCase().includes(q)))
+      .slice(0, 24)
+      .map(s => {
+        const pos = s.text ? s.text.toLowerCase().indexOf(q) : -1;
+        let snip = s.text ? s.text.slice(0, 140) : "Sezione contenitore";
+        if (pos >= 0) {
+          const st = Math.max(0, pos - 48);
+          snip = (st > 0 ? "…" : "") + s.text.slice(st, st + 160) + "…";
+        }
+        return { kind: "article", badge: DOC_SHORT[s.doc], code: s.code, title: s.title, snip, target: s.id };
+      });
 
-    if (!matches.length) {
-      res.innerHTML = `<p class="muted small-text">Nessun risultato per «${escapeHtml(query)}».</p>`;
+    const sinMatches = [];
+    PACK.cheatsheet.quorums.forEach(r => {
+      if (JSON.stringify(r).toLowerCase().includes(q)) {
+        sinMatches.push({ kind: "reference", badge: "Sinossi", code: "Quorum", title: r.context, snip: `${r.costitutivo} · ${r.deliberativo}`, target: "quorums" });
+      }
+    });
+    PACK.cheatsheet.timeline2026.forEach(r => {
+      if (JSON.stringify(r).toLowerCase().includes(q)) {
+        sinMatches.push({ kind: "reference", badge: "Sinossi", code: r.date, title: "Cronoprogramma 2026", snip: r.event, target: "timeline" });
+      }
+    });
+
+    const combined = [...artMatches, ...sinMatches.slice(0, 6)];
+    if (!combined.length) {
+      res.innerHTML = `<p class="muted small">Nessun risultato per «${esc(query)}».</p>`;
       return;
     }
 
-    gsResults = matches;
+    gsResults = combined;
     gsActiveIdx = 0;
     res.innerHTML = "";
-    matches.forEach((s, idx) => {
-      const pos = s.text ? s.text.toLowerCase().indexOf(q) : -1;
-      let snip = s.text ? s.text.slice(0, 150) : "Sezione contenitore";
-      if (pos >= 0) {
-        const start = Math.max(0, pos - 50);
-        snip = (start > 0 ? "…" : "") + s.text.slice(start, start + 165) + "…";
-      }
+    combined.forEach((item, idx) => {
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = `gs-item ${idx === 0 ? "active" : ""}`;
+      btn.className = `sr-item ${idx === 0 ? "active" : ""}`;
       btn.innerHTML = `
-        <div class="gs-item-head">
-          <span class="doc-pill">${DOC_SHORT[s.doc]}</span>
-          <span class="code-badge">${escapeHtml(s.code)}</span>
-          <span>${escapeHtml(s.title)}</span>
+        <div class="sr-item-head">
+          <span class="doc-tag">${esc(item.badge)}</span>
+          <span class="code-chip">${esc(item.code)}</span>
+          <span>${esc(item.title)}</span>
         </div>
-        <div class="gs-item-snip">${escapeHtml(snip)}</div>
+        <div class="sr-item-snip">${esc(item.snip)}</div>
       `;
-      btn.addEventListener("click", () => {
-        closeAllModals();
-        openSectionInReader(s.id);
-      });
+      btn.addEventListener("click", () => executeSearchResult(item));
       res.appendChild(btn);
     });
+  }
+
+  function executeSearchResult(item) {
+    closeAllModals();
+    if (item.kind === "article") {
+      openArticle(item.target);
+    } else {
+      csTab = item.target;
+      syncCsTabs();
+      renderReference();
+      switchView("reference");
+    }
   }
 
   function renderBackupSummary() {
@@ -1589,40 +1690,41 @@
     const sm2Count = Object.keys(state.sm2).length;
     const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k]).length;
     document.getElementById("backupSummary").textContent =
-      `Sezioni imparate/a memoria: ${studied} (${mem} a memoria) · Schede SM-2 attive: ${sm2Count} · Segnalibri: ${bmCount} · Risposte quiz: ${state.quizStats.total}`;
+      `Consolidate: ${studied}/${STUDYABLE_SECTIONS.length} (${mem} a memoria) · SM-2: ${sm2Count} · Segnalibri: ${bmCount} · Quiz: ${state.quizStats.total}`;
   }
 
-  // ==================== EVENT BINDINGS ====================
-  function bindGlobalEvents() {
-    // Primary Navigation (Desktop + Mobile Bottom)
-    document.getElementById("brandHome").addEventListener("click", () => switchView("dashboard"));
-    document.querySelectorAll("#desktopNav .nav-item, #bottomNav .bnav-item").forEach(btn => {
+  // ==================== EVENT WIRING ====================
+  function bindAllEvents() {
+    // Primary 4-Destination Navigation
+    document.getElementById("brandHome").addEventListener("click", () => switchView("overview"));
+    document.querySelectorAll("#desktopNav .nav-tab, #mobileNav .bnav-btn").forEach(btn => {
       btn.addEventListener("click", () => switchView(btn.dataset.view));
     });
 
-    // Dashboard CTAs
-    document.getElementById("btnHeroContinue").addEventListener("click", () => {
-      openSectionInReader(readerSecId || STUDYABLE_SECTIONS[0].id);
+    // Overview quick actions
+    document.getElementById("btnQuickFlashcards").addEventListener("click", () => {
+      switchPracticeMode("flashcards");
+      switchView("practice");
     });
-    document.getElementById("btnHeroCloze").addEventListener("click", () => switchView("cloze"));
-    document.getElementById("btnHeroFlashcards").addEventListener("click", () => switchView("flashcards"));
-    document.getElementById("btnHeroBlitz").addEventListener("click", () => {
+    document.getElementById("btnQuickBlitz").addEventListener("click", () => {
+      qzCustomContext = null;
       document.getElementById("qzModeFilter").value = "blitz";
       document.getElementById("qzDocFilter").value = "all";
       document.getElementById("qzOnlyUnmastered").checked = false;
       startQuiz();
-      switchView("quiz");
+      switchPracticeMode("quiz");
+      switchView("practice");
     });
     document.getElementById("btnOpenTimeline").addEventListener("click", () => {
       csTab = "timeline";
       syncCsTabs();
-      renderCheatsheet();
-      switchView("cheatsheet");
+      renderReference();
+      switchView("reference");
     });
-    document.querySelectorAll(".kpi-card[data-goto]").forEach(card => {
-      card.addEventListener("click", () => switchView(card.dataset.goto));
-    });
-    document.getElementById("kpiBookmarksCard").addEventListener("click", () => {
+    document.getElementById("metricNormativa").addEventListener("click", () => openArticle(readerSecId || STUDYABLE_SECTIONS[0].id));
+    document.getElementById("metricFlashcards").addEventListener("click", () => { switchPracticeMode("flashcards"); switchView("practice"); });
+    document.getElementById("metricQuiz").addEventListener("click", () => { switchPracticeMode("quiz"); switchView("practice"); });
+    document.getElementById("metricBookmarks").addEventListener("click", () => {
       readerDocFilter = "all";
       syncReaderDocPills();
       readerStatusFilter = "bookmarked";
@@ -1640,14 +1742,14 @@
       saveState();
     });
 
-    // Reader controls
+    // Reader controls & TOC Drawer
     document.getElementById("btnOpenTocDrawer").addEventListener("click", openTocDrawer);
     document.getElementById("btnCloseTocDrawer").addEventListener("click", closeTocDrawer);
     document.getElementById("tocBackdrop").addEventListener("click", closeTocDrawer);
 
-    document.querySelectorAll("#readerDocPills .pill").forEach(p => {
-      p.addEventListener("click", () => {
-        readerDocFilter = p.dataset.doc;
+    document.querySelectorAll("#readerDocPills .seg-btn").forEach(b => {
+      b.addEventListener("click", () => {
+        readerDocFilter = b.dataset.doc;
         syncReaderDocPills();
         renderReaderSidebar();
       });
@@ -1658,141 +1760,141 @@
       renderReaderSidebar();
     });
 
-    document.getElementById("btnFontDec").addEventListener("click", () => {
-      applyReaderScale(state.readerScale - 0.08);
-      saveState();
+    // Inline Reader Mode Switch (Lettura <-> A Memoria)
+    document.querySelectorAll("#readerModeSwitch .seg-btn").forEach(b => {
+      b.addEventListener("click", () => {
+        if (b.disabled) return;
+        readerMode = b.dataset.rmode;
+        syncReaderModeTabs();
+        if (readerMode === "cloze") renderInlineCloze();
+        setHash(`reader/${readerSecId}${readerMode === "cloze" ? "/cloze" : ""}`);
+      });
     });
-    document.getElementById("btnFontInc").addEventListener("click", () => {
-      applyReaderScale(state.readerScale + 0.08);
-      saveState();
+    document.getElementById("btnSwitchInlineCloze").addEventListener("click", () => {
+      readerMode = readerMode === "read" ? "cloze" : "read";
+      syncReaderModeTabs();
+      if (readerMode === "cloze") renderInlineCloze();
+      setHash(`reader/${readerSecId}${readerMode === "cloze" ? "/cloze" : ""}`);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     });
+
+    // Inline Cloze tools
+    document.getElementById("inlineClozeLevel").addEventListener("change", renderInlineCloze);
+    document.getElementById("inlineClozeInput").addEventListener("change", renderInlineCloze);
+    document.getElementById("btnInlineHint").addEventListener("click", () => {
+      const b = document.querySelector("#inlineClozeBody .cloze-blank:not(.revealed)");
+      if (b) { b.click(); return; }
+      document.querySelector("#inlineClozeBody .cloze-peek")?.click();
+    });
+    document.getElementById("btnInlineRevealAll").addEventListener("click", () => {
+      document.querySelectorAll("#inlineClozeBody .cloze-blank:not(.revealed)").forEach(el => el.click());
+      document.querySelectorAll("#inlineClozeBody .cloze-peek").forEach(el => el.click());
+    });
+    document.getElementById("btnInlineReset").addEventListener("click", renderInlineCloze);
+
+    // Font size, numbers highlight, bookmark, mastery, context return
+    document.getElementById("btnFontDec").addEventListener("click", () => { applyReaderScale(state.readerScale - 0.08); saveState(); });
+    document.getElementById("btnFontInc").addEventListener("click", () => { applyReaderScale(state.readerScale + 0.08); saveState(); });
     document.getElementById("toggleHighlightNums").addEventListener("change", () => {
       if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
     });
     document.getElementById("btnBookmarkSec").addEventListener("click", () => {
       if (!readerSecId) return;
-      if (state.bookmarks[readerSecId]) {
-        delete state.bookmarks[readerSecId];
-        showToast("Segnalibro rimosso.");
-      } else {
-        state.bookmarks[readerSecId] = true;
-        showToast("Salvato nei segnalibri.", "ok");
-      }
+      if (state.bookmarks[readerSecId]) { delete state.bookmarks[readerSecId]; showToast("Segnalibro rimosso."); }
+      else { state.bookmarks[readerSecId] = true; showToast("Salvato nei segnalibri.", "ok"); }
       saveState();
       renderReaderArticle(readerSecId, { skipHash: true });
     });
-    document.getElementById("btnXrefBack").addEventListener("click", () => {
-      const prevId = xrefReturnStack.pop();
-      if (prevId) renderReaderArticle(prevId);
-    });
-    document.getElementById("btnSendToCloze").addEventListener("click", () => {
-      if (readerSecId) openSectionInCloze(readerSecId);
-    });
-    document.getElementById("btnArticleFlashcards").addEventListener("click", () => {
-      const rel = PACK.flashcards.filter(c => c.ref === readerSecId);
-      if (rel.length) {
-        buildFcQueue(false, rel);
-        switchView("flashcards");
-        showToast(`Caricate ${rel.length} flashcards collegate a questo articolo.`);
+    document.getElementById("btnContextReturn").addEventListener("click", () => {
+      const top = returnStack.pop();
+      if (!top) return;
+      if (top.type === "article") {
+        renderReaderArticle(top.target);
+      } else if (top.type === "practice") {
+        switchPracticeMode(top.sub || "flashcards");
+        switchView("practice");
+      } else if (top.type === "reference") {
+        csTab = top.sub || "timeline";
+        syncCsTabs();
+        renderReference();
+        switchView("reference");
       }
     });
-    document.querySelectorAll("#readerMasteryBtns .m-btn").forEach(b => {
+    document.querySelectorAll("#readerMasteryBtns .m-chip").forEach(b => {
       b.addEventListener("click", () => {
         if (!readerSecId) return;
         const val = Number(b.dataset.status);
         state.mastery[readerSecId] = val;
         saveState();
         renderReaderArticle(readerSecId, { skipHash: true });
-        showToast(`Stato aggiornato: ${STATUS_LABELS[val]}`, val >= 2 ? "ok" : "info");
+        showToast(`Padronanza: ${STATUS_LABELS[val]}`, val >= 2 ? "ok" : "info");
       });
+    });
+
+    // Focused Article Flashcards & Quiz launch
+    document.getElementById("btnArticleFlashcards").addEventListener("click", () => {
+      const sec = SECTION_MAP.get(readerSecId);
+      const rel = PACK.flashcards.filter(c => c.ref === readerSecId);
+      if (!rel.length) return;
+      buildFcQueue(false, rel, sec.code);
+      switchPracticeMode("flashcards");
+      switchView("practice");
+    });
+    document.getElementById("btnArticleQuiz").addEventListener("click", () => {
+      const sec = SECTION_MAP.get(readerSecId);
+      const rel = PACK.quizzes.filter(q => q.ref === readerSecId);
+      if (!rel.length) return;
+      startQuiz(rel, sec.code);
+      switchPracticeMode("quiz");
+      switchView("practice");
     });
 
     ["btnPrevSec", "btnNextSec", "btnMobilePrev", "btnMobileNext"].forEach(id => {
       document.getElementById(id).addEventListener("click", e => {
         const target = e.currentTarget.dataset.target;
         if (target) {
-          xrefReturnStack = [];
+          returnStack = [];
           renderReaderArticle(target);
           window.scrollTo({ top: 0, behavior: "smooth" });
         }
       });
     });
 
-    // Cloze controls
-    document.getElementById("clozeDocSelect").addEventListener("change", e => {
-      populateClozeSecSelect(e.target.value);
-      renderCloze();
-      if (currentView === "cloze") setHash(`cloze/${clozeSecId}`);
+    // Practice Hub Switcher & Collapsible Filter Trays
+    document.querySelectorAll("#practiceModeSwitch .seg-btn").forEach(b => {
+      b.addEventListener("click", () => switchPracticeMode(b.dataset.pmode));
     });
-    document.getElementById("clozeSecSelect").addEventListener("change", e => {
-      clozeSecId = e.target.value;
-      renderCloze();
-      if (currentView === "cloze") setHash(`cloze/${clozeSecId}`);
-    });
-    document.getElementById("clozeLevelSelect").addEventListener("change", renderCloze);
-    document.getElementById("clozeInputMode").addEventListener("change", renderCloze);
 
-    document.getElementById("btnClozeHint").addEventListener("click", () => {
-      const nextBlank = document.querySelector("#clozeBody .cloze-blank:not(.revealed)");
-      if (nextBlank) { nextBlank.click(); return; }
-      const nextPeek = document.querySelector("#clozeBody .cloze-peek");
-      if (nextPeek) nextPeek.click();
-    });
-    document.getElementById("btnClozeRevealAll").addEventListener("click", () => {
-      document.querySelectorAll("#clozeBody .cloze-blank:not(.revealed)").forEach(el => el.click());
-      document.querySelectorAll("#clozeBody .cloze-peek").forEach(btn => btn.click());
-    });
-    document.getElementById("btnClozeReset").addEventListener("click", renderCloze);
-
-    const markClozeMemorized = () => {
-      if (!clozeSecId) return;
-      state.mastery[clozeSecId] = 3;
-      saveState();
-      populateClozeSecSelect(document.getElementById("clozeDocSelect").value);
-      showToast("Articolo segnato come A MEMORIA!", "ok");
+    const wireTrayToggle = (btnId, trayId) => {
+      const btn = document.getElementById(btnId);
+      const tray = document.getElementById(trayId);
+      btn.addEventListener("click", () => {
+        const open = tray.classList.toggle("hidden") === false;
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
     };
-    document.getElementById("btnClozeMarkMem").addEventListener("click", markClozeMemorized);
-    document.getElementById("btnClozeDoneMark").addEventListener("click", markClozeMemorized);
-    document.getElementById("btnClozeLevelUp").addEventListener("click", () => {
-      const sel = document.getElementById("clozeLevelSelect");
-      const nextLv = Math.min(4, Number(sel.value) + 1);
-      sel.value = String(nextLv);
-      renderCloze();
-    });
-    document.getElementById("btnClozeOpenReader").addEventListener("click", () => {
-      if (clozeSecId) openSectionInReader(clozeSecId);
-    });
-    document.getElementById("btnClozePrev").addEventListener("click", () => {
-      const idx = CLOZEABLE_SECTIONS.findIndex(s => s.id === clozeSecId);
-      if (idx > 0) openSectionInCloze(CLOZEABLE_SECTIONS[idx - 1].id);
-    });
-    document.getElementById("btnClozeNext").addEventListener("click", () => {
-      const idx = CLOZEABLE_SECTIONS.findIndex(s => s.id === clozeSecId);
-      if (idx >= 0 && idx < CLOZEABLE_SECTIONS.length - 1) openSectionInCloze(CLOZEABLE_SECTIONS[idx + 1].id);
-    });
-    document.getElementById("btnClozeRandom").addEventListener("click", () => {
-      const pool = CLOZEABLE_SECTIONS.filter(s => (state.mastery[s.id] || 0) < 3 && s.id !== clozeSecId);
-      const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)] : CLOZEABLE_SECTIONS[0];
-      if (pick) openSectionInCloze(pick.id);
-    });
+    wireTrayToggle("btnToggleFcFilters", "fcFilterTray");
+    wireTrayToggle("btnToggleQzFilters", "qzFilterTray");
+    wireTrayToggle("btnToggleClozeFilters", "clozeFilterTray");
 
     // Flashcards controls
     ["fcDeckMode", "fcDocFilter", "fcTagFilter", "fcOnlyDue"].forEach(id => {
       document.getElementById(id).addEventListener("change", () => buildFcQueue(false));
     });
-    document.getElementById("btnFcShuffle").addEventListener("click", () => {
-      buildFcQueue(true);
-      showToast("Mazzo mescolato.");
-    });
+    document.getElementById("btnFcShuffle").addEventListener("click", () => { buildFcQueue(true); showToast("Mazzo mescolato."); });
     document.getElementById("btnFcUndo").addEventListener("click", undoLastFlashcard);
     document.getElementById("flashcardEl").addEventListener("click", flipFlashcard);
     document.getElementById("btnFcReveal").addEventListener("click", flipFlashcard);
     document.getElementById("btnFcSource").addEventListener("click", e => {
       e.stopPropagation();
       const card = fcQueue[0];
-      if (card?.ref) openSectionInReader(card.ref);
+      if (card?.ref) {
+        openArticle(card.ref, {
+          returnTo: { type: "practice", sub: "flashcards", label: "Flashcards", reason: "Verifica norma della scheda" },
+        });
+      }
     });
-    document.querySelectorAll("#fcRatingBar .rate-btn").forEach(b => {
+    document.querySelectorAll("#fcRatingBar .sm2-btn").forEach(b => {
       b.addEventListener("click", () => rateFlashcard(Number(b.dataset.q)));
     });
     document.getElementById("btnFcShowAll").addEventListener("click", () => {
@@ -1801,29 +1903,75 @@
     });
     document.getElementById("btnFcRestartSession").addEventListener("click", () => buildFcQueue(true));
 
-    // Quiz controls — auto-apply filters
+    // Quiz controls
     ["qzModeFilter", "qzDocFilter", "qzOnlyUnmastered"].forEach(id => {
       document.getElementById(id).addEventListener("change", () => startQuiz());
     });
     document.getElementById("btnStartQuiz").addEventListener("click", () => startQuiz());
     document.getElementById("btnQzRestart").addEventListener("click", () => startQuiz());
-    document.getElementById("btnRetryWrong").addEventListener("click", () => startQuiz([...qzWrong]));
-    document.getElementById("btnQzRetryWrong2").addEventListener("click", () => startQuiz([...qzWrong]));
-    document.getElementById("btnQzNext").addEventListener("click", () => {
-      qzIdx++;
-      renderQuizQuestion();
+    document.getElementById("btnRetryWrong").addEventListener("click", () => startQuiz([...qzWrong], "Ripasso errori"));
+    document.getElementById("btnQzRetryWrong2").addEventListener("click", () => startQuiz([...qzWrong], "Ripasso errori"));
+    document.getElementById("btnQzNext").addEventListener("click", () => { qzIdx++; renderQuizQuestion(); });
+
+    // Practice Cloze controls
+    document.getElementById("clozeDocSelect").addEventListener("change", e => {
+      populatePracticeClozeSecSelect(e.target.value);
+      renderPracticeCloze();
+    });
+    document.getElementById("clozeSecSelect").addEventListener("change", e => {
+      practiceClozeSecId = e.target.value;
+      renderPracticeCloze();
+    });
+    document.getElementById("clozeLevelSelect").addEventListener("change", renderPracticeCloze);
+    document.getElementById("clozeInputMode").addEventListener("change", renderPracticeCloze);
+    document.getElementById("btnPClozeHint").addEventListener("click", () => {
+      const b = document.querySelector("#pClozeBody .cloze-blank:not(.revealed)");
+      if (b) { b.click(); return; }
+      document.querySelector("#pClozeBody .cloze-peek")?.click();
+    });
+    document.getElementById("btnPClozeRevealAll").addEventListener("click", () => {
+      document.querySelectorAll("#pClozeBody .cloze-blank:not(.revealed)").forEach(el => el.click());
+      document.querySelectorAll("#pClozeBody .cloze-peek").forEach(el => el.click());
+    });
+    document.getElementById("btnPClozeReset").addEventListener("click", renderPracticeCloze);
+    document.getElementById("btnPClozeMarkMem").addEventListener("click", () => {
+      if (!practiceClozeSecId) return;
+      state.mastery[practiceClozeSecId] = 3;
+      saveState();
+      populatePracticeClozeSecSelect(SECTION_MAP.get(practiceClozeSecId).doc);
+      showToast("Sezione segnata A MEMORIA.", "ok");
+    });
+    document.getElementById("btnPClozeOpenReader").addEventListener("click", () => {
+      if (practiceClozeSecId) {
+        openArticle(practiceClozeSecId, {
+          returnTo: { type: "practice", sub: "cloze", label: "Percorso Cloze", reason: "Consultazione articolo" },
+        });
+      }
+    });
+    document.getElementById("btnPClozePrev").addEventListener("click", () => {
+      const idx = CLOZEABLE_SECTIONS.findIndex(s => s.id === practiceClozeSecId);
+      if (idx > 0) openPracticeClozeArticle(CLOZEABLE_SECTIONS[idx - 1].id);
+    });
+    document.getElementById("btnPClozeNext").addEventListener("click", () => {
+      const idx = CLOZEABLE_SECTIONS.findIndex(s => s.id === practiceClozeSecId);
+      if (idx >= 0 && idx < CLOZEABLE_SECTIONS.length - 1) openPracticeClozeArticle(CLOZEABLE_SECTIONS[idx + 1].id);
+    });
+    document.getElementById("btnClozeRandom").addEventListener("click", () => {
+      const pool = CLOZEABLE_SECTIONS.filter(s => (state.mastery[s.id] || 0) < 3 && s.id !== practiceClozeSecId);
+      const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)] : CLOZEABLE_SECTIONS[0];
+      if (pick) openPracticeClozeArticle(pick.id);
     });
 
-    // Cheatsheet controls
-    document.querySelectorAll("#csTabs .pill").forEach(p => {
-      p.addEventListener("click", () => {
-        csTab = p.dataset.cs;
+    // Reference controls
+    document.querySelectorAll("#csTabs .rail-tab").forEach(t => {
+      t.addEventListener("click", () => {
+        csTab = t.dataset.cs;
         syncCsTabs();
-        renderCheatsheet();
-        setHash(`cheatsheet/${csTab}`);
+        renderReference();
+        setHash(`reference/${csTab}`);
       });
     });
-    document.getElementById("csSearch").addEventListener("input", renderCheatsheet);
+    document.getElementById("csSearch").addEventListener("input", renderReference);
 
     // Search Modal
     document.getElementById("btnSearchQuick").addEventListener("click", () => {
@@ -1834,38 +1982,30 @@
       renderGlobalSearch(inp.value);
     });
     document.getElementById("closeSearchModal").addEventListener("click", closeAllModals);
-    document.getElementById("searchModal").addEventListener("click", e => {
-      if (e.target.id === "searchModal") closeAllModals();
-    });
+    document.getElementById("searchModal").addEventListener("click", e => { if (e.target.id === "searchModal") closeAllModals(); });
     document.getElementById("globalSearchInput").addEventListener("input", e => renderGlobalSearch(e.target.value));
     document.getElementById("globalSearchInput").addEventListener("keydown", e => {
       if (!gsResults.length) return;
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        gsActiveIdx = e.key === "ArrowDown"
-          ? (gsActiveIdx + 1) % gsResults.length
-          : (gsActiveIdx - 1 + gsResults.length) % gsResults.length;
-        const items = document.querySelectorAll("#globalSearchResults .gs-item");
-        items.forEach((el, i) => el.classList.toggle("active", i === gsActiveIdx));
-        items[gsActiveIdx]?.scrollIntoView({ block: "nearest" });
+        gsActiveIdx = e.key === "ArrowDown" ? (gsActiveIdx + 1) % gsResults.length : (gsActiveIdx - 1 + gsResults.length) % gsResults.length;
+        const els = document.querySelectorAll("#globalSearchResults .sr-item");
+        els.forEach((el, i) => el.classList.toggle("active", i === gsActiveIdx));
+        els[gsActiveIdx]?.scrollIntoView({ block: "nearest" });
       } else if (e.key === "Enter" && gsActiveIdx >= 0) {
         e.preventDefault();
-        const picked = gsResults[gsActiveIdx];
-        closeAllModals();
-        openSectionInReader(picked.id);
+        executeSearchResult(gsResults[gsActiveIdx]);
       }
     });
 
-    // Backup Modal (in-app confirm, zero alert/confirm!)
+    // Backup Modal
     document.getElementById("btnBackup").addEventListener("click", () => {
       renderBackupSummary();
       openModal("backupModal");
       document.getElementById("btnExportProgress").focus();
     });
     document.getElementById("closeBackupModal").addEventListener("click", closeAllModals);
-    document.getElementById("backupModal").addEventListener("click", e => {
-      if (e.target.id === "backupModal") closeAllModals();
-    });
+    document.getElementById("backupModal").addEventListener("click", e => { if (e.target.id === "backupModal") closeAllModals(); });
     document.getElementById("btnExportProgress").addEventListener("click", () => {
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
@@ -1881,119 +2021,86 @@
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          const imported = JSON.parse(reader.result);
-          if (typeof imported !== "object" || !imported) throw new Error("Formato non valido");
+          const imp = JSON.parse(reader.result);
+          if (!imp || typeof imp !== "object") throw new Error("invalid");
           state = {
-            ...defaultState(),
-            ...imported,
-            mastery: imported.mastery || {},
-            bookmarks: imported.bookmarks || {},
-            sm2: imported.sm2 || {},
-            quizStats: imported.quizStats || { total: 0, correct: 0 },
-            quizMastered: imported.quizMastered || {},
+            ...defaultState(), ...imp,
+            mastery: imp.mastery || {}, bookmarks: imp.bookmarks || {},
+            sm2: imp.sm2 || {}, quizStats: imp.quizStats || { total: 0, correct: 0 },
+            quizMastered: imp.quizMastered || {},
           };
           saveState();
           applyTheme(state.theme);
           applyReaderScale(state.readerScale);
-          renderDashboard();
+          renderOverview();
           renderReaderSidebar();
           if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
           buildFcQueue(false);
           closeAllModals();
-          showToast("Progressi ripristinati con successo!", "ok");
+          showToast("Progressi ripristinati.", "ok");
         } catch (_) {
-          showToast("File JSON non valido: impossibile importare.", "warn");
+          showToast("File JSON non valido.", "warn");
         }
         e.target.value = "";
       };
       reader.readAsText(file);
     });
-    document.getElementById("btnResetAsk").addEventListener("click", () => {
-      document.getElementById("resetConfirmBox").classList.remove("hidden");
-    });
-    document.getElementById("btnResetCancel").addEventListener("click", () => {
-      document.getElementById("resetConfirmBox").classList.add("hidden");
-    });
+    document.getElementById("btnResetAsk").addEventListener("click", () => document.getElementById("resetConfirmBox").classList.remove("hidden"));
+    document.getElementById("btnResetCancel").addEventListener("click", () => document.getElementById("resetConfirmBox").classList.add("hidden"));
     document.getElementById("btnResetConfirm").addEventListener("click", () => {
-      const keepTheme = state.theme;
-      state = { ...defaultState(), theme: keepTheme };
+      const theme = state.theme;
+      state = { ...defaultState(), theme };
       saveState();
-      renderDashboard();
+      renderOverview();
       renderReaderSidebar();
       if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
       buildFcQueue(false);
       startQuiz();
       closeAllModals();
-      showToast("Tutti i progressi sono stati azzerati.");
+      showToast("Progressi azzerati.");
     });
 
-    // Lightbox controls
+    // Lightbox
     document.getElementById("closeLightbox").addEventListener("click", closeAllModals);
-    document.getElementById("lightboxModal").addEventListener("click", e => {
-      if (e.target.id === "lightboxModal") closeAllModals();
-    });
+    document.getElementById("lightboxModal").addEventListener("click", e => { if (e.target.id === "lightboxModal") closeAllModals(); });
     document.getElementById("btnLbPrev").addEventListener("click", () => {
-      if (lbGallery.length > 1) {
-        lbIdx = (lbIdx - 1 + lbGallery.length) % lbGallery.length;
-        updateLightbox();
-      }
+      if (lbGallery.length > 1) { lbIdx = (lbIdx - 1 + lbGallery.length) % lbGallery.length; updateLightbox(); }
     });
     document.getElementById("btnLbNext").addEventListener("click", () => {
-      if (lbGallery.length > 1) {
-        lbIdx = (lbIdx + 1) % lbGallery.length;
-        updateLightbox();
-      }
+      if (lbGallery.length > 1) { lbIdx = (lbIdx + 1) % lbGallery.length; updateLightbox(); }
     });
 
     // Global Keyboard Shortcuts
     document.addEventListener("keydown", e => {
       const inInput = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
-
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         document.getElementById("btnSearchQuick").click();
         return;
       }
+      if (e.key === "Escape") { closeAllModals(); closeTocDrawer(); return; }
 
-      if (e.key === "Escape") {
-        closeAllModals();
-        closeTocDrawer();
-        return;
-      }
-
-      // Lightbox gallery arrows
       if (!document.getElementById("lightboxModal").classList.contains("hidden")) {
         if (e.key === "ArrowLeft") document.getElementById("btnLbPrev").click();
         if (e.key === "ArrowRight") document.getElementById("btnLbNext").click();
         return;
       }
-
       if (inInput) return;
 
-      // Flashcards shortcuts
-      if (currentView === "flashcards") {
-        if (e.code === "Space") {
-          e.preventDefault();
-          flipFlashcard();
-        } else if (e.key.toLowerCase() === "z" && fcLastAction) {
-          undoLastFlashcard();
-        } else if (fcFlipped) {
+      if (currentView === "practice" && practiceMode === "flashcards") {
+        if (e.code === "Space") { e.preventDefault(); flipFlashcard(); }
+        else if (e.key.toLowerCase() === "z" && fcLastAction) undoLastFlashcard();
+        else if (fcFlipped) {
           if (e.key === "1") rateFlashcard(1);
           if (e.key === "2") rateFlashcard(3);
           if (e.key === "3") rateFlashcard(4);
           if (e.key === "4") rateFlashcard(5);
         }
-        return;
-      }
-
-      // Quiz shortcuts
-      if (currentView === "quiz" && !document.getElementById("quizBox").classList.contains("hidden")) {
+      } else if (currentView === "practice" && practiceMode === "quiz" && !document.getElementById("quizBox").classList.contains("hidden")) {
         if (!qzAnswered) {
           const map = { a: 0, b: 1, c: 2, d: 3, "1": 0, "2": 1, "3": 2, "4": 3 };
           const k = e.key.toLowerCase();
-          if (map[k] !== undefined && qzQueue[qzIdx]?.options[map[k]] !== undefined) {
-            handleQuizAnswer(map[k]);
-          }
+          if (map[k] !== undefined && qzQueue[qzIdx]?.options[map[k]] !== undefined) handleQuizAnswer(map[k]);
         } else if (e.key === "Enter" || e.key === "ArrowRight") {
           e.preventDefault();
           qzIdx++;
@@ -2006,10 +2113,10 @@
   init().catch(err => {
     console.error("Init error:", err);
     document.getElementById("mainContent").innerHTML = `
-      <div class="hero-surface" style="display:block;">
-        <h2>Errore durante il caricamento dei dati</h2>
-        <p class="muted" style="margin-top:0.5rem;">Assicurati di aprire l'app da un server HTTP o dal link online.</p>
-        <pre style="margin-top:0.8rem;font-size:0.8rem;overflow:auto;">${escapeHtml(String(err))}</pre>
+      <div class="briefing-hero" style="display:block;">
+        <h2>Errore di caricamento</h2>
+        <p class="muted" style="margin-top:0.5rem;">Impossibile leggere i dati della normativa.</p>
+        <pre style="margin-top:0.75rem;font-size:0.8rem;overflow:auto;">${esc(String(err))}</pre>
       </div>`;
   });
 })();
