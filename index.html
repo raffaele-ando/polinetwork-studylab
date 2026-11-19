@@ -3,42 +3,39 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#f6f5f0" />
-  <meta name="description" content="PoliNetwork StudyLab — Consultazione integrale, studio attivo e memorizzazione per Statuto, Raccolta dei Regolamenti Interni (RRI) e Regolamento Elettorale Direttivo di PoliNetwork APS." />
-  <title>PoliNetwork StudyLab — Normativa &amp; Preparazione</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d4ed8'/%3E%3Ctext x='32' y='42' font-family='system-ui,sans-serif' font-size='27' font-weight='800' fill='%23ffffff' text-anchor='middle'%3EPN%3C/text%3E%3C/svg%3E" />
+  <meta name="theme-color" content="#f2f2f7" />
+  <meta name="description" content="PoliNetwork Studio — Statuto, Regolamenti Interni e Regolamento Elettorale 2026: lettura, Cloze, flashcard e quiz." />
+  <title>PoliNetwork Studio</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23007aff'/%3E%3Ctext x='32' y='42' font-family='-apple-system,system-ui,sans-serif' font-size='26' font-weight='800' fill='%23ffffff' text-anchor='middle'%3EPN%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <a href="#mainContent" class="skip-link">Salta al contenuto principale</a>
 
-  <!-- ==================== TOP BAR ==================== -->
-  <header class="topbar" role="banner">
+  <!-- ==================== DESKTOP / TABLET TOP BAR ==================== -->
+  <header class="topbar" id="globalTopbar" role="banner">
     <div class="topbar-inner">
-      <button type="button" class="brand" id="brandHome" aria-label="PoliNetwork StudyLab — Torna a Panoramica">
+      <button type="button" class="brand" id="brandHome" aria-label="PoliNetwork Studio — Home">
         <span class="brand-mark" aria-hidden="true">PN</span>
-        <span class="brand-text">
-          <span class="brand-title">StudyLab</span>
-          <span class="brand-sub">PoliNetwork APS</span>
-        </span>
+        <span class="brand-title">Studio</span>
       </button>
 
       <nav class="primary-nav" id="desktopNav" aria-label="Navigazione principale">
         <button type="button" class="nav-tab active" data-view="overview" aria-current="page">
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
-          <span>Panoramica</span>
+          <span>Studio</span>
         </button>
         <button type="button" class="nav-tab" data-view="reader">
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          <span>Normativa</span>
+          <span>Norme</span>
         </button>
         <button type="button" class="nav-tab" data-view="practice">
-          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-          <span>Allenamento</span>
-          <span class="nav-count" id="navDueBadge" aria-label="Flashcard da ripassare oggi">0</span>
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>Pratica</span>
+          <span class="nav-count hidden" id="navDueBadge" aria-label="Flashcard da ripassare">0</span>
         </button>
         <button type="button" class="nav-tab" data-view="reference">
           <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M9 10v10"/></svg>
@@ -47,16 +44,18 @@
       </nav>
 
       <div class="topbar-utilities">
-        <button type="button" class="search-btn" id="btnSearchQuick" aria-label="Cerca nella normativa (Ctrl+K)">
-          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-          <span class="search-btn-label">Cerca norme, quorum, date…</span>
-          <kbd class="search-btn-kbd">Ctrl K</kbd>
+        <button type="button" class="search-pill" id="btnSearchQuick" aria-label="Cerca nella normativa (Ctrl+K)">
+          <span class="search-pill-left">
+            <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+            <span class="search-pill-label">Cerca…</span>
+          </span>
+          <kbd class="search-pill-kbd"><span>⌘</span><span>K</span></kbd>
         </button>
-        <button type="button" class="icon-btn" id="btnTheme" aria-label="Cambia tema chiaro o scuro" title="Cambia tema">
-          <svg class="ic" id="iconTheme" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <button type="button" class="circle-btn" id="btnTheme" aria-label="Cambia tema chiaro o scuro" title="Tema">
+          <svg class="ic sm" id="iconTheme" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         </button>
-        <button type="button" class="icon-btn" id="btnBackup" aria-label="Salvataggio e backup progressi" title="Backup e dati">
-          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <button type="button" class="circle-btn" id="btnBackup" aria-label="Backup e progressi" title="Backup">
+          <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
       </div>
     </div>
@@ -65,601 +64,584 @@
   <!-- ==================== MAIN WORKSPACE ==================== -->
   <main class="main-shell" id="mainContent" tabindex="-1">
 
-    <!-- ==================== 1. PANORAMICA ==================== -->
+    <!-- ==================== 1. STUDIO (HOME) ==================== -->
     <section class="view active" id="view-overview" aria-labelledby="overviewHeading">
-      <div class="overview-grid">
-        <div class="briefing-hero">
-          <div class="briefing-main">
-            <p class="eyebrow" id="overviewEyebrow">
-              <span class="eyebrow-tag">CORPUS UFFICIALE</span>
-              <span class="eyebrow-meta" id="overviewEyebrowMeta">3 DOCUMENTI · 137 SEZIONI</span>
-            </p>
-            <h1 class="display-title" id="overviewHeading">Preparazione normativa PoliNetwork APS</h1>
-            <p class="briefing-sub" id="briefingAdvice">
-              Consulta il testo integrale di Statuto, Regolamenti Interni e Regolamento Elettorale 2026, esercitati con il testo a scomparsa e consolida con ripassi programmati e quiz.
-            </p>
-            <div class="briefing-cta-row">
-              <button type="button" class="btn primary" id="btnNextBestAction">
-                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"/></svg>
-                <span id="nextBestLabel">Inizia dallo Statuto</span>
-              </button>
-              <button type="button" class="btn secondary" id="btnQuickFlashcards">Ripassa Flashcard</button>
-              <button type="button" class="btn secondary" id="btnQuickBlitz">Blitz Numeri &amp; Quorum</button>
-            </div>
+      <div class="ios-container">
+        <div class="view-large-head">
+          <h1 class="large-title" id="overviewHeading">Studio</h1>
+          <div class="mobile-head-actions">
+            <button type="button" class="circle-btn" data-proxy-click="btnSearchQuick" aria-label="Cerca">
+              <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+            </button>
+            <button type="button" class="circle-btn" data-proxy-click="btnTheme" aria-label="Cambia tema">
+              <svg class="ic sm" id="iconThemeMobile" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+            <button type="button" class="circle-btn" data-proxy-click="btnBackup" aria-label="Backup progressi">
+              <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
           </div>
+        </div>
 
-          <div class="mastery-summary" aria-label="Indice di preparazione sulle 137 sezioni normative">
-            <div class="ring-box">
-              <svg class="progress-ring" viewBox="0 0 120 120" role="img" aria-labelledby="overallPct">
-                <circle class="ring-track" cx="60" cy="60" r="50"></circle>
-                <circle class="ring-fill" id="overallRing" cx="60" cy="60" r="50" stroke-dasharray="314.16" stroke-dashoffset="314.16"></circle>
-              </svg>
-              <div class="ring-text">
-                <span class="ring-pct" id="overallPct">0%</span>
-                <span class="ring-lbl">Progresso</span>
+        <div class="home-bento">
+          <!-- Primary Focus Card -->
+          <div class="apple-card hero-card">
+            <div class="hero-card-top">
+              <div class="hero-copy">
+                <span class="hero-kicker" id="nextBestKicker">Prossimo passo</span>
+                <h2 class="hero-title" id="nextBestTitle">Art. 1 · Denominazione</h2>
+                <p class="hero-meta" id="nextBestSub">Statuto · 1 min</p>
+              </div>
+              <div class="mini-ring-wrap" aria-label="Avanzamento complessivo dello studio">
+                <div class="mini-ring">
+                  <svg viewBox="0 0 56 56" role="img" aria-labelledby="overallPct">
+                    <circle class="ring-track" cx="28" cy="28" r="23"></circle>
+                    <circle class="ring-fill" id="overallRing" cx="28" cy="28" r="23" stroke-dasharray="144.51" stroke-dashoffset="144.51"></circle>
+                  </svg>
+                  <span class="mini-ring-val" id="overallPct">0%</span>
+                </div>
+                <span class="mini-ring-cap">Totale</span>
               </div>
             </div>
-            <div class="legend-col">
-              <ul class="legend-list" id="overviewLegend">
-                <li><span class="dot s3"></span><span>A memoria</span><strong id="legMem">0</strong></li>
-                <li><span class="dot s2"></span><span>Imparate</span><strong id="legLearned">0</strong></li>
-                <li><span class="dot s1"></span><span>In corso</span><strong id="legWip">0</strong></li>
-                <li><span class="dot s0"></span><span>Da studiare</span><strong id="legTodo">137</strong></li>
-              </ul>
-              <p class="legend-note">Media pesata sulle 137 sezioni</p>
+
+            <div class="hero-actions">
+              <button type="button" class="btn-apple primary full" id="btnNextBestAction">
+                <span id="nextBestLabel">Inizia lettura</span>
+              </button>
+
+              <div class="hero-quick-pair">
+                <button type="button" class="btn-apple soft" id="btnQuickFlashcards">Flashcard</button>
+                <button type="button" class="btn-apple soft" id="btnQuickBlitz">Blitz Quorum</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right / Secondary Stack: Live Event Tile + Compact Stats -->
+          <div class="home-side-stack">
+            <div class="apple-card event-card-box">
+              <button type="button" class="event-card-main" id="btnOpenTimeline">
+                <div class="ios-cal" aria-hidden="true">
+                  <span class="ios-cal-month" id="calMonth">NOV</span>
+                  <span class="ios-cal-day" id="calDay">21</span>
+                </div>
+                <div class="event-copy">
+                  <strong class="event-title" id="deadlineText">Assemblea Elettiva</strong>
+                  <div class="event-meta-chips" id="deadlineSub">
+                    <span class="event-countdown" id="deadlineCountdown">Caricamento…</span>
+                    <span class="event-sep" aria-hidden="true">·</span>
+                    <span class="event-origin">Cronoprogramma</span>
+                  </div>
+                </div>
+                <svg class="ic chev-right" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <div class="event-card-foot hidden" id="deadlineFootRow">
+                <button type="button" class="event-ref-btn" id="btnDeadlineArticle">
+                  <span id="deadlineArticleLabel">Apri articolo scadenza</span>
+                  <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="apple-card stats-mini-grid" role="region" aria-label="Riepilogo rapido">
+              <button type="button" class="mini-stat" id="metricNormativa">
+                <span class="mini-stat-val" id="statSections">0 / 137</span>
+                <span class="mini-stat-lbl">Sezioni</span>
+              </button>
+              <button type="button" class="mini-stat" id="metricQuiz">
+                <span class="mini-stat-val" id="statQuizMastered">0 / 40</span>
+                <span class="mini-stat-lbl">Quiz</span>
+              </button>
+              <button type="button" class="mini-stat" id="metricBookmarks">
+                <span class="mini-stat-val" id="statBookmarks">0</span>
+                <span class="mini-stat-lbl">Salvati</span>
+              </button>
             </div>
           </div>
         </div>
 
-        <!-- Live Election Timeline Strip -->
-        <aside class="deadline-strip" id="deadlineStrip" aria-label="Prossima scadenza elettorale">
-          <div class="deadline-info">
-            <div class="deadline-kicker-row">
-              <span class="live-dot" aria-hidden="true"></span>
-              <span class="deadline-kicker" id="deadlineKicker">PROSSIMA SCADENZA ELEZIONI 2026</span>
-              <span class="countdown-tag" aria-label="Tempo rimanente">
-                <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
-                <span id="deadlineCountdown">—</span>
-              </span>
-            </div>
-            <strong class="deadline-text" id="deadlineText">Caricamento cronoprogramma…</strong>
+        <!-- Apple Inset Grouped Document List -->
+        <div class="ios-section">
+          <div class="ios-section-head">
+            <h2 class="ios-section-label">Documenti</h2>
           </div>
-          <div class="deadline-right">
-            <div class="deadline-actions">
-              <button type="button" class="btn small secondary hidden" id="btnDeadlineArticle">Leggi articolo</button>
-              <button type="button" class="btn small secondary" id="btnOpenTimeline">Cronoprogramma</button>
-            </div>
-          </div>
-        </aside>
-
-        <!-- Hairline Metric Strip -->
-        <div class="metric-strip" role="region" aria-label="Indicatori di preparazione">
-          <button type="button" class="metric-cell" id="metricNormativa">
-            <span class="metric-label">Sezioni consolidate</span>
-            <span class="metric-val" id="statSections">0 / 137</span>
-            <span class="metric-hint" id="statSectionsHint">Imparate o a memoria</span>
-          </button>
-          <button type="button" class="metric-cell" id="metricFlashcards">
-            <span class="metric-label">Flashcard da ripassare</span>
-            <span class="metric-val" id="statDue">0</span>
-            <span class="metric-hint" id="statDueHint">Ripasso programmato oggi</span>
-          </button>
-          <button type="button" class="metric-cell" id="metricQuiz">
-            <span class="metric-label">Quiz superati</span>
-            <span class="metric-val" id="statQuizMastered">0 / 40</span>
-            <span class="metric-hint" id="statQuizAcc">Nessuna risposta ancora</span>
-          </button>
-          <button type="button" class="metric-cell" id="metricBookmarks">
-            <span class="metric-label">Segnalibri</span>
-            <span class="metric-val" id="statBookmarks">0</span>
-            <span class="metric-hint" id="statBookmarksHint">Articoli contrassegnati</span>
-          </button>
+          <div class="apple-group" id="docList"></div>
         </div>
 
-        <!-- Document Directory -->
-        <div class="block-section">
-          <div class="block-head">
-            <h2 class="section-title">I tre documenti del corpus</h2>
-            <span class="mono-meta" id="corpusTotalsMeta">57 pagine · 137 sezioni normative</span>
-          </div>
-          <div class="doc-list" id="docList"></div>
-        </div>
-
-        <!-- Collapsible Method Guide -->
-        <details class="guide-accordion" id="guideAccordion">
+        <!-- Subtle Collapsible Guide Row -->
+        <details class="apple-disclosure" id="guideAccordion">
           <summary>
-            <span>Come studiare in 4 fasi (Lettura → Cloze → Flashcard → Quiz)</span>
-            <svg class="ic chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            <span>Metodo di studio</span>
+            <svg class="ic sm chev-down" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
           </summary>
-          <div class="guide-steps">
-            <div class="guide-step">
-              <span class="step-num">01</span>
-              <h3>Consulta in Normativa</h3>
-              <p>Leggi il testo ufficiale con numeri, quorum e scadenze evidenziati; segui i rimandi incrociati e salva i passaggi chiave nei segnalibri.</p>
-            </div>
-            <div class="guide-step">
-              <span class="step-num">02</span>
-              <h3>Fissa con il Cloze (testo a scomparsa)</h3>
-              <p>Senza cambiare schermo, attiva <strong>Cloze</strong> sullo stesso articolo e progredisci dal Livello 1 (termini chiave) al Livello 4 (sole iniziali).</p>
-            </div>
-            <div class="guide-step">
-              <span class="step-num">03</span>
-              <h3>Ripassa con le Flashcard</h3>
-              <p>L'algoritmo di ripetizione dilazionata (SM-2) calcola l'intervallo ottimale in base alla tua sicurezza, riproponendo prima ciò che esiti a ricordare.</p>
-            </div>
-            <div class="guide-step">
-              <span class="step-num">04</span>
-              <h3>Verifica con Quiz e Casi Pratici</h3>
-              <p>Allenati sui numeri critici, sulle maggioranze e sugli scenari realistici di assemblea, con rimando immediato alla disposizione originale.</p>
-            </div>
+          <div class="guide-grid">
+            <div class="guide-item"><strong>1. Leggi</strong><span>Testo integrale con numeri evidenziati e rimandi diretti tra articoli.</span></div>
+            <div class="guide-item"><strong>2. Cloze</strong><span>Passa a Cloze sullo stesso articolo per nascondere parole chiave e cifre.</span></div>
+            <div class="guide-item"><strong>3. Flashcard</strong><span>Ripetizione dilazionata SM-2: rivedi prima ciò che esiti a ricordare.</span></div>
+            <div class="guide-item"><strong>4. Quiz &amp; Sinossi</strong><span>Verifica quorum, scadenze 2026 e formula STV con fonte immediata.</span></div>
           </div>
         </details>
       </div>
     </section>
 
-    <!-- ==================== 2. NORMATIVA (READER + INLINE A MEMORIA) ==================== -->
-    <section class="view" id="view-reader" aria-label="Consultazione e memorizzazione normativa">
-      <div class="mobile-reader-bar">
-        <button type="button" class="btn small secondary" id="btnOpenTocDrawer" aria-expanded="false" aria-controls="readerSidebar">
-          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="15" y2="18"/></svg>
-          <span>Indice</span>
-          <span class="mono-code" id="mobileCurrentCode">Art. 1</span>
-        </button>
-        <div class="mobile-reader-right">
-          <button type="button" class="icon-btn sm" id="btnMobilePrev" aria-label="Articolo precedente">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button type="button" class="icon-btn sm" id="btnMobileNext" aria-label="Articolo successivo">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
-      </div>
-
+    <!-- ==================== 2. NORME (CRAFT / APPLE BOOKS READER) ==================== -->
+    <section class="view" id="view-reader" aria-label="Consultazione normativa">
       <div class="drawer-backdrop hidden" id="tocBackdrop" aria-hidden="true"></div>
 
-      <div class="reader-shell">
-        <aside class="toc-drawer" id="readerSidebar" aria-label="Indice dei tre documenti">
-          <div class="toc-mobile-head">
-            <strong>Indice Normativa</strong>
-            <button type="button" class="icon-btn sm" id="btnCloseTocDrawer" aria-label="Chiudi indice">
-              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      <div class="reader-layout">
+        <!-- Sidebar / Slide-over TOC -->
+        <aside class="toc-sidebar" id="readerSidebar" aria-label="Indice documenti">
+          <div class="toc-head-mobile">
+            <strong>Indice</strong>
+            <button type="button" class="circle-btn sm" id="btnCloseTocDrawer" aria-label="Chiudi indice">
+              <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <div class="toc-filters">
-            <div class="seg-control compact" id="readerDocPills" role="tablist" aria-label="Filtra documento">
-              <button type="button" class="seg-btn active" data-doc="all" role="tab" aria-selected="true">Tutti</button>
-              <button type="button" class="seg-btn" data-doc="statuto" role="tab" aria-selected="false">Statuto</button>
-              <button type="button" class="seg-btn" data-doc="rri" role="tab" aria-selected="false">RRI</button>
-              <button type="button" class="seg-btn" data-doc="elettorale" role="tab" aria-selected="false">Elettorale</button>
+
+          <div class="toc-controls">
+            <div class="ios-seg" id="readerDocPills" role="tablist" aria-label="Filtra documento">
+              <button type="button" class="ios-seg-btn active" data-doc="all" role="tab" aria-selected="true">Tutti</button>
+              <button type="button" class="ios-seg-btn" data-doc="statuto" role="tab" aria-selected="false">Statuto</button>
+              <button type="button" class="ios-seg-btn" data-doc="rri" role="tab" aria-selected="false">RRI</button>
+              <button type="button" class="ios-seg-btn" data-doc="elettorale" role="tab" aria-selected="false">Elettorale</button>
             </div>
-            <input type="search" id="readerSearch" class="field sm" placeholder="Filtra indice o testo…" aria-label="Filtra indice o testo" />
-            <div class="toc-filter-footer">
-              <select id="readerStatusFilter" class="field sm" aria-label="Filtra per stato">
+            <div class="ios-search-wrap">
+              <svg class="ic xs search-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+              <input type="search" id="readerSearch" class="ios-field sm has-ic" placeholder="Filtra indice…" aria-label="Filtra indice o testo" />
+            </div>
+            <div class="toc-filter-row">
+              <select id="readerStatusFilter" class="ios-field sm" aria-label="Filtra per stato">
                 <option value="all">Tutti gli stati</option>
-                <option value="bookmarked">Segnalibri ★</option>
+                <option value="bookmarked">Salvati ★</option>
                 <option value="unstudied">Da studiare</option>
                 <option value="inprogress">In corso</option>
                 <option value="memorized">A memoria</option>
               </select>
-              <span class="mono-meta" id="readerMatchCount">137 sez.</span>
+              <span class="toc-count" id="readerMatchCount">137</span>
             </div>
           </div>
+
           <div class="toc-list" id="readerTocList" role="navigation" aria-label="Elenco articoli"></div>
         </aside>
 
-        <article class="editorial-sheet" id="readerSheet">
-          <div class="sheet-inner">
-          <div class="return-banner hidden" id="returnBanner">
-            <span id="returnReason">Provenienza</span>
-            <button type="button" class="btn small secondary" id="btnContextReturn">← Torna a <strong id="returnLabel"></strong></button>
-          </div>
+        <!-- Clean Pure-White Reading Canvas -->
+        <article class="reader-canvas" id="readerSheet">
+          <!-- Single Unified Sticky iOS Nav Bar -->
+          <div class="reader-nav-bar">
+            <div class="reader-nav-left">
+              <button type="button" class="ios-back-btn" id="btnOpenTocDrawer" aria-expanded="false" aria-controls="readerSidebar">
+                <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+                <span>Indice</span>
+              </button>
+              <nav class="breadcrumb desktop-only" id="readerBreadcrumb" aria-label="Percorso documento">Statuto</nav>
+            </div>
 
-          <div class="sheet-top-bar">
-            <nav class="breadcrumb" id="readerBreadcrumb" aria-label="Percorso documento">Statuto</nav>
-            <div class="sheet-utilities">
-              <div class="seg-control compact" id="readerModeSwitch" role="tablist" aria-label="Modalità articolo">
-                <button type="button" class="seg-btn active" data-rmode="read" role="tab" aria-selected="true">Lettura</button>
-                <button type="button" class="seg-btn" data-rmode="cloze" role="tab" aria-selected="false" id="tabInlineCloze" title="Esercizio testo a scomparsa (Cloze)">Cloze</button>
+            <div class="ios-seg compact" id="readerModeSwitch" role="tablist" aria-label="Modalità">
+              <button type="button" class="ios-seg-btn active" data-rmode="read" role="tab" aria-selected="true">Leggi</button>
+              <button type="button" class="ios-seg-btn" data-rmode="cloze" role="tab" aria-selected="false" id="tabInlineCloze">Cloze</button>
+            </div>
+
+            <div class="reader-nav-right">
+              <div class="font-menu-wrap">
+                <button type="button" class="text-icon-btn" id="btnFontCycle" aria-expanded="false" aria-controls="fontPopover" aria-label="Dimensione testo" title="Dimensione testo">Aa</button>
+                <div class="font-popover hidden" id="fontPopover" role="dialog" aria-label="Dimensione testo">
+                  <button type="button" class="fp-btn" id="btnFontDec" aria-label="Riduci testo">A−</button>
+                  <span class="fp-val" id="fontScaleVal">100%</span>
+                  <button type="button" class="fp-btn" id="btnFontInc" aria-label="Aumenta testo">A+</button>
+                </div>
               </div>
-              <button type="button" class="icon-btn sm" id="btnBookmarkSec" aria-pressed="false" aria-label="Salva nei segnalibri" title="Segnalibro">
-                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+              <button type="button" class="text-icon-btn" id="btnBookmarkSec" aria-pressed="false" aria-label="Salva articolo" title="Salva">
+                <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
               </button>
             </div>
           </div>
 
-          <header class="article-head">
-            <div class="article-kicker">
-              <span class="code-chip" id="readerArtCode">Art. 1</span>
-              <span id="readerArtPage">Pag. 1</span>
-              <span aria-hidden="true">·</span>
-              <span id="readerReadTime">~1 min</span>
+          <div class="reader-inner">
+            <div class="return-pill hidden" id="returnBanner">
+              <span id="returnReason">Provenienza</span>
+              <button type="button" class="text-action" id="btnContextReturn">← Torna a <strong id="returnLabel"></strong></button>
             </div>
-            <h1 class="article-title" id="readerArtTitle">Denominazione</h1>
 
-            <div class="article-status-row" id="readerMasteryWrap">
-              <div class="mastery-seg" id="readerMasteryBtns" role="group" aria-label="Stato di apprendimento articolo">
-                <button type="button" class="m-chip" data-status="0" aria-pressed="false"><span class="dot s0"></span>Da studiare</button>
-                <button type="button" class="m-chip" data-status="1" aria-pressed="false"><span class="dot s1"></span>In corso</button>
-                <button type="button" class="m-chip" data-status="2" aria-pressed="false"><span class="dot s2"></span>Imparato</button>
-                <button type="button" class="m-chip" data-status="3" aria-pressed="false"><span class="dot s3"></span>A memoria</button>
+            <header class="art-header">
+              <div class="art-kicker">
+                <span id="readerArtKicker">Statuto · Art. 1</span>
+                <span class="art-meta-muted" id="readerReadTime">· Pag. 1 · ~1 min</span>
               </div>
+              <h1 class="art-title" id="readerArtTitle">Denominazione</h1>
 
-              <div class="read-only-tools" id="readOnlyTools">
-                <label class="inline-toggle" id="toggleHighlightWrap">
-                  <input type="checkbox" id="toggleHighlightNums" checked />
-                  <span>Evidenzia numeri</span>
-                </label>
-                <div class="font-stepper" role="group" aria-label="Dimensione testo">
-                  <button type="button" class="stepper-btn" id="btnFontDec" aria-label="Riduci dimensione testo">A-</button>
-                  <button type="button" class="stepper-btn" id="btnFontInc" aria-label="Aumenta dimensione testo">A+</button>
-                </div>
+              <div class="art-tools-row" id="readerMasteryWrap">
+                <select id="readerMasterySelect" class="ios-pill-select" data-mastery="0" aria-label="Stato di apprendimento">
+                  <option value="0">Da studiare</option>
+                  <option value="1">In corso</option>
+                  <option value="2">Imparato</option>
+                  <option value="3">A memoria</option>
+                </select>
+                <button type="button" class="pill-toggle active" id="btnToggleNums" aria-pressed="true">
+                  <span class="pill-dot" aria-hidden="true"></span>
+                  <span id="numsToggleLabel">Numeri attivi</span>
+                </button>
               </div>
+            </header>
+
+            <!-- MODE A: VERBATIM PROSE -->
+            <div id="readerReadPane">
+              <div class="legal-prose" id="readerArtBody"></div>
+              <div class="pdf-gallery" id="readerArtImages"></div>
             </div>
-          </header>
 
-          <!-- MODE A: VERBATIM EDITORIAL PROSE -->
-          <div id="readerReadPane">
-            <div class="legal-prose" id="readerArtBody"></div>
-            <div class="pdf-gallery" id="readerArtImages"></div>
-          </div>
-
-          <!-- MODE B: INLINE TESTO A SCOMPARSA -->
-          <div id="readerClozePane" class="hidden">
-            <div class="cloze-sticky-shell sticky-bar">
-              <div class="cloze-toolbar">
-                <div class="cloze-toolbar-selects">
-                  <select id="inlineClozeLevel" class="field sm" aria-label="Livello testo a scomparsa">
-                    <option value="1">Lv. 1 — Termini chiave</option>
-                    <option value="2">Lv. 2 — Medio (~35%)</option>
-                    <option value="3">Lv. 3 — Difficile (~65%)</option>
-                    <option value="4">Lv. 4 — Solo iniziali</option>
+            <!-- MODE B: INLINE CLOZE -->
+            <div id="readerClozePane" class="hidden">
+              <div class="cloze-selects-card">
+                <div class="cloze-bar-selects">
+                  <select id="inlineClozeLevel" class="ios-field sm" aria-label="Livello Cloze">
+                    <option value="1">Lv. 1 · Termini chiave</option>
+                    <option value="2">Lv. 2 · Medio (35%)</option>
+                    <option value="3">Lv. 3 · Difficile (65%)</option>
+                    <option value="4">Lv. 4 · Solo iniziali</option>
                   </select>
-                  <select id="inlineClozeInput" class="field sm" aria-label="Modalità di risposta">
+                  <select id="inlineClozeInput" class="ios-field sm" aria-label="Modalità risposta">
                     <option value="click">Tocca e scopri</option>
-                    <option value="type">Scrivi la parola</option>
+                    <option value="type">Scrivi parola</option>
                   </select>
                 </div>
-                <div class="cloze-toolbar-actions">
-                  <span class="mono-meta cloze-counter mobile-inline-counter" id="inlineClozeCounterMobile" aria-hidden="true">0 / 0</span>
-                  <div class="cloze-action-btns">
-                    <button type="button" class="btn small secondary" id="btnInlineHint" aria-label="Suggerisci una parola"><span class="lbl-full">Suggerisci 1</span><span class="lbl-short" aria-hidden="true">+1 aiuto</span></button>
-                    <button type="button" class="btn small secondary" id="btnInlineRevealAll" aria-label="Mostra tutto il testo"><span class="lbl-full">Mostra testo</span><span class="lbl-short" aria-hidden="true">Mostra</span></button>
-                    <button type="button" class="btn small secondary" id="btnInlineReset" aria-label="Ricomincia esercizio" disabled>
-                      <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-                      <span class="lbl-full">Ricomincia</span>
+              </div>
+              <div class="cloze-sticky-strip" id="inlineClozeStickyBar">
+                <div class="cloze-bar-actions">
+                  <span class="cloze-counter" id="inlineClozeCounter" aria-live="polite">0 / 0</span>
+                  <div class="cloze-btn-group">
+                    <button type="button" class="btn-apple soft sm" id="btnInlineHint">+1 aiuto</button>
+                    <button type="button" class="btn-apple soft sm" id="btnInlineRevealAll">Mostra tutte</button>
+                    <button type="button" class="btn-apple soft sm icon-only" id="btnInlineReset" aria-label="Ricomincia" disabled>
+                      <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
                     </button>
                   </div>
                 </div>
-              </div>
-              <div class="cloze-progress-strip">
-                <span class="mono-meta cloze-counter desktop-progress-counter" id="inlineClozeCounter" aria-live="polite">0 / 0</span>
-                <div class="thin-bar integrated">
-                  <div class="thin-bar-fill" id="inlineClozeBar"></div>
-                  <div class="thin-bar-revealed" id="inlineClozeBarRev"></div>
+                <div class="pill-track">
+                  <div class="pill-track-fill" id="inlineClozeBar"></div>
+                  <div class="pill-track-rev" id="inlineClozeBarRev"></div>
                 </div>
               </div>
+              <div class="inline-notice hidden" id="inlineClozeNotice" role="status"></div>
+              <div class="cloze-prose" id="inlineClozeBody"></div>
             </div>
-            <div class="inline-notice hidden" id="inlineClozeNotice" role="status"></div>
-            <div class="cloze-prose" id="inlineClozeBody"></div>
-          </div>
 
-          <!-- Related Learning Connections -->
-          <section class="article-connections" id="articleConnections" aria-label="Esercizi collegati a questo articolo">
-            <div class="conn-copy">
-              <strong>Esercitati su questo articolo</strong>
-              <span class="muted small" id="connSummary">Metti alla prova la memoria con il Cloze (testo a scomparsa) o le domande collegate.</span>
-            </div>
-            <div class="conn-actions">
-              <button type="button" class="btn small primary" id="btnSwitchInlineCloze">Avvia Cloze</button>
-              <button type="button" class="btn small secondary hidden" id="btnArticleFlashcards"><span>Flashcard (<span id="artFcCount">0</span>)</span></button>
-              <button type="button" class="btn small secondary hidden" id="btnArticleQuiz"><span>Quiz (<span id="artQzCount">0</span>)</span></button>
-            </div>
-          </section>
+            <!-- Linked Practice Strip -->
+            <section class="art-connect" id="articleConnections" aria-label="Esercizi collegati">
+              <button type="button" class="btn-apple primary" id="btnSwitchInlineCloze">Allenati in Cloze</button>
+              <button type="button" class="btn-apple soft hidden" id="btnArticleFlashcards">Flashcard (<span id="artFcCount">0</span>)</button>
+              <button type="button" class="btn-apple soft hidden" id="btnArticleQuiz">Quiz (<span id="artQzCount">0</span>)</button>
+            </section>
 
-          <!-- Prev / Next Footer -->
-          <nav class="article-pager" aria-label="Navigazione tra articoli">
-            <button type="button" class="pager-btn prev" id="btnPrevSec">
-              <span class="pager-dir">← Precedente</span>
-              <span class="pager-title" id="prevSecTitle">—</span>
-            </button>
-            <button type="button" class="pager-btn next" id="btnNextSec">
-              <span class="pager-dir">Successivo →</span>
-              <span class="pager-title" id="nextSecTitle">—</span>
-            </button>
-          </nav>
+            <!-- Prev / Next Navigation -->
+            <nav class="art-pager" aria-label="Articolo precedente e successivo">
+              <button type="button" class="pager-card prev" id="btnPrevSec">
+                <span class="pager-dir">‹ Precedente</span>
+                <span class="pager-title" id="prevSecTitle">—</span>
+              </button>
+              <button type="button" class="pager-card next" id="btnNextSec">
+                <span class="pager-dir">Successivo ›</span>
+                <span class="pager-title" id="nextSecTitle">—</span>
+              </button>
+            </nav>
           </div>
         </article>
       </div>
     </section>
 
-    <!-- ==================== 3. ALLENAMENTO ==================== -->
+    <!-- ==================== 3. PRATICA (FLASHCARD · QUIZ · CLOZE) ==================== -->
     <section class="view" id="view-practice" aria-labelledby="practiceHeading">
-      <div class="practice-top">
-        <div>
-          <h1 class="page-title" id="practiceHeading">Allenamento attivo</h1>
-          <p class="muted small">Ripasso programmato (SM-2), quiz normativi e percorso guidato con testo a scomparsa.</p>
-        </div>
-
-        <div class="seg-control" id="practiceModeSwitch" role="tablist" aria-label="Modalità di allenamento">
-          <button type="button" class="seg-btn active" data-pmode="flashcards" role="tab" aria-selected="true">
-            <span>Flashcard</span>
-            <span class="seg-pill" id="practiceDuePill">0</span>
-          </button>
-          <button type="button" class="seg-btn" data-pmode="quiz" role="tab" aria-selected="false">Quiz &amp; Casi</button>
-          <button type="button" class="seg-btn" data-pmode="cloze" role="tab" aria-selected="false">Cloze</button>
-        </div>
-      </div>
-
-      <!-- SUB-MODE 3A: FLASHCARDS -->
-      <div class="practice-pane" id="pane-flashcards" role="tabpanel">
-        <div class="filter-bar-compact">
-          <div class="filter-summary-left">
-            <span class="mono-meta" id="fcActiveSummary">Alta Resa · Tutti · 58 schede</span>
-            <button type="button" class="clear-focus-chip hidden" id="btnFcClearFocus">✕ Mostra mazzo completo</button>
-          </div>
-          <div class="filter-summary-right">
-            <button type="button" class="btn small ghost hidden" id="btnFcUndo">Annulla voto</button>
-            <button type="button" class="btn small secondary" id="btnFcShuffle">Mescola</button>
-            <button type="button" class="btn small secondary" id="btnToggleFcFilters" aria-expanded="false" aria-controls="fcFilterTray">Filtri ▾</button>
+      <div class="ios-container practice-container">
+        <div class="practice-header">
+          <h1 class="large-title compact-title" id="practiceHeading">Pratica</h1>
+          <div class="ios-seg" id="practiceModeSwitch" role="tablist" aria-label="Modalità di pratica">
+            <button type="button" class="ios-seg-btn active" data-pmode="flashcards" role="tab" aria-selected="true">Flashcard</button>
+            <button type="button" class="ios-seg-btn" data-pmode="quiz" role="tab" aria-selected="false">Quiz</button>
+            <button type="button" class="ios-seg-btn" data-pmode="cloze" role="tab" aria-selected="false">Cloze</button>
           </div>
         </div>
 
-        <div class="filter-tray hidden" id="fcFilterTray">
-          <div class="tray-field">
-            <label for="fcDeckMode">Mazzo</label>
-            <select id="fcDeckMode" class="field sm">
-              <option value="curated">Alta Resa (58)</option>
-              <option value="all_articles">Tutti gli Articoli (136)</option>
-              <option value="combined">Completo (194)</option>
-            </select>
-          </div>
-          <div class="tray-field">
-            <label for="fcDocFilter">Documento</label>
-            <select id="fcDocFilter" class="field sm">
-              <option value="all">Tutti i documenti</option>
-              <option value="statuto">Statuto</option>
-              <option value="rri">Regolamenti Interni (RRI)</option>
-              <option value="elettorale">Reg. Elettorale 2026</option>
-            </select>
-          </div>
-          <div class="tray-field">
-            <label for="fcTagFilter">Argomento</label>
-            <select id="fcTagFilter" class="field sm">
-              <option value="all">Tutti gli argomenti</option>
-            </select>
-          </div>
-          <div class="tray-field align-end">
-            <label class="inline-toggle full">
-              <input type="checkbox" id="fcOnlyDue" />
-              <span>Solo da ripassare oggi</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="studio-stage">
-          <div class="stage-meta">
-            <span class="mono-meta" id="fcQueueInfo">Rimanenti: 58</span>
-            <span class="meta-chip" id="fcCardMeta">Nuova scheda</span>
-          </div>
-          <div class="thin-bar"><div class="thin-bar-fill" id="fcBarFill"></div></div>
-
-          <div class="flashcard-sheet" id="flashcardEl" tabindex="0" role="region" aria-label="Scheda flashcard">
-            <div class="card-tags">
-              <span class="doc-tag" id="fcDocBadge">Statuto</span>
-              <span class="soft-tag" id="fcTagBadge">Argomento</span>
-              <span class="soft-tag warn hidden" id="fcRetryBadge">Ripetizione</span>
+        <!-- SUB-MODE 3A: FLASHCARD FOCUS DECK -->
+        <div class="practice-pane" id="pane-flashcards" role="tabpanel">
+          <div class="deck-top-bar">
+            <div class="deck-top-left">
+              <button type="button" class="circle-btn sm hidden" id="btnFcUndo" aria-label="Annulla ultimo voto" title="Annulla voto">
+                <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+              </button>
+              <button type="button" class="focus-chip hidden" id="btnFcClearFocus">✕ Mostra tutto</button>
             </div>
-            <div class="fc-question" id="fcQuestion">Caricamento…</div>
+            <span class="status-pill" id="fcQueueInfo">1 di 58</span>
+            <div class="deck-top-right">
+              <button type="button" class="circle-btn sm" id="btnFcShuffle" aria-label="Mescola mazzo" title="Mescola">
+                <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+              </button>
+              <button type="button" class="circle-btn sm" id="btnToggleFcFilters" aria-expanded="false" aria-controls="fcFilterTray" aria-label="Filtri flashcard" title="Filtri">
+                <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+              </button>
+            </div>
+          </div>
 
-            <div class="fc-back hidden" id="fcBack" aria-live="polite">
-              <div class="fc-back-head">
-                <span class="answer-kicker">Risposta verificata</span>
-                <button type="button" class="link-btn" id="btnFcSource">Apri norma (<span id="fcRefLabel"></span>) →</button>
+          <div class="pill-track deck-track"><div class="pill-track-fill" id="fcBarFill"></div></div>
+
+          <div class="apple-card filter-panel hidden" id="fcFilterTray">
+            <div class="filter-field">
+              <label for="fcDeckMode">Mazzo</label>
+              <select id="fcDeckMode" class="ios-field sm">
+                <option value="curated">Schede chiave (58)</option>
+                <option value="all_articles">Tutti gli articoli (136)</option>
+                <option value="combined">Completo (194)</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="fcDocFilter">Documento</label>
+              <select id="fcDocFilter" class="ios-field sm">
+                <option value="all">Tutti i documenti</option>
+                <option value="statuto">Statuto</option>
+                <option value="rri">Regolamenti Interni</option>
+                <option value="elettorale">Reg. Elettorale 2026</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="fcTagFilter">Argomento</label>
+              <select id="fcTagFilter" class="ios-field sm">
+                <option value="all">Tutti gli argomenti</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="fcOnlyDue">Stato</label>
+              <label class="ios-switch-row" for="fcOnlyDue">
+                <span class="ios-switch-label">Solo da ripassare</span>
+                <input type="checkbox" id="fcOnlyDue" class="ios-switch-input" />
+                <span class="ios-switch-track" aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="deck-stage">
+            <div class="flashcard-deck-card" id="flashcardEl" tabindex="0" role="region" aria-label="Flashcard">
+              <div class="fc-card-top">
+                <span class="fc-meta-kicker" id="fcMetaLine">Statuto · Principi</span>
+                <span class="soft-pill hidden" id="fcRetryBadge">Ripetizione</span>
+                <span class="fc-card-state" id="fcCardMeta">Nuova</span>
               </div>
-              <div class="fc-answer" id="fcAnswer"></div>
+              <div class="fc-question" id="fcQuestion">Caricamento…</div>
+
+              <div class="fc-back hidden" id="fcBack" aria-live="polite">
+                <div class="fc-divider"></div>
+                <div class="fc-answer" id="fcAnswer"></div>
+                <button type="button" class="text-action fc-src-btn" id="btnFcSource">Apri <span id="fcRefLabel">Statuto Art. 1</span> ›</button>
+              </div>
+            </div>
+
+            <div class="apple-card empty-card hidden" id="fcEmptyState">
+              <h2 id="fcEmptyTitle">Sessione completata</h2>
+              <p class="muted" id="fcEmptyDesc">Hai completato tutte le schede di questa selezione.</p>
+              <div class="empty-actions">
+                <button type="button" class="btn-apple primary" id="btnFcShowAll">Mostra tutte le schede</button>
+                <button type="button" class="btn-apple soft" id="btnFcRestartSession">Ricomincia</button>
+              </div>
             </div>
           </div>
 
-          <div class="session-done hidden" id="fcEmptyState">
-            <h2 id="fcEmptyTitle">Sessione completata</h2>
-            <p class="muted" id="fcEmptyDesc">Hai ripassato tutte le schede previste per questi filtri.</p>
-            <div class="briefing-cta-row centered">
-              <button type="button" class="btn primary" id="btnFcShowAll">Mostra tutte le schede</button>
-              <button type="button" class="btn secondary" id="btnFcRestartSession">Ricomincia</button>
+          <!-- Sticky Thumb-Zone Reveal / SM-2 Rating Dock -->
+          <div class="thumb-dock" id="fcThumbDock">
+            <div id="fcRevealWrap">
+              <button type="button" class="btn-apple primary full" id="btnFcReveal">Mostra risposta</button>
+              <span class="kbd-hint desktop-only">Spazio gira · 1–4 valuta · Z annulla</span>
             </div>
-          </div>
 
-          <div class="stage-cta" id="fcRevealWrap">
-            <button type="button" class="btn primary large wide-mobile" id="btnFcReveal">Mostra risposta</button>
-            <span class="kbd-hint desktop-only">Premi <kbd>Spazio</kbd> per girare · <kbd>1</kbd> – <kbd>4</kbd> per valutare · <kbd>Z</kbd> annulla</span>
-          </div>
-
-          <div class="hidden" id="fcRatingWrap">
-            <div class="sm2-grid" id="fcRatingBar" role="group" aria-label="Quanto ricordavi questa scheda?">
-              <button type="button" class="sm2-btn r1" data-q="1"><kbd class="sm2-key">1</kbd><strong>Non la so</strong><small id="int1">Rivedi ora</small></button>
-              <button type="button" class="sm2-btn r2" data-q="3"><kbd class="sm2-key">2</kbd><strong>Difficile</strong><small id="int2">1 giorno</small></button>
-              <button type="button" class="sm2-btn r3" data-q="4"><kbd class="sm2-key">3</kbd><strong>Bene</strong><small id="int3">3 giorni</small></button>
-              <button type="button" class="sm2-btn r4" data-q="5"><kbd class="sm2-key">4</kbd><strong>A memoria</strong><small id="int4">6 giorni</small></button>
+            <div class="hidden" id="fcRatingWrap">
+              <div class="sm2-dock" id="fcRatingBar" role="group" aria-label="Valuta quanto ricordavi">
+                <button type="button" class="sm2-pill r1" data-q="1"><strong>Ripeti</strong><small id="int1">Ora</small></button>
+                <button type="button" class="sm2-pill r2" data-q="3"><strong>Difficile</strong><small id="int2">1g</small></button>
+                <button type="button" class="sm2-pill r3" data-q="4"><strong>Bene</strong><small id="int3">3g</small></button>
+                <button type="button" class="sm2-pill r4" data-q="5"><strong>Facile</strong><small id="int4">6g</small></button>
+              </div>
+              <span class="kbd-hint desktop-only">Tasti 1–4 per valutare · Z per annullare</span>
             </div>
-            <span class="kbd-hint desktop-only stage-kbd-foot">Scorciatoie: <kbd>1</kbd> – <kbd>4</kbd> valuta · <kbd>Z</kbd> annulla ultimo voto</span>
           </div>
         </div>
-      </div>
 
-      <!-- SUB-MODE 3B: QUIZ & CASI PRATICI -->
-      <div class="practice-pane hidden" id="pane-quiz" role="tabpanel">
-        <div class="filter-bar-compact">
-          <div class="filter-summary-left">
-            <span class="mono-meta" id="qzActiveSummary">Tutte le tipologie · Tutti i documenti · 40 domande</span>
-            <button type="button" class="clear-focus-chip hidden" id="btnQzClearFocus">✕ Mostra tutte le domande</button>
+        <!-- SUB-MODE 3B: QUIZ -->
+        <div class="practice-pane hidden" id="pane-quiz" role="tabpanel">
+          <div class="deck-top-bar">
+            <div class="deck-top-left">
+              <button type="button" class="warn-chip hidden" id="btnRetryWrong">
+                <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                <span><span class="hide-xs">Ripeti errori</span><span class="show-xs">Errori</span> (<span id="wrongInlineCount">0</span>)</span>
+              </button>
+              <button type="button" class="focus-chip hidden" id="btnQzClearFocus">✕ Tutte</button>
+            </div>
+            <span class="status-pill" id="qzCounter">1 di 40</span>
+            <div class="deck-top-right">
+              <button type="button" class="circle-btn sm" id="btnToggleQzFilters" aria-expanded="false" aria-controls="qzFilterTray" aria-label="Filtri e opzioni quiz" title="Filtri">
+                <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+              </button>
+            </div>
           </div>
-          <div class="filter-summary-right">
-            <button type="button" class="btn small warn-pill hidden" id="btnRetryWrong"><span class="lbl-full">Ripeti errori (<span id="wrongInlineCount">0</span>)</span><span class="lbl-short" aria-hidden="true">Errori (<span id="wrongInlineCountShort">0</span>)</span></button>
-            <button type="button" class="btn small secondary" id="btnStartQuiz">
-              <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-              <span>Ricomincia</span>
+
+          <div class="pill-track deck-track"><div class="pill-track-fill" id="qzBarFill"></div></div>
+
+          <div class="apple-card filter-panel hidden" id="qzFilterTray">
+            <div class="filter-field">
+              <label for="qzModeFilter">Tipologia</label>
+              <select id="qzModeFilter" class="ios-field sm">
+                <option value="all">Tutte (40)</option>
+                <option value="blitz">Blitz Numeri &amp; Quorum (18)</option>
+                <option value="mc">Normativa (12)</option>
+                <option value="scenario">Scenari Pratici (10)</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="qzDocFilter">Documento</label>
+              <select id="qzDocFilter" class="ios-field sm">
+                <option value="all">Tutti i documenti</option>
+                <option value="statuto">Statuto</option>
+                <option value="rri">Regolamenti Interni</option>
+                <option value="elettorale">Reg. Elettorale 2026</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="qzOnlyUnmastered">Stato</label>
+              <label class="ios-switch-row" for="qzOnlyUnmastered">
+                <span class="ios-switch-label">Solo da superare</span>
+                <input type="checkbox" id="qzOnlyUnmastered" class="ios-switch-input" />
+                <span class="ios-switch-track" aria-hidden="true"></span>
+              </label>
+            </div>
+            <div class="filter-field align-end">
+              <button type="button" class="btn-apple soft sm full" id="btnStartQuiz">Ricomincia sessione</button>
+            </div>
+          </div>
+
+          <div class="apple-card quiz-card" id="quizBox">
+            <div class="fc-card-top">
+              <span class="fc-meta-kicker" id="qzMetaLine">Statuto · Blitz</span>
+              <span class="fc-card-state" id="qzScoreLive"><span class="score-ok">✓ 0</span> · <span class="score-bad">✕ 0</span></span>
+            </div>
+            <h2 class="quiz-question" id="qzQuestion">Caricamento…</h2>
+            <div class="quiz-opts" id="qzOptions" role="group" aria-label="Opzioni di risposta"></div>
+            <button type="button" class="quiz-expand-opts hidden" id="btnQzExpandOpts" aria-expanded="false">
+              <span id="qzExpandLabel">Mostra tutte le opzioni</span>
+              <svg class="ic xs expand-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
-            <button type="button" class="btn small secondary" id="btnToggleQzFilters" aria-expanded="false" aria-controls="qzFilterTray">Filtri ▾</button>
-          </div>
-        </div>
-
-        <div class="filter-tray hidden" id="qzFilterTray">
-          <div class="tray-field">
-            <label for="qzModeFilter">Tipologia</label>
-            <select id="qzModeFilter" class="field sm">
-              <option value="all">Tutte le modalità (40)</option>
-              <option value="blitz">Blitz Numeri &amp; Quorum (18)</option>
-              <option value="mc">Normativa (12)</option>
-              <option value="scenario">Scenari Pratici (10)</option>
-            </select>
-          </div>
-          <div class="tray-field">
-            <label for="qzDocFilter">Documento</label>
-            <select id="qzDocFilter" class="field sm">
-              <option value="all">Tutti i documenti</option>
-              <option value="statuto">Statuto</option>
-              <option value="rri">Regolamenti Interni (RRI)</option>
-              <option value="elettorale">Reg. Elettorale 2026</option>
-            </select>
-          </div>
-          <div class="tray-field align-end">
-            <label class="inline-toggle full">
-              <input type="checkbox" id="qzOnlyUnmastered" />
-              <span>Solo non ancora superate</span>
-            </label>
-          </div>
-        </div>
-
-        <div class="studio-stage">
-          <div class="quiz-sheet" id="quizBox">
-            <div class="stage-meta">
-              <span class="mono-meta" id="qzCounter">Domanda 1 / 40</span>
-              <span class="mono-meta" id="qzScoreLive">0 esatte · 0 errate</span>
-            </div>
-            <div class="thin-bar"><div class="thin-bar-fill" id="qzBarFill"></div></div>
-
-            <div class="card-tags">
-              <span class="doc-tag" id="qzDocBadge">Statuto</span>
-              <span class="soft-tag" id="qzModeBadge">Blitz</span>
-            </div>
-
-            <h2 class="quiz-q" id="qzQuestion">Caricamento…</h2>
-            <div class="quiz-opts" id="qzOptions" role="group" aria-label="Scelte di risposta"></div>
 
             <div class="quiz-fb hidden" id="qzFeedback" aria-live="polite">
-              <strong id="qzFbTitle"></strong>
+              <div class="quiz-fb-head">
+                <span class="fb-badge-ic" id="qzFbIcon" aria-hidden="true">✕</span>
+                <strong id="qzFbTitle"></strong>
+              </div>
               <p id="qzFbText"></p>
               <div class="quiz-fb-foot">
-                <button type="button" class="link-btn" id="btnQzSource">Verifica nella norma (<span id="qzRefLabel"></span>) →</button>
-                <button type="button" class="btn primary small" id="btnQzNext">Prossima →</button>
+                <button type="button" class="text-action" id="btnQzSource">Apri <span id="qzRefLabel"></span> ›</button>
+                <button type="button" class="btn-apple primary sm" id="btnQzNext">Prossima ›</button>
               </div>
             </div>
-            <span class="kbd-hint desktop-only stage-kbd-foot">Scorciatoie: <kbd>A</kbd> – <kbd>D</kbd> rispondi · <kbd>Invio</kbd> continua</span>
+          </div>
+          <span class="kbd-hint desktop-only" id="qzKbdHint">A–D rispondi · Invio continua</span>
+
+          <!-- Mobile Unified Post-Answer Feedback Sheet -->
+          <div class="quiz-mobile-dock hidden" id="qzMobileDock" aria-live="polite">
+            <div class="qmd-top">
+              <div class="quiz-fb-head">
+                <span class="fb-badge-ic" id="qmdIcon" aria-hidden="true">✕</span>
+                <strong class="qmd-verdict" id="qmdVerdict">Risposta errata</strong>
+              </div>
+              <button type="button" class="btn-apple primary sm" id="btnQzMobileNext">Prossima ›</button>
+            </div>
+            <p class="qmd-explain" id="qmdExplain"></p>
+            <button type="button" class="qmd-src" id="btnQzMobileSource">Apri fonte ›</button>
           </div>
 
-          <div class="session-done hidden" id="quizEmptyState">
-            <h2>Tutte le domande di questa selezione sono già superate</h2>
-            <p class="muted">Ottimo risultato! Puoi disattivare il filtro per esercitarti nuovamente sull'intero banco.</p>
-            <div class="briefing-cta-row centered">
-              <button type="button" class="btn primary" id="btnQzShowAll">Rivedi tutte le domande</button>
+          <div class="apple-card empty-card hidden" id="quizEmptyState">
+            <h2>Tutte le domande superate</h2>
+            <p class="muted">Disattiva il filtro per esercitarti di nuovo su tutte le domande.</p>
+            <div class="empty-actions">
+              <button type="button" class="btn-apple primary" id="btnQzShowAll">Rivedi tutte</button>
             </div>
           </div>
 
-          <div class="session-done hidden" id="quizSummary">
+          <div class="apple-card empty-card hidden" id="quizSummary">
             <h2>Riepilogo sessione</h2>
-            <div class="big-score" id="qzSumScore">0 / 0</div>
+            <div class="summary-score" id="qzSumScore">0 / 0</div>
             <p class="muted" id="qzSumMsg"></p>
             <div class="missed-list hidden" id="qzMissedList"></div>
-            <div class="briefing-cta-row centered">
-              <button type="button" class="btn primary" id="btnQzRestart">Nuova sessione</button>
-              <button type="button" class="btn secondary hidden" id="btnQzRetryWrong2">Ripeti solo gli errori</button>
+            <div class="empty-actions">
+              <button type="button" class="btn-apple primary" id="btnQzRestart">Nuova sessione</button>
+              <button type="button" class="btn-apple soft hidden" id="btnQzRetryWrong2">Ripeti errori</button>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- SUB-MODE 3C: PERCORSO TESTO A SCOMPARSA -->
-      <div class="practice-pane hidden" id="pane-cloze" role="tabpanel">
-        <div class="filter-bar-compact">
-          <div class="filter-summary-left">
-            <span class="mono-meta" id="clozeQueueSummary">Statuto · Art. 1 · Lv. 1</span>
+        <!-- SUB-MODE 3C: PERCORSO CLOZE -->
+        <div class="practice-pane hidden" id="pane-cloze" role="tabpanel">
+          <div class="deck-top-bar">
+            <button type="button" class="btn-apple soft sm" id="btnClozeRandom">Casuale</button>
+            <span class="status-pill" id="clozeQueueSummary">Statuto · Art. 1</span>
+            <button type="button" class="circle-btn sm" id="btnToggleClozeFilters" aria-expanded="false" aria-controls="clozeFilterTray" aria-label="Seleziona articolo" title="Seleziona">
+              <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+            </button>
           </div>
-          <div class="filter-summary-right">
-            <button type="button" class="btn small secondary" id="btnClozeRandom">Casuale non memorizzato</button>
-            <button type="button" class="btn small secondary" id="btnToggleClozeFilters" aria-expanded="false" aria-controls="clozeFilterTray">Seleziona ▾</button>
-          </div>
-        </div>
 
-        <div class="filter-tray hidden" id="clozeFilterTray">
-          <div class="tray-field">
-            <label for="clozeDocSelect">Documento</label>
-            <select id="clozeDocSelect" class="field sm">
-              <option value="statuto">Statuto PoliNetwork APS</option>
-              <option value="rri">Raccolta Regolamenti Interni (RRI)</option>
-              <option value="elettorale">Regolamento Elettorale 2026</option>
-            </select>
+          <div class="apple-card filter-panel hidden" id="clozeFilterTray">
+            <div class="filter-field">
+              <label for="clozeDocSelect">Documento</label>
+              <select id="clozeDocSelect" class="ios-field sm">
+                <option value="statuto">Statuto</option>
+                <option value="rri">Regolamenti Interni</option>
+                <option value="elettorale">Reg. Elettorale 2026</option>
+              </select>
+            </div>
+            <div class="filter-field span-2">
+              <label for="clozeSecSelect">Articolo</label>
+              <select id="clozeSecSelect" class="ios-field sm"></select>
+            </div>
+            <div class="filter-field">
+              <label for="clozeLevelSelect">Livello</label>
+              <select id="clozeLevelSelect" class="ios-field sm">
+                <option value="1">Lv. 1 · Termini chiave</option>
+                <option value="2">Lv. 2 · Medio (35%)</option>
+                <option value="3">Lv. 3 · Difficile (65%)</option>
+                <option value="4">Lv. 4 · Solo iniziali</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="clozeInputMode">Modalità</label>
+              <select id="clozeInputMode" class="ios-field sm">
+                <option value="click">Tocca e scopri</option>
+                <option value="type">Scrivi parola</option>
+              </select>
+            </div>
           </div>
-          <div class="tray-field span-2">
-            <label for="clozeSecSelect">Articolo / Sezione</label>
-            <select id="clozeSecSelect" class="field sm"></select>
-          </div>
-          <div class="tray-field">
-            <label for="clozeLevelSelect">Livello</label>
-            <select id="clozeLevelSelect" class="field sm">
-              <option value="1">Lv. 1 — Termini chiave</option>
-              <option value="2">Lv. 2 — Medio (~35%)</option>
-              <option value="3">Lv. 3 — Difficile (~65%)</option>
-              <option value="4">Lv. 4 — Solo iniziali</option>
-            </select>
-          </div>
-          <div class="tray-field">
-            <label for="clozeInputMode">Modalità</label>
-            <select id="clozeInputMode" class="field sm">
-              <option value="click">Tocca e scopri</option>
-              <option value="type">Scrivi la parola</option>
-            </select>
-          </div>
-        </div>
 
-        <div class="studio-stage">
-          <div class="editorial-sheet compact">
-            <div class="cloze-sticky-shell sticky-bar">
-              <div class="cloze-head-row">
-                <div class="article-kicker">
-                  <span class="code-chip" id="pClozeCode">Art. 1</span>
-                  <strong id="pClozeTitle">Denominazione</strong>
-                </div>
-                <div class="cloze-toolbar-actions">
-                  <span class="mono-meta cloze-counter mobile-inline-counter" id="pClozeCounterMobile" aria-hidden="true">0 / 0</span>
-                  <div class="cloze-action-btns">
-                    <button type="button" class="btn small secondary" id="btnPClozeHint" aria-label="Suggerisci una parola"><span class="lbl-full">Suggerisci 1</span><span class="lbl-short" aria-hidden="true">+1 aiuto</span></button>
-                    <button type="button" class="btn small secondary" id="btnPClozeRevealAll" aria-label="Mostra tutto il testo"><span class="lbl-full">Mostra testo</span><span class="lbl-short" aria-hidden="true">Mostra</span></button>
-                    <button type="button" class="btn small secondary" id="btnPClozeReset" aria-label="Ricomincia esercizio" disabled>
-                      <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-                      <span class="lbl-full">Ricomincia</span>
-                    </button>
-                  </div>
+          <div class="apple-card practice-cloze-card">
+            <div class="cloze-bar">
+              <div class="pcloze-head">
+                <span class="fc-meta-kicker" id="pClozeCode">Art. 1</span>
+                <strong class="pcloze-title" id="pClozeTitle">Denominazione</strong>
+              </div>
+              <div class="cloze-bar-actions">
+                <span class="cloze-counter" id="pClozeCounter" aria-live="polite">0 / 0</span>
+                <div class="cloze-btn-group">
+                  <button type="button" class="btn-apple soft sm" id="btnPClozeHint">+1 aiuto</button>
+                  <button type="button" class="btn-apple soft sm" id="btnPClozeRevealAll">Mostra tutte</button>
+                  <button type="button" class="btn-apple soft sm icon-only" id="btnPClozeReset" aria-label="Ricomincia" disabled>
+                    <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+                  </button>
                 </div>
               </div>
-              <div class="cloze-progress-strip">
-                <span class="mono-meta cloze-counter desktop-progress-counter" id="pClozeCounter" aria-live="polite">0 / 0</span>
-                <div class="thin-bar integrated">
-                  <div class="thin-bar-fill" id="pClozeBar"></div>
-                  <div class="thin-bar-revealed" id="pClozeBarRev"></div>
-                </div>
+              <div class="pill-track">
+                <div class="pill-track-fill" id="pClozeBar"></div>
+                <div class="pill-track-rev" id="pClozeBarRev"></div>
               </div>
             </div>
+
             <div class="inline-notice hidden" id="pClozeNotice" role="status"></div>
             <div class="cloze-prose" id="pClozeBody"></div>
 
-            <div class="cloze-foot-row">
-              <div class="cloze-foot-left">
-                <button type="button" class="link-btn" id="btnPClozeOpenReader">Apri in Normativa →</button>
-                <button type="button" class="btn small secondary" id="btnPClozeMarkMem">Segna A Memoria</button>
-              </div>
-              <div class="cloze-foot-right">
-                <button type="button" class="btn small secondary" id="btnPClozePrev">← Prec.</button>
-                <button type="button" class="btn small primary" id="btnPClozeNext">Succ. →</button>
+            <div class="pcloze-foot">
+              <button type="button" class="text-action" id="btnPClozeOpenReader">Apri in Norme ›</button>
+              <div class="cloze-btn-group">
+                <button type="button" class="btn-apple soft sm" id="btnPClozeMarkMem">Segna a memoria</button>
+                <button type="button" class="btn-apple soft sm" id="btnPClozePrev">‹</button>
+                <button type="button" class="btn-apple primary sm" id="btnPClozeNext">Succ. ›</button>
               </div>
             </div>
           </div>
@@ -669,106 +651,108 @@
 
     <!-- ==================== 4. SINOSSI ==================== -->
     <section class="view" id="view-reference" aria-labelledby="refHeading">
-      <div class="ref-top">
-        <div>
-          <h1 class="page-title" id="refHeading">Sinossi operativa</h1>
-          <p class="muted small">Consultazione rapida di date 2026, quorum, organi, termini, formula STV e schemi PDF.</p>
+      <div class="ios-container">
+        <div class="view-large-head">
+          <h1 class="large-title" id="refHeading">Sinossi</h1>
         </div>
-      </div>
 
-      <div class="ref-tabs-rail" id="csTabs" role="tablist" aria-label="Categorie sinossi">
-        <button type="button" class="rail-tab active" data-cs="timeline" role="tab" aria-selected="true">Cronoprogramma 2026</button>
-        <button type="button" class="rail-tab" data-cs="quorums" role="tab" aria-selected="false">Quorum (15)</button>
-        <button type="button" class="rail-tab" data-cs="organs" role="tab" aria-selected="false">Organi (10)</button>
-        <button type="button" class="rail-tab" data-cs="deadlines" role="tab" aria-selected="false">Scadenze (14)</button>
-        <button type="button" class="rail-tab" data-cs="hierarchy" role="tab" aria-selected="false">Gerarchia &amp; STV</button>
-        <button type="button" class="rail-tab" data-cs="diagrams" role="tab" aria-selected="false">Schemi PDF (9)</button>
-      </div>
+        <div class="ref-pills-rail" id="csTabs" role="tablist" aria-label="Categorie sinossi">
+          <button type="button" class="ref-pill active" data-cs="timeline" role="tab" aria-selected="true">Cronoprogramma</button>
+          <button type="button" class="ref-pill" data-cs="quorums" role="tab" aria-selected="false">Quorum</button>
+          <button type="button" class="ref-pill" data-cs="organs" role="tab" aria-selected="false">Organi</button>
+          <button type="button" class="ref-pill" data-cs="deadlines" role="tab" aria-selected="false">Scadenze</button>
+          <button type="button" class="ref-pill" data-cs="hierarchy" role="tab" aria-selected="false">STV</button>
+          <button type="button" class="ref-pill" data-cs="diagrams" role="tab" aria-selected="false">Schemi PDF</button>
+        </div>
 
-      <div class="ref-panel" role="tabpanel">
-        <div class="ref-filter-bar" id="csFilterBar">
-          <div class="search-input-wrap ref-search">
-            <svg class="ic search-input-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-            <input type="search" id="csSearch" class="field sm has-icon has-clear" placeholder="Filtra cronoprogramma…" aria-label="Filtra voci della sezione attiva" />
-            <button type="button" class="search-clear-btn hidden" id="btnClearCsSearch" aria-label="Cancella filtro">
-              <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <div class="ref-filter-row" id="csFilterBar">
+          <div class="ios-search-wrap ref-search">
+            <svg class="ic xs search-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="search" id="csSearch" class="ios-field sm has-ic has-clear" placeholder="Filtra cronoprogramma…" aria-label="Filtra voci" />
+            <button type="button" class="clear-ic-btn hidden" id="btnClearCsSearch" aria-label="Cancella filtro">
+              <svg class="ic-clear" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M7.2 7.2l5.6 5.6M12.8 7.2l-5.6 5.6" stroke="var(--bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>
             </button>
           </div>
         </div>
+
         <div class="ref-content" id="csContent"></div>
       </div>
     </section>
   </main>
 
-  <!-- ==================== 4-ITEM MOBILE BOTTOM BAR ==================== -->
-  <nav class="bottom-bar" id="mobileNav" aria-label="Navigazione mobile">
-    <button type="button" class="bnav-btn active" data-view="overview" aria-current="page">
-      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
-      <span>Panoramica</span>
-    </button>
-    <button type="button" class="bnav-btn" data-view="reader">
-      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <span>Normativa</span>
-    </button>
-    <button type="button" class="bnav-btn" data-view="practice">
-      <span class="bnav-ic-wrap">
-        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-        <span class="bnav-count hidden" id="mobileDueBadge">0</span>
-      </span>
-      <span>Allenamento</span>
-    </button>
-    <button type="button" class="bnav-btn" data-view="reference">
-      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M9 10v10"/></svg>
-      <span>Sinossi</span>
-    </button>
-  </nav>
+  <!-- ==================== FLOATING iOS PILL TAB BAR (MOBILE) ==================== -->
+  <div class="floating-nav-wrap" id="mobileNavWrap">
+    <nav class="floating-nav" id="mobileNav" aria-label="Navigazione mobile">
+      <button type="button" class="fnav-btn active" data-view="overview" aria-current="page">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>
+        <span>Studio</span>
+      </button>
+      <button type="button" class="fnav-btn" data-view="reader">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        <span>Norme</span>
+      </button>
+      <button type="button" class="fnav-btn" data-view="practice">
+        <span class="fnav-ic-wrap">
+          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span class="fnav-dot hidden" id="mobileDueBadge" aria-label="Ripassi programmati"></span>
+        </span>
+        <span>Pratica</span>
+      </button>
+      <button type="button" class="fnav-btn" data-view="reference">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M9 10v10"/></svg>
+        <span>Sinossi</span>
+      </button>
+    </nav>
+  </div>
 
-  <!-- ==================== MODAL: COMMAND SEARCH (Ctrl+K) ==================== -->
+  <!-- ==================== MODAL: SPOTLIGHT SEARCH (Ctrl+K) ==================== -->
   <div class="modal-backdrop hidden" id="searchModal" role="dialog" aria-modal="true" aria-labelledby="searchModalTitle">
-    <div class="modal-panel">
+    <div class="modal-sheet">
       <div class="modal-head">
-        <h2 id="searchModalTitle">Ricerca nel corpus</h2>
-        <button type="button" class="icon-btn sm" id="closeSearchModal" aria-label="Chiudi ricerca">
-          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </div>
-      <div class="search-input-wrap">
-        <svg class="ic search-input-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="search" id="globalSearchInput" class="field has-icon has-clear" placeholder="Cerca articolo, quorum, Droop, delega, 90 giorni, probiviri…" aria-label="Cerca nella normativa e nelle sinossi" />
-        <button type="button" class="search-clear-btn hidden" id="btnClearGlobalSearch" aria-label="Cancella ricerca">
+        <h2 id="searchModalTitle">Cerca</h2>
+        <button type="button" class="circle-btn sm" id="closeSearchModal" aria-label="Chiudi ricerca">
           <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
+      <div class="ios-search-wrap">
+        <svg class="ic sm search-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="search" id="globalSearchInput" class="ios-field has-ic has-clear" placeholder="Articolo, quorum, Droop, delega, 90 giorni…" aria-label="Cerca nella normativa" />
+        <button type="button" class="clear-ic-btn hidden" id="btnClearGlobalSearch" aria-label="Cancella ricerca">
+          <svg class="ic-clear" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M7.2 7.2l5.6 5.6M12.8 7.2l-5.6 5.6" stroke="var(--bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
       <div class="search-results" id="globalSearchResults"></div>
+      <div class="search-modal-foot" id="searchModalFoot">
+        <span id="searchResultCount">Ricerca rapida</span>
+        <span class="search-kbd-hints desktop-only">↑↓ Naviga · ↵ Apri · Esc Chiudi</span>
+      </div>
     </div>
   </div>
 
-  <!-- ==================== MODAL: BACKUP & DATA ==================== -->
+  <!-- ==================== MODAL: BACKUP ==================== -->
   <div class="modal-backdrop hidden" id="backupModal" role="dialog" aria-modal="true" aria-labelledby="backupModalTitle">
-    <div class="modal-panel compact">
+    <div class="modal-sheet compact">
       <div class="modal-head">
-        <h2 id="backupModalTitle">Progressi &amp; Backup</h2>
-        <button type="button" class="icon-btn sm" id="closeBackupModal" aria-label="Chiudi gestione dati">
-          <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <h2 id="backupModalTitle">Progressi e backup</h2>
+        <button type="button" class="circle-btn sm" id="closeBackupModal" aria-label="Chiudi">
+          <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
-      <p class="muted small">
-        I tuoi progressi restano salvati localmente in questo browser. Esporta il file JSON per trasferirli fra telefono e computer.
-      </p>
+      <p class="muted small">I progressi restano sul dispositivo. Esporta un file JSON per sincronizzarli tra telefono e computer.</p>
       <div class="backup-summary" id="backupSummary"></div>
       <div class="modal-actions">
-        <button type="button" class="btn primary" id="btnExportProgress">Esporta JSON</button>
-        <label class="btn secondary" id="lblImportProgress" tabindex="0" role="button">
+        <button type="button" class="btn-apple primary" id="btnExportProgress">Esporta JSON</button>
+        <label class="btn-apple soft" id="lblImportProgress" tabindex="0" role="button">
           Importa JSON
           <input type="file" id="inputImportProgress" accept=".json" class="sr-only" />
         </label>
-        <button type="button" class="btn danger" id="btnResetAsk">Azzera dati</button>
+        <button type="button" class="btn-apple danger-soft" id="btnResetAsk">Azzera</button>
       </div>
-      <div class="confirm-panel hidden" id="resetConfirmBox">
-        <p><strong>Confermi l'azzeramento?</strong> Stati di studio, segnalibri, calendario flashcard e cronologia quiz verranno rimossi da questo dispositivo.</p>
+      <div class="confirm-box hidden" id="resetConfirmBox">
+        <p><strong>Confermi l'azzeramento?</strong> Tutti gli stati di studio, salvati, flashcard e quiz verranno rimossi.</p>
         <div class="modal-actions">
-          <button type="button" class="btn small danger" id="btnResetConfirm">Sì, azzera tutto</button>
-          <button type="button" class="btn small secondary" id="btnResetCancel">Annulla</button>
+          <button type="button" class="btn-apple danger sm" id="btnResetConfirm">Sì, azzera</button>
+          <button type="button" class="btn-apple soft sm" id="btnResetCancel">Annulla</button>
         </div>
       </div>
     </div>
@@ -780,14 +764,14 @@
       <div class="lightbox-bar">
         <span class="lightbox-cap" id="lightboxCap"></span>
         <div class="lightbox-controls">
-          <button type="button" class="icon-btn sm" id="btnLbPrev" aria-label="Schema precedente">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          <button type="button" class="circle-btn sm" id="btnLbPrev" aria-label="Schema precedente">
+            <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
-          <button type="button" class="icon-btn sm" id="btnLbNext" aria-label="Schema successivo">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          <button type="button" class="circle-btn sm" id="btnLbNext" aria-label="Schema successivo">
+            <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
-          <button type="button" class="icon-btn sm" id="closeLightbox" aria-label="Chiudi anteprima">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <button type="button" class="circle-btn sm" id="closeLightbox" aria-label="Chiudi">
+            <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
       </div>
@@ -795,7 +779,7 @@
     </div>
   </div>
 
-  <!-- ==================== TOAST LIVE REGION ==================== -->
+  <!-- ==================== TOAST ==================== -->
   <div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
 
   <script src="app.js"></script>

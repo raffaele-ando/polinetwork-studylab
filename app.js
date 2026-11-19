@@ -15,18 +15,15 @@
   let readerDocFilter = "all";
   let readerStatusFilter = "all";
   let readerSecId = null;
-  let readerMode = "read"; // "read" | "cloze"
+  let readerMode = "read";
   let returnStack = [];
 
-  // Practice hub state
   let practiceMode = "flashcards";
   let practiceClozeSecId = null;
 
-  // Active Cloze controller handles (separate recalled vs passively revealed!)
   let inlineClozeCtrl = null;
   let practiceClozeCtrl = null;
 
-  // Flashcards state
   let fcQueue = [];
   let fcTotalSession = 0;
   let fcCompletedSession = 0;
@@ -34,7 +31,6 @@
   let fcLastAction = null;
   let fcCustomContext = null;
 
-  // Quiz state
   let qzQueue = [];
   let qzIdx = 0;
   let qzCorrect = 0;
@@ -42,21 +38,20 @@
   let qzAnswered = false;
   let qzCustomContext = null;
 
-  // Reference & Lightbox state
   let csTab = "timeline";
   let lbGallery = [];
   let lbIdx = 0;
 
-  // Search & Focus Trap state
   let gsResults = [];
   let gsActiveIdx = -1;
   let lastFocusedEl = null;
   let activeTrapContainer = null;
 
   const DOC_SHORT = { statuto: "Statuto", rri: "RRI", elettorale: "Elettorale" };
+  const DOC_CLEAN = { statuto: "Statuto", rri: "Regolamenti Interni", elettorale: "Regolamento Elettorale" };
   const STATUS_LABELS = ["Da studiare", "In corso", "Imparato", "A memoria"];
-  const MODE_LABELS = { all: "Tutte", blitz: "Blitz Numeri", mc: "Normativa", scenario: "Scenari" };
-  const MODE_LABELS_FULL = { all: "Tutte le tipologie", blitz: "Blitz Numeri", mc: "Normativa", scenario: "Scenari Pratici" };
+  const MODE_LABELS = { all: "Tutte", blitz: "Blitz", mc: "Normativa", scenario: "Scenari" };
+  const MONTHS_IT = ["GEN", "FEB", "MAR", "APR", "MAG", "GIU", "LUG", "AGO", "SET", "OTT", "NOV", "DIC"];
 
   const DIAGRAM_LABELS = {
     "21": "Allegato D — Modulo Candidatura Direttivo",
@@ -64,10 +59,18 @@
     "25": "Allegato G — Timeline dei Tempi (2/4)",
     "26": "Allegato G — Timeline dei Tempi (3/4)",
     "27": "Allegato G — Timeline dei Tempi (4/4)",
-    "28": "Allegato H — Schema dello Scrutinio STV (1/2)",
-    "29": "Allegato H — Schema dello Scrutinio STV (2/2)",
+    "28": "Allegato H — Schema Scrutinio STV (1/2)",
+    "29": "Allegato H — Schema Scrutinio STV (2/2)",
     "32": "Allegato K — Processo Elettorale per Attore (1/2)",
     "33": "Allegato K — Processo Elettorale per Attore (2/2)",
+  };
+
+  const CS_PLACEHOLDERS = {
+    timeline: "Filtra cronoprogramma…",
+    quorums: "Filtra quorum…",
+    organs: "Filtra organi…",
+    deadlines: "Filtra scadenze…",
+    diagrams: "Filtra schemi PDF…",
   };
 
   const STOPWORDS = new Set([
@@ -142,17 +145,17 @@
     return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[’'“”".,;:()]/g, "").trim();
   }
 
-  function showToast(msg, kind = "info") {
+  function showToast(msg) {
     const region = document.getElementById("toastRegion");
     const el = document.createElement("div");
-    el.className = `toast ${kind}`;
+    el.className = "toast";
     el.textContent = msg;
     region.appendChild(el);
     setTimeout(() => {
       el.style.opacity = "0";
       el.style.transition = "opacity 0.2s";
       setTimeout(() => el.remove(), 220);
-    }, 2600);
+    }, 2200);
   }
 
   function parseItalianDate(str) {
@@ -174,9 +177,9 @@
     return `Tra ${Math.max(1, m)} min`;
   }
 
-  function formatInterval(days) {
-    if (days <= 0) return "Rivedi ora";
-    return days === 1 ? "1 giorno" : `${days} giorni`;
+  function formatShortInterval(days) {
+    if (days <= 0) return "Ora";
+    return `${days}g`;
   }
 
   function formatSourceCitation(refId) {
@@ -187,8 +190,14 @@
 
   function formatOperators(str) {
     return String(str)
+      .replace(/\s*->\s*/g, "\u00A0→ ")
+      .replace(/\s*→\s*/g, "\u00A0→ ")
       .replace(/([≥≤><])\s*(\d)/g, "$1\u00A0$2")
       .replace(/\([^)]{1,28}\)/g, m => m.replace(/ /g, "\u00A0"));
+  }
+
+  function formatArrows(str) {
+    return String(str || "").replace(/\s*(?:->|→)\s*/g, "\u00A0→ ");
   }
 
   function highlightQuery(text, query) {
@@ -199,13 +208,6 @@
     return safe.replace(new RegExp(`(${escapedQ})`, "gi"), '<mark class="search-hit">$1</mark>');
   }
 
-  function formatQuizScore() {
-    const okWord = qzCorrect === 1 ? "esatta" : "esatte";
-    const badWord = qzWrong.length === 1 ? "errata" : "errate";
-    return `<span class="score-full">${qzCorrect} ${okWord} · ${qzWrong.length} ${badWord}</span><span class="score-short" aria-hidden="true">✓ ${qzCorrect} · ✕ ${qzWrong.length}</span>`;
-  }
-
-  // ==================== PURE SM-2 ENGINE ====================
   function computeNextSM2(prev, quality) {
     const base = prev || { reps: 0, interval: 0, ef: 2.5 };
     let { reps, interval, ef } = base;
@@ -234,7 +236,7 @@
     return { reps, interval, ef: Number(ef.toFixed(2)), nextReview: Date.now() + interval * 86400000 };
   }
 
-  // ==================== FOCUS TRAP (WCAG 2.2 AA) ====================
+  // ==================== FOCUS TRAP ====================
   function getFocusable(container) {
     return Array.from(container.querySelectorAll(
       'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
@@ -247,17 +249,13 @@
     if (!focusables.length) return;
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
-    if (e.shiftKey && document.activeElement === first) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && document.activeElement === last) {
-      e.preventDefault();
-      first.focus();
-    }
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   }
 
   // ==================== INIT ====================
   async function init() {
+    document.body.dataset.view = "overview";
     applyTheme(state.theme);
     applyReaderScale(state.readerScale);
     applySavedPrefsToControls();
@@ -301,12 +299,12 @@
 
     applyRouteFromHash();
     window.addEventListener("hashchange", applyRouteFromHash);
-    setInterval(renderDeadlineStrip, 60000);
+    setInterval(renderDeadlineCard, 60000);
   }
 
   function applySavedPrefsToControls() {
     const p = state.prefs;
-    document.getElementById("toggleHighlightNums").checked = p.highlightNums !== false;
+    syncNumsToggleUI(p.highlightNums !== false);
     document.getElementById("inlineClozeLevel").value = p.clozeLevel || "1";
     document.getElementById("clozeLevelSelect").value = p.clozeLevel || "1";
     document.getElementById("inlineClozeInput").value = p.clozeInputMode || "click";
@@ -314,64 +312,76 @@
     document.getElementById("fcDeckMode").value = p.fcDeckMode || "curated";
   }
 
+  function syncNumsToggleUI(on) {
+    const btn = document.getElementById("btnToggleNums");
+    if (!btn) return;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    const lbl = document.getElementById("numsToggleLabel");
+    if (lbl) lbl.textContent = on ? "Numeri attivi" : "Numeri spenti";
+    else btn.textContent = on ? "Numeri attivi" : "Numeri spenti";
+  }
+
   function syncDynamicOptionLabels() {
     const nCur = PACK.flashcards.length;
     const nArt = CLOZEABLE_SECTIONS.length;
     const deckSel = document.getElementById("fcDeckMode");
-    deckSel.options[0].textContent = `Alta Resa (${nCur} schede)`;
-    deckSel.options[1].textContent = `Tutti gli Articoli (${nArt} sezioni)`;
-    deckSel.options[2].textContent = `Mazzo Completo (${nCur + nArt} schede)`;
+    deckSel.options[0].textContent = `Schede chiave (${nCur})`;
+    deckSel.options[1].textContent = `Tutti gli articoli (${nArt})`;
+    deckSel.options[2].textContent = `Completo (${nCur + nArt})`;
 
     const nAll = PACK.quizzes.length;
     const nBlitz = PACK.quizzes.filter(q => q.mode === "blitz").length;
     const nMc = PACK.quizzes.filter(q => q.mode === "mc").length;
     const nScen = PACK.quizzes.filter(q => q.mode === "scenario").length;
     const qzSel = document.getElementById("qzModeFilter");
-    qzSel.options[0].textContent = `Tutte le modalità (${nAll})`;
-    qzSel.options[1].textContent = `Blitz Numeri & Quorum (${nBlitz})`;
+    qzSel.options[0].textContent = `Tutte (${nAll})`;
+    qzSel.options[1].textContent = `Blitz Numeri (${nBlitz})`;
     qzSel.options[2].textContent = `Normativa (${nMc})`;
-    qzSel.options[3].textContent = `Scenari Pratici (${nScen})`;
-
-    const cs = PACK.cheatsheet;
-    const map = {
-      quorums: `Quorum (${cs.quorums.length})`,
-      organs: `Organi (${cs.organs.length})`,
-      deadlines: `Scadenze (${cs.keyDeadlines.length})`,
-    };
-    document.querySelectorAll("#csTabs .rail-tab").forEach(t => {
-      if (map[t.dataset.cs]) t.textContent = map[t.dataset.cs];
-    });
+    qzSel.options[3].textContent = `Scenari (${nScen})`;
   }
 
   function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", theme === "dark" ? "#0d1017" : "#f6f5f0");
-    const icon = document.getElementById("iconTheme");
-    if (icon) {
-      icon.innerHTML = theme === "dark"
-        ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>'
-        : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-    }
+    if (meta) meta.setAttribute("content", theme === "dark" ? "#000000" : "#f2f2f7");
+    const svg = theme === "dark"
+      ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>'
+      : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+    ["iconTheme", "iconThemeMobile"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = svg;
+    });
   }
 
   function applyReaderScale(scale) {
-    state.readerScale = Number(Math.max(0.85, Math.min(1.3, Number(scale) || 1)).toFixed(2));
+    state.readerScale = Number(Math.max(0.88, Math.min(1.28, Number(scale) || 1)).toFixed(2));
     document.documentElement.style.setProperty("--reader-scale", state.readerScale);
+    const valEl = document.getElementById("fontScaleVal");
+    if (valEl) valEl.textContent = `${Math.round(state.readerScale * 100)}%`;
   }
 
-  // ==================== CROSS-VIEW SYNC & ROUTING ====================
+  function closeFontPopover() {
+    const pop = document.getElementById("fontPopover");
+    const btn = document.getElementById("btnFontCycle");
+    if (pop && !pop.classList.contains("hidden")) {
+      pop.classList.add("hidden");
+      if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  // ==================== ROUTING & VIEW SYNC ====================
   function syncAllViewsForStateChange(affectedSecId = null) {
     updateDueBadges();
     if (affectedSecId) {
       syncReaderSidebarDots();
       if (readerSecId === affectedSecId) {
-        const cur = state.mastery[affectedSecId] || 0;
-        document.querySelectorAll("#readerMasteryBtns .m-chip").forEach(b => {
-          const act = Number(b.dataset.status) === cur;
-          b.classList.toggle("active", act);
-          b.setAttribute("aria-pressed", act ? "true" : "false");
-        });
+        const sel = document.getElementById("readerMasterySelect");
+        if (sel) {
+          const v = String(state.mastery[affectedSecId] || 0);
+          sel.value = v;
+          sel.dataset.mastery = v;
+        }
       }
       const sec = SECTION_MAP.get(affectedSecId);
       if (sec && document.getElementById("clozeDocSelect").value === sec.doc) {
@@ -388,11 +398,13 @@
   function switchView(viewName, opts = {}) {
     if (!["overview", "reader", "practice", "reference"].includes(viewName)) viewName = "overview";
     currentView = viewName;
+    document.body.dataset.view = viewName;
+    closeFontPopover();
 
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(`view-${viewName}`)?.classList.add("active");
 
-    document.querySelectorAll("#desktopNav .nav-tab, #mobileNav .bnav-btn").forEach(btn => {
+    document.querySelectorAll("#desktopNav .nav-tab, #mobileNav .fnav-btn").forEach(btn => {
       const act = btn.dataset.view === viewName;
       btn.classList.toggle("active", act);
       if (act) btn.setAttribute("aria-current", "page");
@@ -401,9 +413,7 @@
 
     if (viewName === "overview") renderOverview();
     else if (viewName === "reader") syncReaderSidebarDots();
-    else if (viewName === "practice") {
-      populatePracticeClozeSecSelect(document.getElementById("clozeDocSelect").value);
-    }
+    else if (viewName === "practice") populatePracticeClozeSecSelect(document.getElementById("clozeDocSelect").value);
 
     if (!opts.skipHash) {
       if (viewName === "reader" && readerSecId) setHash(`reader/${readerSecId}${readerMode === "cloze" ? "/cloze" : ""}`);
@@ -417,7 +427,7 @@
   function switchPracticeMode(mode, opts = {}) {
     if (!["flashcards", "quiz", "cloze"].includes(mode)) mode = "flashcards";
     practiceMode = mode;
-    document.querySelectorAll("#practiceModeSwitch .seg-btn").forEach(b => {
+    document.querySelectorAll("#practiceModeSwitch .ios-seg-btn").forEach(b => {
       const act = b.dataset.pmode === mode;
       b.classList.toggle("active", act);
       b.setAttribute("aria-selected", act ? "true" : "false");
@@ -429,6 +439,7 @@
     if (!opts.skipHash && currentView === "practice") {
       setHash(`practice/${practiceMode}${practiceMode === "cloze" && practiceClozeSecId ? `/${practiceClozeSecId}` : ""}`);
     }
+    if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function applyRouteFromHash() {
@@ -445,7 +456,7 @@
       if (p1 === "cloze" && p2 && SECTION_MAP.has(p2)) openPracticeClozeArticle(p2, { skipHash: true });
       else switchView("practice", { skipHash: true });
     } else if (head === "reference" || head === "cheatsheet") {
-      if (p1 && document.querySelector(`#csTabs .rail-tab[data-cs="${p1}"]`)) {
+      if (p1 && document.querySelector(`#csTabs .ref-pill[data-cs="${p1}"]`)) {
         csTab = p1;
         syncCsTabs();
         renderReference();
@@ -485,7 +496,7 @@
   function openPracticeClozeArticle(secId, opts = {}) {
     const sec = SECTION_MAP.get(secId);
     if (!sec || !CLOZEABLE_SECTIONS.some(s => s.id === secId)) {
-      showToast("Seleziona un articolo normativo.", "warn");
+      showToast("Seleziona un articolo normativo.");
       return;
     }
     practiceClozeSecId = secId;
@@ -497,18 +508,25 @@
     switchView("practice", opts);
   }
 
-  // ==================== 1. PANORAMICA ====================
-  function updateDueBadges() {
-    const due = countDueCards("curated");
-    document.getElementById("navDueBadge").textContent = due;
-    document.getElementById("practiceDuePill").textContent = due;
-    const mb = document.getElementById("mobileDueBadge");
-    mb.textContent = due;
-    mb.classList.toggle("hidden", due === 0);
-    return due;
+  // ==================== 1. STUDIO (HOME) ====================
+  function countTrulyDueReviewed() {
+    const now = Date.now();
+    return PACK.flashcards.filter(c => state.sm2[c.id] && now >= state.sm2[c.id].nextReview).length;
   }
 
-  function renderDeadlineStrip() {
+  function updateDueBadges() {
+    const dueReviewed = countTrulyDueReviewed();
+    const navB = document.getElementById("navDueBadge");
+    if (navB) {
+      navB.textContent = dueReviewed;
+      navB.classList.toggle("hidden", dueReviewed === 0);
+    }
+    const mb = document.getElementById("mobileDueBadge");
+    if (mb) mb.classList.toggle("hidden", dueReviewed === 0);
+    return dueReviewed;
+  }
+
+  function renderDeadlineCard() {
     const now = Date.now();
     const list = PACK.cheatsheet.timeline2026;
     let nextItem = null;
@@ -519,193 +537,144 @@
         break;
       }
     }
-    const kicker = document.getElementById("deadlineKicker");
-    const text = document.getElementById("deadlineText");
-    const cd = document.getElementById("deadlineCountdown");
+    const monthEl = document.getElementById("calMonth");
+    const dayEl = document.getElementById("calDay");
+    const titleEl = document.getElementById("deadlineText");
+    const cdEl = document.getElementById("deadlineCountdown");
+    const footRow = document.getElementById("deadlineFootRow");
     const artBtn = document.getElementById("btnDeadlineArticle");
+    const artLbl = document.getElementById("deadlineArticleLabel");
 
     if (nextItem) {
-      const isElec = nextItem.date.startsWith("21/11/2026") && nextItem.event.includes("ASSEMBLEA");
-      kicker.textContent = isElec ? "ASSEMBLEA ELETTIVA · 21/11/2026" : `PROSSIMA SCADENZA · ${nextItem.date}`;
-      text.textContent = nextItem.event;
-      cd.textContent = formatCountdown(nextItem.dt.getTime() - now);
+      monthEl.textContent = MONTHS_IT[nextItem.dt.getMonth()];
+      dayEl.textContent = String(nextItem.dt.getDate());
+      titleEl.textContent = nextItem.event;
+      cdEl.textContent = formatCountdown(nextItem.dt.getTime() - now);
       if (nextItem.ref && SECTION_MAP.has(nextItem.ref)) {
-        artBtn.classList.remove("hidden");
+        footRow.classList.remove("hidden");
+        artLbl.textContent = `Norma · ${formatSourceCitation(nextItem.ref).replace(/Art\.\s+/, "Art.\u00A0")}`;
         artBtn.onclick = () => openArticle(nextItem.ref, {
-          returnTo: { type: "overview", label: "Panoramica", reason: "Scadenza elettorale" },
+          returnTo: { type: "overview", label: "Studio", reason: "Scadenza elettorale" },
         });
       } else {
-        artBtn.classList.add("hidden");
+        footRow.classList.add("hidden");
       }
     } else {
-      kicker.textContent = "CRONOPROGRAMMA ELEZIONI 2026";
-      text.textContent = "Tutte le scadenze del ciclo elettorale 2026 risultano concluse.";
-      cd.textContent = "Concluso";
-      artBtn.classList.add("hidden");
+      monthEl.textContent = "NOV";
+      dayEl.textContent = "21";
+      titleEl.textContent = "Elezioni Direttivo 2026";
+      cdEl.textContent = "Programma completo";
+      footRow.classList.add("hidden");
     }
   }
 
   function renderOverview() {
-    let scoreSum = 0, nTodo = 0, nWip = 0, nLearned = 0, nMem = 0;
+    let scoreSum = 0, nLearned = 0, nMem = 0;
     let firstWipSec = null;
     for (const s of STUDYABLE_SECTIONS) {
       const m = state.mastery[s.id] || 0;
       scoreSum += m;
-      if (m === 0) nTodo++;
-      else if (m === 1) { nWip++; if (!firstWipSec) firstWipSec = s; }
-      else if (m === 2) nLearned++;
-      else nMem++;
+      if (m === 1 && !firstWipSec) firstWipSec = s;
+      if (m === 2) nLearned++;
+      if (m === 3) nMem++;
     }
     const pct = Math.round((scoreSum / (STUDYABLE_SECTIONS.length * 3 || 1)) * 100);
-    const due = updateDueBadges();
+    const dueReviewed = updateDueBadges();
     const qzMast = Object.keys(state.quizMastered).filter(k => state.quizMastered[k]).length;
     const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k] && SECTION_MAP.has(k)).length;
 
-    document.getElementById("overviewEyebrowMeta").textContent =
-      `3 DOCUMENTI · ${STUDYABLE_SECTIONS.length} SEZIONI`;
-    document.getElementById("corpusTotalsMeta").textContent =
-      `${CORPUS.documents.reduce((a, d) => a + d.pages, 0)} pagine · ${STUDYABLE_SECTIONS.length} sezioni normative`;
-
     document.getElementById("overallPct").textContent = `${pct}%`;
-    const circ = 2 * Math.PI * 50;
+    const circ = 2 * Math.PI * 23;
     const ringEl = document.getElementById("overallRing");
     ringEl.style.strokeDashoffset = circ * (1 - pct / 100);
     ringEl.style.opacity = pct === 0 ? "0" : "1";
 
-    document.getElementById("legMem").textContent = nMem;
-    document.getElementById("legLearned").textContent = nLearned;
-    document.getElementById("legWip").textContent = nWip;
-    document.getElementById("legTodo").textContent = nTodo;
+    const focusSec = firstWipSec || SECTION_MAP.get(readerSecId) || STUDYABLE_SECTIONS[0];
+    const words = focusSec?.text ? focusSec.text.trim().split(/\s+/).filter(Boolean).length : 0;
+    const mins = Math.max(1, Math.ceil(words / 180));
 
+    const kickerEl = document.getElementById("nextBestKicker");
+    const titleEl = document.getElementById("nextBestTitle");
+    const subEl = document.getElementById("nextBestSub");
     const nextBtn = document.getElementById("btnNextBestAction");
     const nextLbl = document.getElementById("nextBestLabel");
-    const quickFcBtn = document.getElementById("btnQuickFlashcards");
-    const advice = document.getElementById("briefingAdvice");
-    const hasStarted = (nWip + nLearned + nMem > 0) || state.quizStats.total > 0 || Object.keys(state.sm2).length > 0;
-    let primaryIsFlashcards = false;
 
-    if (firstWipSec) {
-      nextLbl.textContent = `Continua ${firstWipSec.code}`;
-      advice.textContent = `Hai in corso «${firstWipSec.code} — ${firstWipSec.title}» (${DOC_SHORT[firstWipSec.doc]}). Riprendi la lettura o passa al Cloze (testo a scomparsa) per fissarlo a memoria.`;
-      nextBtn.onclick = () => openArticle(firstWipSec.id);
-    } else if (hasStarted && due > 0) {
-      primaryIsFlashcards = true;
-      nextLbl.textContent = `Ripassa ${due} flashcard`;
-      advice.textContent = `Hai ${due} flashcard pronte per il ripasso programmato oggi: rivederle ora rafforza la memoria a lungo termine.`;
+    if (dueReviewed > 0) {
+      kickerEl.textContent = "Ripasso di oggi";
+      titleEl.textContent = `${dueReviewed} flashcard pronte`;
+      subEl.textContent = "Ripetizione dilazionata SM-2";
+      nextLbl.textContent = "Avvia ripasso";
       nextBtn.onclick = () => {
         document.getElementById("fcOnlyDue").checked = true;
         buildFcQueue(false);
         switchPracticeMode("flashcards");
         switchView("practice");
       };
-    } else if (hasStarted) {
-      nextLbl.textContent = "Apri Normativa";
-      advice.textContent = `${nLearned + nMem} sezioni consolidate su ${STUDYABLE_SECTIONS.length} e ${qzMast}/${PACK.quizzes.length} domande quiz superate.`;
-      nextBtn.onclick = () => openArticle(readerSecId || STUDYABLE_SECTIONS[0].id);
+    } else if (firstWipSec) {
+      kickerEl.textContent = "Continua da qui";
+      titleEl.textContent = `${firstWipSec.code.replace(/\s+/g, "\u00A0")} ·\u00A0${firstWipSec.title}`;
+      subEl.textContent = `${DOC_SHORT[firstWipSec.doc]} · ${mins} min`;
+      nextLbl.textContent = "Riprendi lettura";
+      nextBtn.onclick = () => openArticle(firstWipSec.id);
     } else {
-      nextLbl.textContent = "Inizia dallo Statuto";
-      advice.textContent = "Consulta il testo ufficiale con numeri e quorum evidenziati, esercitati con il Cloze (testo a scomparsa) sullo stesso articolo e consolida con flashcard e quiz.";
-      nextBtn.onclick = () => openArticle(STUDYABLE_SECTIONS[0].id);
-    }
-
-    if (primaryIsFlashcards) {
-      quickFcBtn.textContent = "Apri Normativa";
-      quickFcBtn.onclick = () => openArticle(readerSecId || STUDYABLE_SECTIONS[0].id);
-    } else {
-      quickFcBtn.textContent = "Ripassa Flashcard";
-      quickFcBtn.onclick = () => {
-        switchPracticeMode("flashcards");
-        switchView("practice");
-      };
+      kickerEl.textContent = "Prossimo passo";
+      titleEl.textContent = `${focusSec.code.replace(/\s+/g, "\u00A0")} ·\u00A0${focusSec.title}`;
+      subEl.textContent = `${DOC_SHORT[focusSec.doc]} · ${mins} min`;
+      nextLbl.textContent = state.lastSecId ? "Riprendi lettura" : "Inizia lettura";
+      nextBtn.onclick = () => openArticle(focusSec.id);
     }
 
     document.getElementById("statSections").textContent = `${nLearned + nMem} / ${STUDYABLE_SECTIONS.length}`;
-    document.getElementById("statSectionsHint").textContent = `${nMem} a memoria · ${nWip} in corso`;
-
-    document.getElementById("statDue").textContent = due;
-    document.getElementById("statDueHint").textContent = `Su ${PACK.flashcards.length} chiave + ${CLOZEABLE_SECTIONS.length} articoli`;
-
     document.getElementById("statQuizMastered").textContent = `${qzMast} / ${PACK.quizzes.length}`;
-    if (state.quizStats.total > 0) {
-      const acc = Math.round((state.quizStats.correct / state.quizStats.total) * 100);
-      document.getElementById("statQuizAcc").textContent = `Precisione storica ${acc}% (${state.quizStats.correct}/${state.quizStats.total})`;
-    } else {
-      document.getElementById("statQuizAcc").textContent = "0 risposte registrate";
-    }
-
     document.getElementById("statBookmarks").textContent = bmCount;
-    document.getElementById("statBookmarksHint").textContent = bmCount > 0
-      ? "Apri gli articoli contrassegnati"
-      : "Segna gli articoli chiave";
 
-    renderDeadlineStrip();
+    renderDeadlineCard();
+
+    const docIcons = {
+      statuto: { cls: "blue", svg: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>', subExtra: "" },
+      rri: { cls: "indigo", svg: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>', subExtra: "" },
+      elettorale: { cls: "green", svg: '<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>', subExtra: " · Schemi STV" },
+    };
 
     const listEl = document.getElementById("docList");
     listEl.innerHTML = "";
     for (const doc of CORPUS.documents) {
       const secs = doc.sections.filter(s => s.text && s.text.trim().length > 0);
-      const dWip = secs.filter(s => (state.mastery[s.id] || 0) === 1).length;
-      const dOk = secs.filter(s => (state.mastery[s.id] || 0) === 2).length;
-      const dMem = secs.filter(s => (state.mastery[s.id] || 0) === 3).length;
-      const dPct = Math.round(((dWip + dOk * 2 + dMem * 3) / (secs.length * 3 || 1)) * 100);
-      const firstSec = secs[0]?.id;
-      const firstCloze = secs.find(s => s.text.trim().length > 20 && s.id !== "el-b-1")?.id || firstSec;
+      const dScore = secs.reduce((acc, s) => acc + (state.mastery[s.id] || 0), 0);
+      const dPct = Math.round((dScore / (secs.length * 3 || 1)) * 100);
+      const ic = docIcons[doc.id] || docIcons.statuto;
+      const unit = doc.id === "statuto" ? "articoli" : "sezioni";
 
-      const row = document.createElement("div");
-      row.className = "doc-row";
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "doc-item";
       row.innerHTML = `
-        <div>
-          <div class="doc-row-title">${esc(doc.title)}</div>
-          <div class="doc-row-meta">${doc.pages} pagine · ${secs.length} sezioni normative · ${dMem} a memoria</div>
-        </div>
-        <div class="doc-row-prog">
-          <div class="doc-prog-head"><span>Avanzamento</span><strong>${dPct}%</strong></div>
-          <div class="stacked-bar">
-            <div class="seg-mem" style="width:${(dMem / secs.length) * 100}%"></div>
-            <div class="seg-ok" style="width:${(dOk / secs.length) * 100}%"></div>
-            <div class="seg-wip" style="width:${(dWip / secs.length) * 100}%"></div>
-          </div>
-        </div>
-        <div class="doc-row-actions">
-          <button type="button" class="btn small secondary" data-doc-read="${doc.id}">Leggi</button>
-          <button type="button" class="btn small secondary" data-doc-cloze="${firstCloze}">Cloze</button>
-          <button type="button" class="btn small secondary" data-doc-quiz="${doc.id}">Quiz</button>
-        </div>
+        <span class="doc-sq ${ic.cls}" aria-hidden="true"><svg class="ic sm" viewBox="0 0 24 24">${ic.svg}</svg></span>
+        <span class="doc-info">
+          <div class="doc-name">${esc(DOC_CLEAN[doc.id] || doc.title)}</div>
+          <div class="doc-sub">${secs.length} ${unit}${ic.subExtra}</div>
+        </span>
+        <span class="doc-right">
+          ${dPct > 0 ? `<span class="doc-pct">${dPct}%</span>` : ""}
+          <svg class="ic chev-right" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+        </span>
       `;
-      listEl.appendChild(row);
-    }
-
-    listEl.querySelectorAll("[data-doc-read]").forEach(b => {
-      b.addEventListener("click", () => {
-        const docId = b.dataset.docRead;
-        readerDocFilter = docId;
+      row.addEventListener("click", () => {
+        readerDocFilter = doc.id;
         readerStatusFilter = "all";
         document.getElementById("readerStatusFilter").value = "all";
         syncReaderDocPills();
         renderReaderSidebar();
-        const first = ALL_SECTIONS.find(s => s.doc === docId && s.text?.trim()) || ALL_SECTIONS.find(s => s.doc === docId);
+        const first = ALL_SECTIONS.find(s => s.doc === doc.id && s.text?.trim()) || ALL_SECTIONS.find(s => s.doc === doc.id);
         if (first) openArticle(first.id, { mode: "read" });
       });
-    });
-    listEl.querySelectorAll("[data-doc-cloze]").forEach(b => {
-      b.addEventListener("click", () => openArticle(b.dataset.docCloze, { mode: "cloze" }));
-    });
-    listEl.querySelectorAll("[data-doc-quiz]").forEach(b => {
-      b.addEventListener("click", () => {
-        qzCustomContext = null;
-        document.getElementById("qzDocFilter").value = b.dataset.docQuiz;
-        document.getElementById("qzModeFilter").value = "all";
-        document.getElementById("qzOnlyUnmastered").checked = false;
-        startQuiz();
-        switchPracticeMode("quiz");
-        switchView("practice");
-      });
-    });
+      listEl.appendChild(row);
+    }
   }
 
-  // ==================== 2. NORMATIVA (READER + INLINE A MEMORIA) ====================
+  // ==================== 2. NORME (READER + INLINE CLOZE) ====================
   function syncReaderDocPills() {
-    document.querySelectorAll("#readerDocPills .seg-btn").forEach(b => {
+    document.querySelectorAll("#readerDocPills .ios-seg-btn").forEach(b => {
       const act = b.dataset.doc === readerDocFilter;
       b.classList.toggle("active", act);
       b.setAttribute("aria-selected", act ? "true" : "false");
@@ -718,16 +687,16 @@
     clozeTab.disabled = !canCloze;
     if (!canCloze) readerMode = "read";
 
-    document.querySelectorAll("#readerModeSwitch .seg-btn").forEach(b => {
+    document.querySelectorAll("#readerModeSwitch .ios-seg-btn").forEach(b => {
       const act = b.dataset.rmode === readerMode;
       b.classList.toggle("active", act);
       b.setAttribute("aria-selected", act ? "true" : "false");
     });
     document.getElementById("readerReadPane").classList.toggle("hidden", readerMode !== "read");
     document.getElementById("readerClozePane").classList.toggle("hidden", readerMode !== "cloze");
-    document.getElementById("toggleHighlightWrap").classList.toggle("hidden", readerMode !== "read");
+    document.getElementById("btnToggleNums").classList.toggle("hidden", readerMode !== "read");
     document.getElementById("btnSwitchInlineCloze").textContent =
-      readerMode === "read" ? "Avvia Cloze" : "Torna a Lettura";
+      readerMode === "read" ? "Allenati in Cloze" : "Torna alla lettura";
   }
 
   function getFilteredReaderSections() {
@@ -752,15 +721,10 @@
     list.innerHTML = "";
 
     if (!secs.length) {
-      list.innerHTML = `<p class="muted small" style="padding:1rem;">Nessun articolo corrisponde ai filtri attivi.</p>`;
+      list.innerHTML = `<p class="muted small" style="padding:1rem;">Nessun articolo trovato.</p>`;
       return;
     }
 
-    const DOC_GROUP_TITLES = {
-      statuto: "Statuto",
-      rri: "Regolamenti Interni (RRI)",
-      elettorale: "Reg. Elettorale 2026",
-    };
     const showDocHeaders = readerDocFilter === "all";
     const docStudyCounts = {};
     if (showDocHeaders) {
@@ -777,7 +741,7 @@
         const hdr = document.createElement("div");
         hdr.className = "toc-doc-header";
         hdr.setAttribute("role", "presentation");
-        hdr.innerHTML = `<span>${esc(DOC_GROUP_TITLES[s.doc] || s.doc)}</span><span>${docStudyCounts[s.doc] || 0} sez.</span>`;
+        hdr.innerHTML = `<span>${esc(DOC_CLEAN[s.doc] || s.doc)}</span><span>${docStudyCounts[s.doc] || 0}</span>`;
         frag.appendChild(hdr);
       }
       const m = state.mastery[s.id] || 0;
@@ -787,10 +751,10 @@
       btn.dataset.secId = s.id;
       btn.className = `toc-item lvl-${s.level} ${isContainer ? "is-group" : ""} ${s.id === readerSecId ? "active" : ""}`;
       btn.innerHTML = `
-        <span class="${isContainer ? "dot" : `dot s${m}`}" aria-hidden="true"></span>
+        <span class="toc-dot ${isContainer ? "" : `s${m}`}" aria-hidden="true"></span>
         <span class="toc-code">${esc(s.num || s.code)}</span>
         <span class="toc-title" title="${esc(s.title)}">${esc(s.title)}</span>
-        ${state.bookmarks[s.id] ? '<span class="toc-star" aria-label="Segnalibro">★</span>' : ""}
+        ${state.bookmarks[s.id] ? '<span class="toc-star" aria-label="Salvato">★</span>' : ""}
       `;
       btn.addEventListener("click", () => {
         returnStack = [];
@@ -810,8 +774,8 @@
       const isTarget = id === readerSecId;
       el.classList.toggle("active", isTarget);
       if (sec?.text?.trim()) {
-        const dot = el.querySelector(".dot");
-        if (dot) dot.className = `dot s${state.mastery[id] || 0}`;
+        const dot = el.querySelector(".toc-dot");
+        if (dot) dot.className = `toc-dot s${state.mastery[id] || 0}`;
       }
       const isBm = !!state.bookmarks[id];
       let star = el.querySelector(".toc-star");
@@ -854,7 +818,7 @@
 
   function formatLegalText(rawText, currentDoc) {
     let html = esc(rawText);
-    if (document.getElementById("toggleHighlightNums")?.checked) {
+    if (state.prefs.highlightNums !== false) {
       const numPattern = /(\b\d{1,2}\/\d{1,2}\/\d{4}\b|\b\d{1,2}:\d{2}\b|€\s?\d+(?:,\d{2})?|\b\d+(?:,\d+)?\s*(?:giorni|giorno|ore|ora|mesi|mese|anni|anno|minuti|minuto|settimane|settimana|crediti|credito|ammonizioni|deleghe|seggi|membri|persone|candidati|semestri|semestre|volte)\b|\b(?:maggioranza assoluta|maggioranza semplice|unanimità|tre quarti|due terzi|un terzo|un sesto|metà più uno|⅔|½|⅙|3\/4|2\/3|1\/3|1\/2)\b|\b(?:trenta|novanta|sette|dieci|quindici|ventiquattro|quarantotto|cinque|sei|nove|dodici|quattro|tre|due)\s+(?:giorni|ore|mesi|anni|minuti|settimane|ammonizioni|deleghe|crediti)\b)/gi;
       html = html.replace(numPattern, '<span class="num-hl">$1</span>');
     }
@@ -889,6 +853,7 @@
       chain.unshift(`${p.code} ${p.title}`);
       pId = p.parent;
     }
+    chain.push(`${sec.code} · ${sec.title}`);
     return [...parts, ...chain].join(" › ");
   }
 
@@ -916,40 +881,31 @@
     }
 
     document.getElementById("readerBreadcrumb").textContent = buildBreadcrumb(sec);
-    document.getElementById("readerArtCode").textContent = sec.code;
-    document.getElementById("mobileCurrentCode").textContent = sec.code;
-    document.getElementById("readerArtPage").textContent = `Pag. ${sec.page}`;
+    document.getElementById("readerArtKicker").textContent = `${DOC_SHORT[sec.doc]} · ${sec.code}`;
 
     const words = sec.text ? sec.text.trim().split(/\s+/).filter(Boolean).length : 0;
     const mins = Math.max(1, Math.ceil(words / 180));
-    document.getElementById("readerReadTime").textContent = words ? `~${mins} min · ${words} parole` : "Indice sezione";
+    document.getElementById("readerReadTime").textContent = words ? `· Pag. ${sec.page} · ${mins} min` : `· Pag. ${sec.page}`;
     document.getElementById("readerArtTitle").textContent = sec.title;
 
     document.getElementById("btnBookmarkSec").setAttribute("aria-pressed", state.bookmarks[sec.id] ? "true" : "false");
 
     const isStudyable = !!(sec.text && sec.text.trim().length > 0);
     document.getElementById("readerMasteryWrap").classList.toggle("hidden", !isStudyable);
-    const curStatus = state.mastery[sec.id] || 0;
-    document.querySelectorAll("#readerMasteryBtns .m-chip").forEach(b => {
-      const act = Number(b.dataset.status) === curStatus;
-      b.classList.toggle("active", act);
-      b.setAttribute("aria-pressed", act ? "true" : "false");
-    });
+    const mSel = document.getElementById("readerMasterySelect");
+    const mVal = String(state.mastery[sec.id] || 0);
+    mSel.value = mVal;
+    mSel.dataset.mastery = mVal;
 
     const bodyEl = document.getElementById("readerArtBody");
     bodyEl.innerHTML = "";
     if (!isStudyable) {
       const children = ALL_SECTIONS.filter(s => s.parent === sec.id);
-      const intro = document.createElement("p");
-      intro.className = "muted small";
-      intro.style.marginBottom = "0.75rem";
-      intro.textContent = "Sezione strutturale. Seleziona un articolo o sottosezione:";
-      bodyEl.appendChild(intro);
       for (const ch of children) {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "prose-child-link";
-        btn.innerHTML = `<span class="code-chip">${esc(ch.code)}</span><strong>${esc(ch.title)}</strong>`;
+        btn.innerHTML = `<span><strong>${esc(ch.code)}</strong> · ${esc(ch.title)}</span><svg class="ic chev-right" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>`;
         btn.addEventListener("click", () => renderReaderArticle(ch.id));
         bodyEl.appendChild(btn);
       }
@@ -959,18 +915,29 @@
       pre.textContent = sec.text;
       bodyEl.appendChild(pre);
     } else {
+      let currentSublist = null;
       for (const blk of sec.blocks) {
         const div = document.createElement("div");
         div.className = `prose-block ${blk.type}`;
         div.innerHTML = formatLegalText(blk.text, sec.doc);
-        bodyEl.appendChild(div);
+        if (blk.type === "subitem") {
+          if (!currentSublist) {
+            currentSublist = document.createElement("div");
+            currentSublist.className = "prose-sublist";
+            bodyEl.appendChild(currentSublist);
+          }
+          currentSublist.appendChild(div);
+        } else {
+          currentSublist = null;
+          bodyEl.appendChild(div);
+        }
       }
     }
 
     bodyEl.querySelectorAll(".xref-link").forEach(btn => {
       btn.addEventListener("click", () => {
         openArticle(btn.dataset.jump, {
-          returnTo: { type: "article", target: sec.id, label: `${sec.code} (${DOC_SHORT[sec.doc]})`, reason: "Rimando normativo" },
+          returnTo: { type: "article", target: sec.id, label: `${sec.code} (${DOC_SHORT[sec.doc]})`, reason: "Rimando" },
         });
       });
     });
@@ -983,7 +950,7 @@
         const card = document.createElement("button");
         card.type = "button";
         card.className = "pdf-card";
-        card.innerHTML = `<img src="${src}" alt="Schema pagina PDF ${sec.code}" loading="lazy" /><div class="pdf-card-cap">Ingrandisci schema — ${src.split("/").pop()}</div>`;
+        card.innerHTML = `<img src="${src}" alt="Schema PDF ${sec.code}" loading="lazy" /><div class="pdf-card-cap">Apri schema · ${src.split("/").pop()}</div>`;
         card.addEventListener("click", () => openLightbox(gallery, i));
         imgWrap.appendChild(card);
       });
@@ -1003,7 +970,6 @@
     document.getElementById("btnArticleQuiz").classList.toggle("hidden", relQzs.length === 0);
     document.getElementById("artQzCount").textContent = relQzs.length;
 
-    // Prev / Next skip empty structural container headings for smooth continuous reading!
     const filteredStudyable = getFilteredReaderSections().filter(s => s.text && s.text.trim().length > 0);
     const pool = filteredStudyable.some(s => s.id === secId) ? filteredStudyable : STUDYABLE_SECTIONS;
     const idx = pool.findIndex(s => s.id === secId);
@@ -1012,7 +978,6 @@
       prev = idx > 0 ? pool[idx - 1] : null;
       next = idx < pool.length - 1 ? pool[idx + 1] : null;
     } else {
-      // Currently on an empty container: next goes to first child article
       const allIdx = ALL_SECTIONS.findIndex(s => s.id === secId);
       for (let i = allIdx - 1; i >= 0; i--) if (ALL_SECTIONS[i].text?.trim()) { prev = ALL_SECTIONS[i]; break; }
       for (let i = allIdx + 1; i < ALL_SECTIONS.length; i++) if (ALL_SECTIONS[i].text?.trim()) { next = ALL_SECTIONS[i]; break; }
@@ -1020,17 +985,15 @@
 
     const btnPrev = document.getElementById("btnPrevSec");
     const btnNext = document.getElementById("btnNextSec");
-    const btnMPrev = document.getElementById("btnMobilePrev");
-    const btnMNext = document.getElementById("btnMobileNext");
-    btnPrev.disabled = btnMPrev.disabled = !prev;
-    btnNext.disabled = btnMNext.disabled = !next;
-    btnPrev.dataset.target = btnMPrev.dataset.target = prev ? prev.id : "";
-    btnNext.dataset.target = btnMNext.dataset.target = next ? next.id : "";
+    btnPrev.disabled = !prev;
+    btnNext.disabled = !next;
+    btnPrev.dataset.target = prev ? prev.id : "";
+    btnNext.dataset.target = next ? next.id : "";
     document.getElementById("prevSecTitle").textContent = prev ? `${prev.code} · ${prev.title}` : "Inizio";
     document.getElementById("nextSecTitle").textContent = next ? `${next.code} · ${next.title}` : "Fine";
   }
 
-  // ==================== EPISTEMICALLY HONEST CLOZE ENGINE ====================
+  // ==================== CLOZE ENGINE ====================
   function shouldBlankToken(word, level, idx) {
     const clean = word.replace(/^[^\p{L}\p{N}€]+|[^\p{L}\p{N}%]+$/gu, "");
     if (!clean) return false;
@@ -1046,13 +1009,7 @@
     return false;
   }
 
-  /**
-   * Epistemically separates:
-   * - recalled: actively typed without peek (type mode) OR individually self-checked (click mode)
-   * - revealed: passively shown via "Suggerisci 1", "Mostra testo", or "?" peek
-   * Never falsely claims recall or auto-promotes mastery when text is merely revealed!
-   */
-  function renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, counterMobileEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn, onMasteryChange }) {
+  function renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn }) {
     const sec = SECTION_MAP.get(secId);
     if (!sec) return { hintOne: () => {}, revealAll: () => {} };
     const level = Number(levelSel.value);
@@ -1062,75 +1019,48 @@
     noticeEl.classList.add("hidden");
     noticeEl.classList.remove("ok");
 
-    const items = []; // [{ isDone, revealPassively }]
+    const items = [];
     let recalled = 0;
     let revealed = 0;
     let tokenIndex = 0;
-
-    const restartArgs = { secId, levelSel, modeSel, bodyEl, counterEl, counterMobileEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn, onMasteryChange };
+    const restartArgs = { secId, levelSel, modeSel, bodyEl, counterEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn };
 
     const updateProgress = () => {
       const total = items.length;
       const done = recalled + revealed;
-      let txt = "";
       if (mode === "type") {
         const revWord = revealed === 1 ? "rivelata" : "rivelate";
-        txt = revealed > 0
-          ? `Ricordate ${recalled}/${total} · ${revealed} ${revWord}`
-          : `Ricordate ${recalled}/${total}`;
+        counterEl.textContent = revealed > 0 ? `${recalled}/${total} · ${revealed} ${revWord}` : `${recalled} / ${total}`;
       } else {
-        txt = revealed > 0
-          ? `${recalled}/${total} · ${revealed} mostrate`
-          : `${recalled} / ${total}`;
+        counterEl.textContent = revealed > 0 ? `${recalled}/${total} · ${revealed} mostrate` : `${recalled} / ${total}`;
       }
-      counterEl.textContent = txt;
-      if (counterMobileEl) counterMobileEl.textContent = txt;
-
-      const recPct = total > 0 ? (recalled / total) * 100 : 0;
-      const revPct = total > 0 ? (revealed / total) * 100 : 0;
-      barEl.style.width = `${recPct.toFixed(2)}%`;
-      if (barRevEl) barRevEl.style.width = `${revPct.toFixed(2)}%`;
-
+      barEl.style.width = `${(total > 0 ? (recalled / total) * 100 : 0).toFixed(2)}%`;
+      if (barRevEl) barRevEl.style.width = `${(total > 0 ? (revealed / total) * 100 : 0).toFixed(2)}%`;
       if (resetBtn) resetBtn.disabled = done === 0;
       if (hintBtn) hintBtn.disabled = done >= total;
       if (revealBtn) revealBtn.disabled = done >= total;
 
       if (total > 0 && done >= total) {
         if (recalled === 0) {
-          // Pure passive reveal: do NOT claim completion or alter mastery!
           noticeEl.classList.remove("ok", "hidden");
           noticeEl.innerHTML = `
-            <span><strong>Testo mostrato per la consultazione.</strong> Premi <em>Ricomincia</em> per metterti alla prova senza aiuti.</span>
-            <div class="notice-actions">
-              <button type="button" class="btn small secondary" data-clz-retry>Ricomincia</button>
-            </div>
+            <span><strong>Testo mostrato.</strong> Ricomincia per provarlo senza aiuti.</span>
+            <div class="notice-actions"><button type="button" class="btn-apple soft sm" data-clz-retry>Ricomincia</button></div>
           `;
-          noticeEl.querySelector("[data-clz-retry]").addEventListener("click", () => {
-            renderClozeInto(restartArgs);
-          });
+          noticeEl.querySelector("[data-clz-retry]").addEventListener("click", () => renderClozeInto(restartArgs));
         } else {
-          // Genuine active engagement -> safely promote unstudied (0) to In corso (1)
           if ((state.mastery[secId] || 0) === 0) {
             state.mastery[secId] = 1;
             saveState();
             syncAllViewsForStateChange(secId);
-            if (onMasteryChange) onMasteryChange();
           }
           const recallPct = Math.round((recalled / total) * 100);
           noticeEl.classList.add("ok");
           noticeEl.classList.remove("hidden");
-          const nextLvHtml = level < 4 ? `<button type="button" class="btn small secondary" data-clz-lvup>Livello ${level + 1}</button>` : "";
-          const summaryMsg = mode === "type"
-            ? `Ricordate ${recalled}/${total} parole (${recallPct}%)${revealed > 0 ? `, ${revealed} con suggerimento` : ""}.`
-            : (revealed > 0
-              ? `Verifica terminata (${recalled} scoperte singolarmente, ${revealed} mostrate).`
-              : `Tutte le ${total} parti verificate.`);
+          const nextLv = level < 4 ? `<button type="button" class="btn-apple soft sm" data-clz-lvup>Livello ${level + 1}</button>` : "";
           noticeEl.innerHTML = `
-            <span><strong>Esercizio terminato.</strong> ${summaryMsg}</span>
-            <div class="notice-actions">
-              ${nextLvHtml}
-              <button type="button" class="btn small primary" data-clz-mem>Segna A Memoria</button>
-            </div>
+            <span><strong>Completato:</strong> ${recalled}/${total} (${recallPct}%)</span>
+            <div class="notice-actions">${nextLv}<button type="button" class="btn-apple primary sm" data-clz-mem>A memoria</button></div>
           `;
           noticeEl.querySelector("[data-clz-lvup]")?.addEventListener("click", () => {
             levelSel.value = String(level + 1);
@@ -1142,8 +1072,7 @@
             state.mastery[secId] = 3;
             saveState();
             syncAllViewsForStateChange(secId);
-            if (onMasteryChange) onMasteryChange();
-            showToast(`${sec.code} segnato A MEMORIA.`, "ok");
+            showToast(`${sec.code} segnato a memoria`);
           });
         }
       }
@@ -1175,7 +1104,7 @@
           const btn = document.createElement("button");
           btn.type = "button";
           btn.className = "cloze-blank";
-          btn.textContent = level === 4 ? `${core[0]}${"·".repeat(Math.min(core.length - 1, 5))}` : `${core[0]}___`;
+          btn.textContent = level === 4 ? `${core[0]} ${"·".repeat(Math.min(core.length - 1, 5))}` : `${core[0]} ···`;
           btn.setAttribute("aria-label", `Scopri parola che inizia per ${core[0]}`);
           const entry = {
             done: false,
@@ -1209,13 +1138,12 @@
           inp.className = "cloze-input";
           inp.placeholder = `${core[0]}…`;
           inp.setAttribute("aria-label", `Scrivi parola che inizia per ${core[0]}`);
-          inp.style.width = `${Math.max(64, Math.min(172, core.length * 9.5 + 16))}px`;
+          inp.style.width = `${Math.max(72, Math.min(168, core.length * 9.2 + 20))}px`;
 
           const peek = document.createElement("button");
           peek.type = "button";
           peek.className = "cloze-peek";
           peek.textContent = "?";
-          peek.title = "Mostra questa parola (conta come rivelata)";
           peek.setAttribute("aria-label", "Mostra questa parola");
 
           const replaceWithChip = (cls, label) => {
@@ -1223,8 +1151,7 @@
             chip.className = cls;
             chip.textContent = core;
             chip.setAttribute("aria-label", `${core} (${label})`);
-            inp.replaceWith(chip);
-            peek.remove();
+            wrap.replaceWith(chip);
           };
 
           const entry = {
@@ -1232,7 +1159,7 @@
             revealPassively: () => {
               if (entry.done) return;
               entry.done = true;
-              replaceWithChip("cloze-chip-peeked", "rivelata con suggerimento");
+              replaceWithChip("cloze-chip-peeked", "rivelata");
               revealed++;
               updateProgress();
               bodyEl.querySelector(".cloze-input")?.focus();
@@ -1241,7 +1168,7 @@
           const markRecalled = () => {
             if (entry.done) return;
             entry.done = true;
-            replaceWithChip("cloze-chip-ok", "ricordata correttamente");
+            replaceWithChip("cloze-chip-ok", "corretta");
             recalled++;
             updateProgress();
             bodyEl.querySelector(".cloze-input")?.focus();
@@ -1249,13 +1176,13 @@
 
           inp.addEventListener("input", () => {
             if (norm(inp.value) === norm(core)) markRecalled();
-            else inp.classList.toggle("bad", inp.value.length >= core.length);
+            else wrap.classList.toggle("is-bad", inp.value.length >= core.length);
           });
           inp.addEventListener("keydown", e => {
             if (e.key === "Enter") {
               e.preventDefault();
               if (norm(inp.value) === norm(core)) markRecalled();
-              else inp.classList.add("bad");
+              else wrap.classList.add("is-bad");
             }
           });
           peek.addEventListener("click", entry.revealPassively);
@@ -1263,12 +1190,18 @@
           wrap.appendChild(inp);
           wrap.appendChild(peek);
           if (trail) {
+            wrap.classList.add("has-trail");
+            const group = document.createElement("span");
+            group.className = "cloze-token-group";
             const tr = document.createElement("span");
             tr.className = "cloze-trail";
             tr.textContent = trail;
-            wrap.appendChild(tr);
+            group.appendChild(wrap);
+            group.appendChild(tr);
+            p.appendChild(group);
+          } else {
+            p.appendChild(wrap);
           }
-          p.appendChild(wrap);
         }
       }
       bodyEl.appendChild(p);
@@ -1277,8 +1210,8 @@
     if (items.length === 0) {
       noticeEl.classList.remove("hidden");
       noticeEl.innerHTML = `
-        <span>Questa sezione non contiene numeri o termini chiave per il Livello 1.</span>
-        <button type="button" class="btn small primary" data-jump-lv2>Passa al Livello 2</button>
+        <span>Nessun termine chiave al Livello 1 per questo articolo.</span>
+        <button type="button" class="btn-apple primary sm" data-jump-lv2>Passa a Livello 2</button>
       `;
       noticeEl.querySelector("[data-jump-lv2]").addEventListener("click", () => {
         levelSel.value = "2";
@@ -1290,13 +1223,8 @@
     updateProgress();
 
     return {
-      hintOne: () => {
-        const next = items.find(it => !it.done);
-        if (next) next.revealPassively();
-      },
-      revealAll: () => {
-        for (const it of items) if (!it.done) it.revealPassively();
-      },
+      hintOne: () => { const next = items.find(it => !it.done); if (next) next.revealPassively(); },
+      revealAll: () => { for (const it of items) if (!it.done) it.revealPassively(); },
     };
   }
 
@@ -1307,7 +1235,6 @@
       modeSel: document.getElementById("inlineClozeInput"),
       bodyEl: document.getElementById("inlineClozeBody"),
       counterEl: document.getElementById("inlineClozeCounter"),
-      counterMobileEl: document.getElementById("inlineClozeCounterMobile"),
       barEl: document.getElementById("inlineClozeBar"),
       barRevEl: document.getElementById("inlineClozeBarRev"),
       noticeEl: document.getElementById("inlineClozeNotice"),
@@ -1325,7 +1252,7 @@
       const m = state.mastery[s.id] || 0;
       const opt = document.createElement("option");
       opt.value = s.id;
-      opt.textContent = `[${STATUS_LABELS[m]}] ${s.code} — ${s.title}`;
+      opt.textContent = `${s.code} — ${s.title}${m === 3 ? " ★" : ""}`;
       sel.appendChild(opt);
     }
     if (!secs.some(s => s.id === practiceClozeSecId) && secs.length) practiceClozeSecId = secs[0].id;
@@ -1335,12 +1262,9 @@
   function renderPracticeCloze() {
     const sec = SECTION_MAP.get(practiceClozeSecId);
     if (!sec) return;
-    document.getElementById("pClozeCode").textContent = sec.code;
+    document.getElementById("pClozeCode").textContent = `${DOC_SHORT[sec.doc]} · ${sec.code}`;
     document.getElementById("pClozeTitle").textContent = sec.title;
-
-    const lv = document.getElementById("clozeLevelSelect").value;
-    const im = document.getElementById("clozeInputMode").value === "click" ? "Tocca" : "Scrivi";
-    document.getElementById("clozeQueueSummary").textContent = `${DOC_SHORT[sec.doc]} · ${sec.code} · Lv. ${lv} · ${im}`;
+    document.getElementById("clozeQueueSummary").textContent = `${DOC_SHORT[sec.doc]} · ${sec.code}`;
 
     const idx = CLOZEABLE_SECTIONS.findIndex(s => s.id === practiceClozeSecId);
     document.getElementById("btnPClozePrev").disabled = idx <= 0;
@@ -1352,7 +1276,6 @@
       modeSel: document.getElementById("clozeInputMode"),
       bodyEl: document.getElementById("pClozeBody"),
       counterEl: document.getElementById("pClozeCounter"),
-      counterMobileEl: document.getElementById("pClozeCounterMobile"),
       barEl: document.getElementById("pClozeBar"),
       barRevEl: document.getElementById("pClozeBarRev"),
       noticeEl: document.getElementById("pClozeNotice"),
@@ -1362,12 +1285,12 @@
     });
   }
 
-  // ==================== 3A. FLASHCARDS ====================
+  // ==================== 3A. FLASHCARD ====================
   function getArticleFlashcards() {
     return CLOZEABLE_SECTIONS.map(s => ({
       id: `auto-${s.id}`, doc: s.doc, ref: s.id,
       refLabel: `${DOC_SHORT[s.doc]} ${s.code}`,
-      tag: "Articoli 1:1",
+      tag: "Articoli",
       q: `[${DOC_SHORT[s.doc]}] Cosa dispone ${s.code} — «${s.title}»?`,
       a: s.text,
     }));
@@ -1384,37 +1307,16 @@
     return !rec || Date.now() >= rec.nextReview;
   }
 
-  function countDueCards(mode = "curated") {
-    return getDeckCards(mode).filter(c => isCardDue(c.id)).length;
-  }
-
   function populateFcTagFilter() {
     const sel = document.getElementById("fcTagFilter");
     const tags = Array.from(new Set(PACK.flashcards.map(c => c.tag))).sort();
-    tags.push("Articoli 1:1");
+    tags.push("Articoli");
     for (const t of tags) {
       const opt = document.createElement("option");
       opt.value = t;
       opt.textContent = t;
       sel.appendChild(opt);
     }
-  }
-
-  function updateFcSummaryText() {
-    const clearChip = document.getElementById("btnFcClearFocus");
-    clearChip.classList.toggle("hidden", !fcCustomContext);
-    const el = document.getElementById("fcActiveSummary");
-    const cardWord = fcTotalSession === 1 ? "scheda" : "schede";
-    if (fcCustomContext) {
-      el.innerHTML = `<span class="sum-full">Focus ${esc(fcCustomContext)} · ${fcTotalSession} ${cardWord}</span><span class="sum-short" aria-hidden="true">${esc(fcCustomContext)} · ${fcTotalSession}</span>`;
-      return;
-    }
-    const modeNames = { curated: "Alta Resa", all_articles: "Articoli 1:1", combined: "Completo" };
-    const mode = modeNames[document.getElementById("fcDeckMode").value];
-    const docVal = document.getElementById("fcDocFilter").value;
-    const docTxt = docVal === "all" ? "Tutti i documenti" : DOC_SHORT[docVal];
-    const dueTxt = document.getElementById("fcOnlyDue").checked ? " · Solo oggi" : "";
-    el.innerHTML = `<span class="sum-full">${esc(mode)} · ${esc(docTxt)}${dueTxt} · ${fcTotalSession} ${cardWord}</span><span class="sum-short" aria-hidden="true">${fcTotalSession} ${cardWord} · ${esc(mode)}</span>`;
   }
 
   function buildFcQueue(shuffle = false, customCards = null, customLabel = null) {
@@ -1445,13 +1347,14 @@
     fcFlipped = false;
     fcLastAction = null;
     document.getElementById("btnFcUndo").classList.add("hidden");
-    updateFcSummaryText();
+    document.getElementById("btnFcClearFocus").classList.toggle("hidden", !fcCustomContext);
     renderFlashcard();
   }
 
   function renderFlashcard() {
     const cardEl = document.getElementById("flashcardEl");
     const emptyEl = document.getElementById("fcEmptyState");
+    const dockEl = document.getElementById("fcThumbDock");
     const revealWrap = document.getElementById("fcRevealWrap");
     const ratingWrap = document.getElementById("fcRatingWrap");
 
@@ -1460,42 +1363,38 @@
 
     if (!fcQueue.length) {
       cardEl.classList.add("hidden");
-      revealWrap.classList.add("hidden");
-      ratingWrap.classList.add("hidden");
+      dockEl.classList.add("hidden");
       emptyEl.classList.remove("hidden");
-
       const onlyDue = document.getElementById("fcOnlyDue").checked;
-      document.getElementById("fcQueueInfo").textContent = fcTotalSession > 0 ? `Completate ${fcCompletedSession}/${fcTotalSession}` : "0 schede";
-      document.getElementById("fcCardMeta").textContent = "Sessione conclusa";
-      document.getElementById("fcEmptyTitle").textContent = fcTotalSession > 0 ? "Sessione completata" : "Nessuna scheda da ripassare oggi";
+      document.getElementById("fcQueueInfo").textContent = fcTotalSession > 0 ? `${fcCompletedSession} di ${fcTotalSession}` : "0 schede";
+      document.getElementById("fcEmptyTitle").textContent = fcTotalSession > 0 ? "Sessione completata" : "Nessuna scheda da ripassare";
       document.getElementById("fcEmptyDesc").textContent = onlyDue
-        ? "Sei in pari con il calendario di ripasso programmato per questi filtri."
+        ? "Sei in pari con il ripasso programmato."
         : "Modifica i filtri o avvia un nuovo ciclo.";
       document.getElementById("btnFcShowAll").classList.toggle("hidden", !onlyDue && !fcCustomContext);
       return;
     }
 
     cardEl.classList.remove("hidden");
+    dockEl.classList.remove("hidden");
     emptyEl.classList.add("hidden");
 
     const card = fcQueue[0];
     const rec = state.sm2[card.id];
-    document.getElementById("fcQueueInfo").textContent = `Rimanenti: ${fcQueue.length} · Completate: ${fcCompletedSession}/${fcTotalSession}`;
-    document.getElementById("fcCardMeta").textContent = !rec
-      ? "Nuova scheda"
-      : (rec.reps === 0 ? "Da rivedere in sessione" : `Rivista ${rec.reps} ${rec.reps === 1 ? "volta" : "volte"} · ${formatInterval(rec.interval)}`);
-
-    document.getElementById("fcDocBadge").textContent = DOC_SHORT[card.doc] || card.doc;
-    document.getElementById("fcTagBadge").textContent = card.tag;
+    const currentIdx = Math.min(fcCompletedSession + 1, fcTotalSession);
+    document.getElementById("fcQueueInfo").textContent = `${currentIdx} di ${fcTotalSession}`;
+    document.getElementById("fcMetaLine").textContent = `${DOC_SHORT[card.doc] || card.doc} · ${card.tag}`;
+    document.getElementById("fcCardMeta").textContent = !rec ? "Nuova" : (rec.reps === 0 ? "Ripetizione" : `Rivista ${rec.reps}×`);
     document.getElementById("fcRetryBadge").classList.toggle("hidden", !card._retry);
-    document.getElementById("fcQuestion").textContent = card.q;
-    document.getElementById("fcAnswer").textContent = card.a;
+
+    document.getElementById("fcQuestion").textContent = formatArrows(card.q);
+    document.getElementById("fcAnswer").textContent = formatArrows(card.a);
     document.getElementById("fcRefLabel").textContent = card.refLabel;
 
-    document.getElementById("int1").textContent = "Rivedi ora";
-    document.getElementById("int2").textContent = formatInterval(computeNextSM2(rec, 3).interval);
-    document.getElementById("int3").textContent = formatInterval(computeNextSM2(rec, 4).interval);
-    document.getElementById("int4").textContent = formatInterval(computeNextSM2(rec, 5).interval);
+    document.getElementById("int1").textContent = "Ora";
+    document.getElementById("int2").textContent = formatShortInterval(computeNextSM2(rec, 3).interval);
+    document.getElementById("int3").textContent = formatShortInterval(computeNextSM2(rec, 4).interval);
+    document.getElementById("int4").textContent = formatShortInterval(computeNextSM2(rec, 5).interval);
 
     fcFlipped = false;
     document.getElementById("fcBack").classList.add("hidden");
@@ -1521,11 +1420,9 @@
     saveState();
     updateDueBadges();
 
-    if (quality < 3) {
-      fcQueue.splice(Math.min(fcQueue.length, 3), 0, { ...card, _retry: true });
-    } else {
-      fcCompletedSession++;
-    }
+    if (quality < 3) fcQueue.splice(Math.min(fcQueue.length, 3), 0, { ...card, _retry: true });
+    else fcCompletedSession++;
+
     document.getElementById("btnFcUndo").classList.remove("hidden");
     renderFlashcard();
   }
@@ -1542,10 +1439,10 @@
     fcLastAction = null;
     document.getElementById("btnFcUndo").classList.add("hidden");
     renderFlashcard();
-    showToast("Ultima valutazione annullata.");
+    showToast("Voto annullato");
   }
 
-  // ==================== 3B. QUIZ & SCENARI ====================
+  // ==================== 3B. QUIZ ====================
   function getFilteredQuizPool() {
     const modeF = document.getElementById("qzModeFilter").value;
     const docF = document.getElementById("qzDocFilter").value;
@@ -1558,21 +1455,6 @@
     });
   }
 
-  function updateQzSummaryText() {
-    document.getElementById("btnQzClearFocus").classList.toggle("hidden", !qzCustomContext);
-    const el = document.getElementById("qzActiveSummary");
-    const qWord = qzQueue.length === 1 ? "domanda" : "domande";
-    if (qzCustomContext) {
-      el.innerHTML = `<span class="sum-full">Focus ${esc(qzCustomContext)} · ${qzQueue.length} ${qWord}</span><span class="sum-short" aria-hidden="true">${esc(qzCustomContext)} · ${qzQueue.length}</span>`;
-      return;
-    }
-    const modeTxt = MODE_LABELS_FULL[document.getElementById("qzModeFilter").value] || "Tutte le tipologie";
-    const docVal = document.getElementById("qzDocFilter").value;
-    const docTxt = docVal === "all" ? "Tutti i documenti" : DOC_SHORT[docVal];
-    const shortSuffix = docVal === "all" ? "" : ` · ${DOC_SHORT[docVal]}`;
-    el.innerHTML = `<span class="sum-full">${esc(modeTxt)} · ${esc(docTxt)} · ${qzQueue.length} ${qWord}</span><span class="sum-short" aria-hidden="true">${qzQueue.length} ${qWord}${esc(shortSuffix)}</span>`;
-  }
-
   function startQuiz(customList = null, customLabel = null) {
     qzCustomContext = customLabel;
     const list = customList || getFilteredQuizPool();
@@ -1583,22 +1465,46 @@
     qzAnswered = false;
 
     document.getElementById("btnRetryWrong").classList.add("hidden");
+    document.getElementById("btnQzClearFocus").classList.toggle("hidden", !qzCustomContext);
     document.getElementById("quizSummary").classList.add("hidden");
-    updateQzSummaryText();
     renderQuizQuestion();
+  }
+
+  function renderQuizScoreLive() {
+    document.getElementById("qzScoreLive").innerHTML =
+      `<span class="score-ok">✓ ${qzCorrect}</span> · <span class="score-bad">✕ ${qzWrong.length}</span>`;
   }
 
   function renderQuizQuestion() {
     const qBox = document.getElementById("quizBox");
     const qEmpty = document.getElementById("quizEmptyState");
+    const paneQuiz = document.getElementById("pane-quiz");
+    const mobileDock = document.getElementById("qzMobileDock");
+    const kbdHint = document.getElementById("qzKbdHint");
+
+    if (mobileDock) {
+      mobileDock.classList.add("hidden");
+      mobileDock.classList.remove("ok", "bad");
+    }
+    if (paneQuiz) paneQuiz.classList.remove("has-answer", "show-all-opts");
+    const expBtn = document.getElementById("btnQzExpandOpts");
+    if (expBtn) {
+      expBtn.classList.add("hidden");
+      expBtn.setAttribute("aria-expanded", "false");
+      const lbl = document.getElementById("qzExpandLabel");
+      if (lbl) lbl.textContent = "Mostra tutte le opzioni";
+    }
 
     if (!qzQueue.length) {
       qBox.classList.add("hidden");
+      if (kbdHint) kbdHint.classList.add("hidden");
       qEmpty.classList.remove("hidden");
+      document.getElementById("qzCounter").textContent = "0 domande";
       return;
     }
     qEmpty.classList.add("hidden");
     qBox.classList.remove("hidden");
+    if (kbdHint) kbdHint.classList.remove("hidden");
 
     if (qzIdx >= qzQueue.length) {
       showQuizSummary();
@@ -1607,12 +1513,10 @@
 
     const item = qzQueue[qzIdx];
     qzAnswered = false;
-    document.getElementById("qzCounter").textContent = `Domanda ${qzIdx + 1} / ${qzQueue.length}`;
-    document.getElementById("qzScoreLive").innerHTML = formatQuizScore();
+    document.getElementById("qzCounter").textContent = `${qzIdx + 1} di ${qzQueue.length}`;
+    renderQuizScoreLive();
     document.getElementById("qzBarFill").style.width = `${(qzIdx / qzQueue.length) * 100}%`;
-
-    document.getElementById("qzDocBadge").textContent = DOC_SHORT[item.doc] || item.doc;
-    document.getElementById("qzModeBadge").textContent = MODE_LABELS[item.mode] || item.mode;
+    document.getElementById("qzMetaLine").textContent = `${DOC_SHORT[item.doc] || item.doc} · ${MODE_LABELS[item.mode] || item.mode}`;
     document.getElementById("qzQuestion").textContent = item.q;
 
     const optsEl = document.getElementById("qzOptions");
@@ -1659,37 +1563,70 @@
     }
     saveState();
 
-    document.getElementById("qzScoreLive").innerHTML = formatQuizScore();
+    renderQuizScoreLive();
     document.getElementById("qzBarFill").style.width = `${((qzIdx + 1) / qzQueue.length) * 100}%`;
+
     const fb = document.getElementById("qzFeedback");
     fb.classList.toggle("ok", ok);
     fb.classList.toggle("bad", !ok);
-    document.getElementById("qzFbTitle").textContent = ok ? "Risposta corretta" : "Risposta errata";
-    document.getElementById("qzFbText").textContent = item.explanation;
+    const verdictText = ok ? "Risposta corretta" : "Risposta errata";
+    const nextLabel = qzIdx + 1 >= qzQueue.length ? "Riepilogo ›" : "Prossima ›";
+    const openRef = () => openArticle(item.ref, { returnTo: { type: "practice", sub: "quiz", label: "Quiz", reason: "Verifica domanda" } });
+
+    const cleanExplain = formatArrows(item.explanation);
+    document.getElementById("qzFbTitle").textContent = verdictText;
+    const fbIc = document.getElementById("qzFbIcon");
+    if (fbIc) fbIc.textContent = ok ? "✓" : "✕";
+    document.getElementById("qzFbText").textContent = cleanExplain;
     document.getElementById("qzRefLabel").textContent = item.refLabel;
-    document.getElementById("btnQzSource").onclick = () => {
-      openArticle(item.ref, {
-        returnTo: { type: "practice", sub: "quiz", label: "Quiz in corso", reason: "Verifica fonte domanda" },
-      });
-    };
-    document.getElementById("btnQzNext").textContent = qzIdx + 1 >= qzQueue.length ? "Vedi riepilogo →" : "Prossima →";
+    document.getElementById("btnQzSource").onclick = openRef;
+    document.getElementById("btnQzNext").textContent = nextLabel;
     fb.classList.remove("hidden");
+
+    const mobileDock = document.getElementById("qzMobileDock");
+    if (mobileDock) {
+      mobileDock.classList.toggle("ok", ok);
+      mobileDock.classList.toggle("bad", !ok);
+      const mIc = document.getElementById("qmdIcon");
+      if (mIc) mIc.textContent = ok ? "✓" : "✕";
+      const vEl = document.getElementById("qmdVerdict");
+      vEl.textContent = verdictText;
+      vEl.className = `qmd-verdict ${ok ? "ok" : "bad"}`;
+      const mSrc = document.getElementById("btnQzMobileSource");
+      mSrc.textContent = `Apri ${item.refLabel} ›`;
+      mSrc.onclick = openRef;
+      const mExp = document.getElementById("qmdExplain");
+      if (mExp) mExp.textContent = cleanExplain;
+      document.getElementById("btnQzMobileNext").textContent = nextLabel;
+      mobileDock.classList.remove("hidden");
+    }
+    document.getElementById("pane-quiz")?.classList.add("has-answer");
+    const hiddenOpts = Math.max(0, item.options.length - (ok ? 1 : 2));
+    const expBtn = document.getElementById("btnQzExpandOpts");
+    if (expBtn && hiddenOpts > 0) {
+      const lbl = document.getElementById("qzExpandLabel");
+      if (lbl) lbl.textContent = `Mostra le altre ${hiddenOpts} opzioni`;
+      expBtn.setAttribute("aria-expanded", "false");
+      expBtn.classList.remove("hidden");
+    }
 
     document.getElementById("btnRetryWrong").classList.toggle("hidden", qzWrong.length === 0);
     document.getElementById("wrongInlineCount").textContent = qzWrong.length;
-    document.getElementById("wrongInlineCountShort").textContent = qzWrong.length;
   }
 
   function showQuizSummary() {
     document.getElementById("quizBox").classList.add("hidden");
+    document.getElementById("qzMobileDock")?.classList.add("hidden");
+    document.getElementById("qzKbdHint")?.classList.add("hidden");
+    document.getElementById("pane-quiz")?.classList.remove("has-answer");
     const sum = document.getElementById("quizSummary");
     sum.classList.remove("hidden");
     const pct = Math.round((qzCorrect / (qzQueue.length || 1)) * 100);
     document.getElementById("qzSumScore").textContent = `${qzCorrect} / ${qzQueue.length} (${pct}%)`;
     document.getElementById("qzSumMsg").textContent =
-      pct >= 90 ? "Padronanza solida: questi punti sono ormai acquisiti." :
-      pct >= 70 ? "Buona base: ripeti subito gli errori per completare la preparazione." :
-      "Conviene rivedere gli articoli collegati agli errori qui sotto e ripetere.";
+      pct >= 90 ? "Ottima padronanza." :
+      pct >= 70 ? "Buona base: ripeti subito gli errori." :
+      "Rivedi le norme collegate agli errori qui sotto.";
 
     const missed = document.getElementById("qzMissedList");
     missed.innerHTML = "";
@@ -1698,12 +1635,9 @@
       for (const w of qzWrong) {
         const row = document.createElement("div");
         row.className = "missed-row";
-        row.innerHTML = `
-          <span><strong>${esc(w.refLabel)}:</strong> ${esc(w.q)}</span>
-          <button type="button" class="link-btn">Apri norma →</button>
-        `;
+        row.innerHTML = `<span><strong>${esc(w.refLabel)}:</strong> ${esc(w.q)}</span><button type="button" class="text-action">Apri ›</button>`;
         row.querySelector("button").addEventListener("click", () => {
-          openArticle(w.ref, { returnTo: { type: "practice", sub: "quiz", label: "Riepilogo Quiz", reason: "Approfondimento errore" } });
+          openArticle(w.ref, { returnTo: { type: "practice", sub: "quiz", label: "Quiz", reason: "Approfondimento" } });
         });
         missed.appendChild(row);
       }
@@ -1714,16 +1648,8 @@
   }
 
   // ==================== 4. SINOSSI ====================
-  const CS_PLACEHOLDERS = {
-    timeline: "Filtra cronoprogramma…",
-    quorums: "Filtra quorum…",
-    organs: "Filtra organi…",
-    deadlines: "Filtra scadenze…",
-    diagrams: "Filtra schemi PDF…",
-  };
-
   function syncCsTabs() {
-    document.querySelectorAll("#csTabs .rail-tab").forEach(t => {
+    document.querySelectorAll("#csTabs .ref-pill").forEach(t => {
       const act = t.dataset.cs === csTab;
       t.classList.toggle("active", act);
       t.setAttribute("aria-selected", act ? "true" : "false");
@@ -1753,33 +1679,41 @@
           <tbody>
             ${rows.map(r => {
               const dt = parseItalianDate(r.date);
-              let cls = "", badge = "";
-              if (r.date.startsWith("21/11/2026") && r.event.includes("ASSEMBLEA")) {
-                cls = "tl-election"; badge = ' <span class="soft-tag warn">Assemblea</span>';
-              } else if (dt && dt.getTime() < now) {
-                cls = "tl-past";
-              } else if (dt && !markedNext) {
-                markedNext = true; cls = "tl-next"; badge = ' <span class="doc-tag">Prossima</span>';
-              }
+              let cls = "";
+              if (r.date.startsWith("21/11/2026") && r.event.includes("ASSEMBLEA")) cls = "tl-election";
+              else if (dt && dt.getTime() < now) cls = "tl-past";
+              else if (dt && !markedNext) { markedNext = true; cls = "tl-next"; }
               return `<tr class="${cls}">
-                <td data-label="Data / Ora"><span class="num-hl">${esc(r.date)}</span>${badge}</td>
+                <td data-label="Data / Ora"><span class="num-hl">${esc(r.date)}</span></td>
                 <td data-label="Adempimento">${esc(r.event)}</td>
-                <td class="col-source" data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} →</button></td>
+                <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} ›</button></td>
               </tr>`;
             }).join("")}
           </tbody>
-        </table></div>` : `<p class="muted">Nessuna scadenza corrisponde a «${esc(q)}».</p>`;
+        </table></div>` : `<p class="muted">Nessun risultato per «${esc(q)}».</p>`;
     } else if (csTab === "quorums") {
       const rows = cs.quorums.filter(match);
+      const formatQuorumContext = raw => {
+        const clean = formatOperators(String(raw).replace(/\bconv\./g, "convocazione"));
+        const parts = clean.split(/\s+—\s+/);
+        if (parts.length > 1) {
+          return `<strong class="q-organ">${esc(parts[0])}</strong><span class="q-sub">${esc(parts.slice(1).join(" · "))}</span>`;
+        }
+        return `<strong class="q-organ">${esc(clean)}</strong>`;
+      };
+      const formatQuorumMetric = raw => {
+        const safe = esc(formatOperators(String(raw).replace(/\bconv\./g, "convocazione")));
+        return safe.replace(/(&gt;\s*50%|&gt;\s*2\/3|≥\s*\d+h?|2\/3|1\/3|50%|24h|unanimità)/gi, '<span class="q-num">$1</span>');
+      };
       wrap.innerHTML = rows.length ? `
         <div class="ref-table-wrap"><table class="ref-table">
           <thead><tr><th>Organo / Seduta</th><th>Costitutivo</th><th>Deliberativo</th><th class="col-source">Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
-              <td data-label="Organo / Seduta"><strong>${esc(formatOperators(r.context))}</strong></td>
-              <td data-label="Costitutivo">${esc(formatOperators(r.costitutivo))}</td>
-              <td data-label="Deliberativo">${esc(formatOperators(r.deliberativo))}</td>
-              <td class="col-source" data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} →</button></td>
+              <td data-label="Organo / Seduta">${formatQuorumContext(r.context)}</td>
+              <td data-label="Costitutivo">${formatQuorumMetric(r.costitutivo)}</td>
+              <td data-label="Deliberativo">${formatQuorumMetric(r.deliberativo)}</td>
+              <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} ›</button></td>
             </tr>`).join("")}
           </tbody>
         </table></div>` : `<p class="muted">Nessun quorum trovato.</p>`;
@@ -1787,14 +1721,14 @@
       const rows = cs.organs.filter(match);
       wrap.innerHTML = rows.length ? `
         <div class="ref-table-wrap"><table class="ref-table">
-          <thead><tr><th>Organo / Carica</th><th>Composizione</th><th>Durata</th><th>Poteri Chiave</th><th class="col-source">Fonte</th></tr></thead>
+          <thead><tr><th>Organo</th><th>Composizione</th><th>Durata</th><th>Poteri</th><th class="col-source">Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
               <td data-label="Organo"><strong>${esc(formatOperators(r.name))}</strong></td>
               <td data-label="Composizione">${esc(formatOperators(r.composition))}</td>
               <td data-label="Durata">${esc(formatOperators(r.term))}</td>
               <td data-label="Poteri">${esc(formatOperators(r.powers))}</td>
-              <td class="col-source" data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} →</button></td>
+              <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} ›</button></td>
             </tr>`).join("")}
           </tbody>
         </table></div>` : `<p class="muted">Nessun organo trovato.</p>`;
@@ -1802,35 +1736,35 @@
       const rows = cs.keyDeadlines.filter(match);
       wrap.innerHTML = rows.length ? `
         <div class="ref-table-wrap"><table class="ref-table">
-          <thead><tr><th>Istituto / Procedura</th><th>Termine / Regola</th><th class="col-source">Fonte</th></tr></thead>
+          <thead><tr><th>Procedura</th><th>Termine</th><th class="col-source">Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
-              <td data-label="Istituto"><strong>${esc(formatOperators(r.term))}</strong></td>
+              <td data-label="Procedura"><strong>${esc(formatOperators(r.term))}</strong></td>
               <td data-label="Termine">${esc(formatOperators(r.value))}</td>
-              <td class="col-source" data-label="Fonte"><button type="button" class="link-btn" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} →</button></td>
+              <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} ›</button></td>
             </tr>`).join("")}
           </tbody>
         </table></div>` : `<p class="muted">Nessun termine trovato.</p>`;
     } else if (csTab === "hierarchy") {
       wrap.innerHTML = `
         <div class="ref-table-wrap"><table class="ref-table">
-          <thead><tr><th>Grado</th><th>Fonte Normativa</th><th>Prevalenza &amp; Note</th></tr></thead>
+          <thead><tr><th>Grado</th><th>Fonte</th><th>Prevalenza e note</th></tr></thead>
           <tbody>
             ${cs.hierarchy.map(r => `<tr>
-              <td data-label="Grado"><span class="code-chip">#${r.rank}</span></td>
+              <td data-label="Grado"><span class="num-hl">#${r.rank}</span></td>
               <td data-label="Fonte"><strong>${esc(r.source)}</strong></td>
-              <td data-label="Note">${esc(r.note)} ${r.ref ? `<button type="button" class="link-btn" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} →</button>` : ""}</td>
+              <td data-label="Note">${esc(r.note)} ${r.ref ? `<button type="button" class="text-action" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} ›</button>` : ""}</td>
             </tr>`).join("")}
           </tbody>
         </table></div>
         <div class="stv-box">
-          <h3 class="section-title" style="font-size:1.08rem;">Sistema Elettorale STV — Sintesi Operativa (Art. A.16 – A.17)</h3>
+          <h3>Sistema Elettorale STV (Art. A.16 – A.17)</h3>
           <div class="stv-formula">Quota di Droop = ⌊ schede_valide / (seggi + 1) ⌋ + 1</div>
-          <p class="muted small" style="line-height:1.72;">
-            <strong>Seggi disponibili (Art. A.17):</strong> &gt;6 candidati validi → 7 seggi · 5 o 6 candidati → 5 seggi · &lt;5 candidati → rinvio e riapertura (max 14 giorni).<br/>
-            <strong>1ª Votazione (STV):</strong> Ogni scheda vale 1; calcoli esatti in frazione. Al raggiungimento della quota l'eccedenza passa al candidato successivo con fattore <code>(voti − quota) / voti</code>; altrimenti si esclude il meno votato.<br/>
-            <strong>2ª Votazione (Cariche):</strong> Solo fra gli eletti della 1ª; STV a 1 seggio per posizione (quota = maggioranza assoluta) per l'ordine di assegnazione delle preferenze.<br/>
-            <strong>Spareggio parità (Art. A.16.4):</strong> 1° Anzianità d'iscrizione → 2° Il più <strong>giovane</strong> → 3° Sorteggio pre-assemblea.
+          <p class="muted small" style="line-height:1.68;">
+            <strong>Seggi:</strong> &gt;6 candidati → 7 seggi · 5–6 candidati → 5 seggi · &lt;5 candidati → rinvio (max 14 giorni).<br/>
+            <strong>1ª Votazione (STV):</strong> eccedenza trasferita con fattore <code>(voti − quota) / voti</code>; altrimenti si esclude il meno votato.<br/>
+            <strong>2ª Votazione (Cariche):</strong> solo fra gli eletti; quota = maggioranza assoluta per posizione.<br/>
+            <strong>Parità (Art. A.16.4):</strong> 1° Anzianità → 2° Il più giovane → 3° Sorteggio.
           </p>
         </div>`;
     } else if (csTab === "diagrams") {
@@ -1851,9 +1785,7 @@
 
     wrap.querySelectorAll("[data-ref-jump]").forEach(btn => {
       btn.addEventListener("click", () => {
-        openArticle(btn.dataset.refJump, {
-          returnTo: { type: "reference", sub: csTab, label: "Sinossi", reason: "Consultazione da Sinossi" },
-        });
+        openArticle(btn.dataset.refJump, { returnTo: { type: "reference", sub: csTab, label: "Sinossi", reason: "Da Sinossi" } });
       });
     });
   }
@@ -1871,10 +1803,7 @@
     let anyOpen = false;
     ["searchModal", "backupModal", "lightboxModal"].forEach(id => {
       const el = document.getElementById(id);
-      if (!el.classList.contains("hidden")) {
-        el.classList.add("hidden");
-        anyOpen = true;
-      }
+      if (!el.classList.contains("hidden")) { el.classList.add("hidden"); anyOpen = true; }
     });
     document.getElementById("resetConfirmBox").classList.add("hidden");
     if (anyOpen) {
@@ -1904,15 +1833,24 @@
     document.getElementById("btnLbNext").disabled = lbGallery.length <= 1;
   }
 
+  function sanitizeSnippetText(text) {
+    return String(text || "")
+      .replace(/\s+/g, " ")
+      .replace(/(?:(?<=^|\s)(?:s[iì]|no)(?=\s|$)\s*){2,}/gi, " · ")
+      .replace(/(?:\s*·\s*){2,}/g, " · ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
   function sliceCleanSnippet(text, matchPos) {
     const clean = text.replace(/\s+/g, " ").trim();
-    if (!clean) return "Sezione contenitore";
-    let start = matchPos >= 0 ? Math.max(0, matchPos - 48) : 0;
+    if (!clean) return "Sezione";
+    let start = matchPos >= 0 ? Math.max(0, matchPos - 46) : 0;
     if (start > 0) {
       const nextSpace = clean.indexOf(" ", start);
       if (nextSpace !== -1 && nextSpace < matchPos) start = nextSpace + 1;
     }
-    let end = Math.min(clean.length, start + 155);
+    let end = Math.min(clean.length, start + 148);
     if (end < clean.length) {
       const lastSpace = clean.lastIndexOf(" ", end);
       if (lastSpace > start + 40) end = lastSpace;
@@ -1923,6 +1861,7 @@
   function renderGlobalSearch(query) {
     const res = document.getElementById("globalSearchResults");
     const clearBtn = document.getElementById("btnClearGlobalSearch");
+    const countEl = document.getElementById("searchResultCount");
     if (clearBtn) clearBtn.classList.toggle("hidden", !query.length);
 
     const q = query.trim().toLowerCase();
@@ -1930,7 +1869,8 @@
     gsActiveIdx = -1;
 
     if (!q) {
-      res.innerHTML = `<p class="muted small">Cerca un articolo, un quorum, una data (es. <em>20/11</em>, <em>Droop</em>, <em>delega</em>, <em>90 giorni</em>) su tutti i 3 documenti e le sinossi.</p>`;
+      res.innerHTML = `<p class="muted small">Cerca articoli, quorum, date o termini (es. <em>Droop</em>, <em>delega</em>, <em>90 giorni</em>).</p>`;
+      if (countEl) countEl.textContent = "Ricerca rapida";
       return;
     }
 
@@ -1938,30 +1878,31 @@
       .filter(s => s.code.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || (s.text && s.text.toLowerCase().includes(q)))
       .slice(0, 24)
       .map(s => {
-        const flat = s.text ? s.text.replace(/\s+/g, " ").trim() : "";
+        const flat = s.text ? sanitizeSnippetText(s.text) : "";
         const pos = flat ? flat.toLowerCase().indexOf(q) : -1;
-        const snip = flat ? sliceCleanSnippet(flat, pos) : "Sezione contenitore";
-        return { kind: "article", badge: DOC_SHORT[s.doc], code: s.code, title: s.title, snip, target: s.id };
+        return { kind: "article", meta: `${DOC_SHORT[s.doc]} · ${s.code}`, title: s.title, snip: flat ? sliceCleanSnippet(flat, pos) : "Sezione", target: s.id };
       });
 
     const sinMatches = [];
     PACK.cheatsheet.quorums.forEach(r => {
       if (JSON.stringify(r).toLowerCase().includes(q)) {
-        sinMatches.push({ kind: "reference", badge: "Sinossi", code: "Quorum", title: r.context, snip: `${r.costitutivo} · ${r.deliberativo}`, target: "quorums" });
+        sinMatches.push({ kind: "reference", meta: "Sinossi · Quorum", title: r.context, snip: `${r.costitutivo} · ${r.deliberativo}`, target: "quorums" });
       }
     });
     PACK.cheatsheet.timeline2026.forEach(r => {
       if (JSON.stringify(r).toLowerCase().includes(q)) {
-        sinMatches.push({ kind: "reference", badge: "Sinossi", code: r.date, title: "Cronoprogramma 2026", snip: r.event, target: "timeline" });
+        sinMatches.push({ kind: "reference", meta: `Sinossi · ${r.date}`, title: "Cronoprogramma 2026", snip: r.event, target: "timeline" });
       }
     });
 
     const combined = [...artMatches, ...sinMatches.slice(0, 6)];
     if (!combined.length) {
       res.innerHTML = `<p class="muted small">Nessun risultato per «${esc(query)}».</p>`;
+      if (countEl) countEl.textContent = "0 risultati";
       return;
     }
 
+    if (countEl) countEl.textContent = combined.length === 1 ? "1 risultato" : `${combined.length} risultati`;
     gsResults = combined;
     gsActiveIdx = 0;
     res.innerHTML = "";
@@ -1970,10 +1911,7 @@
       btn.type = "button";
       btn.className = `sr-item ${idx === 0 ? "active" : ""}`;
       btn.innerHTML = `
-        <div class="sr-item-meta">
-          <span class="doc-tag">${esc(item.badge)}</span>
-          <span class="code-chip">${esc(item.code)}</span>
-        </div>
+        <div class="sr-item-meta">${esc(item.meta)}</div>
         <div class="sr-item-title">${highlightQuery(item.title, query)}</div>
         <div class="sr-item-snip">${highlightQuery(item.snip, query)}</div>
       `;
@@ -1995,20 +1933,26 @@
 
   function renderBackupSummary() {
     const studied = STUDYABLE_SECTIONS.filter(s => (state.mastery[s.id] || 0) >= 2).length;
-    const mem = STUDYABLE_SECTIONS.filter(s => (state.mastery[s.id] || 0) === 3).length;
     const sm2Count = Object.keys(state.sm2).length;
     const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k]).length;
     document.getElementById("backupSummary").textContent =
-      `Consolidate: ${studied}/${STUDYABLE_SECTIONS.length} (${mem} a memoria) · Flashcard valutate: ${sm2Count} · Segnalibri: ${bmCount} · Risposte quiz: ${state.quizStats.total}`;
+      `Sezioni: ${studied}/${STUDYABLE_SECTIONS.length} · Flashcard: ${sm2Count} · Salvati: ${bmCount} · Quiz: ${state.quizStats.total}`;
   }
 
   // ==================== EVENT WIRING ====================
   function bindAllEvents() {
     document.getElementById("brandHome").addEventListener("click", () => switchView("overview"));
-    document.querySelectorAll("#desktopNav .nav-tab, #mobileNav .bnav-btn").forEach(btn => {
+    document.querySelectorAll("#desktopNav .nav-tab, #mobileNav .fnav-btn").forEach(btn => {
       btn.addEventListener("click", () => switchView(btn.dataset.view));
     });
+    document.querySelectorAll("[data-proxy-click]").forEach(btn => {
+      btn.addEventListener("click", () => document.getElementById(btn.dataset.proxyClick)?.click());
+    });
 
+    document.getElementById("btnQuickFlashcards").addEventListener("click", () => {
+      switchPracticeMode("flashcards");
+      switchView("practice");
+    });
     document.getElementById("btnQuickBlitz").addEventListener("click", () => {
       qzCustomContext = null;
       document.getElementById("qzModeFilter").value = "blitz";
@@ -2025,7 +1969,6 @@
       switchView("reference");
     });
     document.getElementById("metricNormativa").addEventListener("click", () => openArticle(readerSecId || STUDYABLE_SECTIONS[0].id));
-    document.getElementById("metricFlashcards").addEventListener("click", () => { switchPracticeMode("flashcards"); switchView("practice"); });
     document.getElementById("metricQuiz").addEventListener("click", () => { switchPracticeMode("quiz"); switchView("practice"); });
     document.getElementById("metricBookmarks").addEventListener("click", () => {
       readerDocFilter = "all";
@@ -2044,12 +1987,12 @@
       saveState();
     });
 
-    // Reader controls & TOC Drawer
+    // Reader & TOC
     document.getElementById("btnOpenTocDrawer").addEventListener("click", openTocDrawer);
     document.getElementById("btnCloseTocDrawer").addEventListener("click", closeTocDrawer);
     document.getElementById("tocBackdrop").addEventListener("click", closeTocDrawer);
 
-    document.querySelectorAll("#readerDocPills .seg-btn").forEach(b => {
+    document.querySelectorAll("#readerDocPills .ios-seg-btn").forEach(b => {
       b.addEventListener("click", () => {
         readerDocFilter = b.dataset.doc;
         syncReaderDocPills();
@@ -2062,8 +2005,7 @@
       renderReaderSidebar();
     });
 
-    // Inline Reader Mode Switch
-    document.querySelectorAll("#readerModeSwitch .seg-btn").forEach(b => {
+    document.querySelectorAll("#readerModeSwitch .ios-seg-btn").forEach(b => {
       b.addEventListener("click", () => {
         if (b.disabled) return;
         readerMode = b.dataset.rmode;
@@ -2080,7 +2022,6 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
-    // Inline Cloze controls (synced preferences + true passive reveal handles!)
     document.getElementById("inlineClozeLevel").addEventListener("change", e => {
       state.prefs.clozeLevel = e.target.value;
       document.getElementById("clozeLevelSelect").value = e.target.value;
@@ -2097,20 +2038,41 @@
     document.getElementById("btnInlineRevealAll").addEventListener("click", () => inlineClozeCtrl?.revealAll());
     document.getElementById("btnInlineReset").addEventListener("click", renderInlineCloze);
 
+    document.getElementById("btnFontCycle").addEventListener("click", e => {
+      e.stopPropagation();
+      const pop = document.getElementById("fontPopover");
+      const open = pop.classList.toggle("hidden") === false;
+      e.currentTarget.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    document.getElementById("fontPopover").addEventListener("click", e => e.stopPropagation());
+    document.addEventListener("click", closeFontPopover);
     document.getElementById("btnFontDec").addEventListener("click", () => { applyReaderScale(state.readerScale - 0.08); saveState(); });
     document.getElementById("btnFontInc").addEventListener("click", () => { applyReaderScale(state.readerScale + 0.08); saveState(); });
-    document.getElementById("toggleHighlightNums").addEventListener("change", e => {
-      state.prefs.highlightNums = e.target.checked;
+
+    document.getElementById("btnToggleNums").addEventListener("click", () => {
+      state.prefs.highlightNums = !(state.prefs.highlightNums !== false);
       saveState();
+      syncNumsToggleUI(state.prefs.highlightNums);
       if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
     });
+
+    document.getElementById("readerMasterySelect").addEventListener("change", e => {
+      if (!readerSecId) return;
+      const val = Number(e.target.value);
+      state.mastery[readerSecId] = val;
+      saveState();
+      syncAllViewsForStateChange(readerSecId);
+      showToast(`Stato: ${STATUS_LABELS[val]}`);
+    });
+
     document.getElementById("btnBookmarkSec").addEventListener("click", () => {
       if (!readerSecId) return;
-      if (state.bookmarks[readerSecId]) { delete state.bookmarks[readerSecId]; showToast("Segnalibro rimosso."); }
-      else { state.bookmarks[readerSecId] = true; showToast("Salvato nei segnalibri.", "ok"); }
+      if (state.bookmarks[readerSecId]) { delete state.bookmarks[readerSecId]; showToast("Rimosso dai salvati"); }
+      else { state.bookmarks[readerSecId] = true; showToast("Salvato"); }
       saveState();
       renderReaderArticle(readerSecId, { skipHash: true });
     });
+
     document.getElementById("btnContextReturn").addEventListener("click", () => {
       const top = returnStack.pop();
       if (!top) return;
@@ -2118,16 +2080,6 @@
       else if (top.type === "overview") switchView("overview");
       else if (top.type === "practice") { switchPracticeMode(top.sub || "flashcards"); switchView("practice"); }
       else if (top.type === "reference") { csTab = top.sub || "timeline"; syncCsTabs(); renderReference(); switchView("reference"); }
-    });
-    document.querySelectorAll("#readerMasteryBtns .m-chip").forEach(b => {
-      b.addEventListener("click", () => {
-        if (!readerSecId) return;
-        const val = Number(b.dataset.status);
-        state.mastery[readerSecId] = val;
-        saveState();
-        syncAllViewsForStateChange(readerSecId);
-        showToast(`Stato aggiornato: ${STATUS_LABELS[val]}`, val >= 2 ? "ok" : "info");
-      });
     });
 
     document.getElementById("btnArticleFlashcards").addEventListener("click", () => {
@@ -2147,7 +2099,7 @@
       switchView("practice");
     });
 
-    ["btnPrevSec", "btnNextSec", "btnMobilePrev", "btnMobileNext"].forEach(id => {
+    ["btnPrevSec", "btnNextSec"].forEach(id => {
       document.getElementById(id).addEventListener("click", e => {
         const target = e.currentTarget.dataset.target;
         if (target) {
@@ -2158,25 +2110,23 @@
       });
     });
 
-    // Practice Hub Switcher & Filter Trays
-    document.querySelectorAll("#practiceModeSwitch .seg-btn").forEach(b => {
+    // Practice
+    document.querySelectorAll("#practiceModeSwitch .ios-seg-btn").forEach(b => {
       b.addEventListener("click", () => switchPracticeMode(b.dataset.pmode));
     });
 
-    const wireTrayToggle = (btnId, trayId, baseLabel) => {
+    const wireTrayToggle = (btnId, trayId) => {
       const btn = document.getElementById(btnId);
       const tray = document.getElementById(trayId);
       btn.addEventListener("click", () => {
         const open = tray.classList.toggle("hidden") === false;
         btn.setAttribute("aria-expanded", open ? "true" : "false");
-        btn.textContent = open ? `${baseLabel} ▴` : `${baseLabel} ▾`;
       });
     };
-    wireTrayToggle("btnToggleFcFilters", "fcFilterTray", "Filtri");
-    wireTrayToggle("btnToggleQzFilters", "qzFilterTray", "Filtri");
-    wireTrayToggle("btnToggleClozeFilters", "clozeFilterTray", "Seleziona");
+    wireTrayToggle("btnToggleFcFilters", "fcFilterTray");
+    wireTrayToggle("btnToggleQzFilters", "qzFilterTray");
+    wireTrayToggle("btnToggleClozeFilters", "clozeFilterTray");
 
-    // Flashcards controls
     document.getElementById("fcDeckMode").addEventListener("change", e => {
       state.prefs.fcDeckMode = e.target.value;
       saveState();
@@ -2186,7 +2136,7 @@
       document.getElementById(id).addEventListener("change", () => buildFcQueue(false));
     });
     document.getElementById("btnFcClearFocus").addEventListener("click", () => buildFcQueue(false));
-    document.getElementById("btnFcShuffle").addEventListener("click", () => { buildFcQueue(true); showToast("Mazzo mescolato."); });
+    document.getElementById("btnFcShuffle").addEventListener("click", () => { buildFcQueue(true); showToast("Mazzo mescolato"); });
     document.getElementById("btnFcUndo").addEventListener("click", undoLastFlashcard);
     document.getElementById("flashcardEl").addEventListener("click", flipFlashcard);
     document.getElementById("btnFcReveal").addEventListener("click", flipFlashcard);
@@ -2194,12 +2144,10 @@
       e.stopPropagation();
       const card = fcQueue[0];
       if (card?.ref) {
-        openArticle(card.ref, {
-          returnTo: { type: "practice", sub: "flashcards", label: "Flashcard", reason: "Verifica norma della scheda" },
-        });
+        openArticle(card.ref, { returnTo: { type: "practice", sub: "flashcards", label: "Flashcard", reason: "Verifica scheda" } });
       }
     });
-    document.querySelectorAll("#fcRatingBar .sm2-btn").forEach(b => {
+    document.querySelectorAll("#fcRatingBar .sm2-pill").forEach(b => {
       b.addEventListener("click", () => rateFlashcard(Number(b.dataset.q)));
     });
     document.getElementById("btnFcShowAll").addEventListener("click", () => {
@@ -2208,7 +2156,7 @@
     });
     document.getElementById("btnFcRestartSession").addEventListener("click", () => buildFcQueue(true));
 
-    // Quiz controls
+    // Quiz
     ["qzModeFilter", "qzDocFilter", "qzOnlyUnmastered"].forEach(id => {
       document.getElementById(id).addEventListener("change", () => startQuiz());
     });
@@ -2219,11 +2167,32 @@
     });
     document.getElementById("btnStartQuiz").addEventListener("click", () => startQuiz());
     document.getElementById("btnQzRestart").addEventListener("click", () => startQuiz());
-    document.getElementById("btnRetryWrong").addEventListener("click", () => startQuiz([...qzWrong], "Ripasso errori"));
-    document.getElementById("btnQzRetryWrong2").addEventListener("click", () => startQuiz([...qzWrong], "Ripasso errori"));
-    document.getElementById("btnQzNext").addEventListener("click", () => { qzIdx++; renderQuizQuestion(); });
+    document.getElementById("btnRetryWrong").addEventListener("click", () => startQuiz([...qzWrong], "Errori"));
+    document.getElementById("btnQzRetryWrong2").addEventListener("click", () => startQuiz([...qzWrong], "Errori"));
+    document.getElementById("btnQzNext").addEventListener("click", () => { qzIdx++; renderQuizQuestion(); window.scrollTo({ top: 0, behavior: "instant" }); });
+    document.getElementById("btnQzMobileNext").addEventListener("click", () => { qzIdx++; renderQuizQuestion(); window.scrollTo({ top: 0, behavior: "instant" }); });
+    document.getElementById("btnQzExpandOpts").addEventListener("click", e => {
+      const pane = document.getElementById("pane-quiz");
+      const expanded = pane.classList.toggle("show-all-opts");
+      const item = qzQueue[qzIdx];
+      const hiddenCount = item ? Math.max(0, item.options.length - (document.querySelectorAll("#qzOptions .quiz-opt.correct, #qzOptions .quiz-opt.wrong").length)) : 2;
+      e.currentTarget.setAttribute("aria-expanded", expanded ? "true" : "false");
+      const lbl = document.getElementById("qzExpandLabel");
+      if (lbl) lbl.textContent = expanded ? "Nascondi altre opzioni" : `Mostra le altre ${hiddenCount} opzioni`;
+    });
 
-    // Practice Cloze controls
+    // Dynamic stuck state for sticky inline Cloze strip
+    const syncClozeStickyState = () => {
+      const bar = document.getElementById("inlineClozeStickyBar");
+      if (!bar || bar.closest(".hidden") || currentView !== "reader") return;
+      const stickyTop = window.innerWidth <= 900 ? 52 : 108;
+      const stuck = window.scrollY > 12 && bar.getBoundingClientRect().top <= stickyTop + 2;
+      bar.classList.toggle("is-stuck", stuck);
+    };
+    window.addEventListener("scroll", syncClozeStickyState, { passive: true });
+    window.addEventListener("resize", syncClozeStickyState, { passive: true });
+
+    // Practice Cloze
     document.getElementById("clozeDocSelect").addEventListener("change", e => {
       populatePracticeClozeSecSelect(e.target.value);
       renderPracticeCloze();
@@ -2252,14 +2221,10 @@
       state.mastery[practiceClozeSecId] = 3;
       saveState();
       syncAllViewsForStateChange(practiceClozeSecId);
-      showToast("Sezione segnata A MEMORIA.", "ok");
+      showToast("Segnato a memoria");
     });
     document.getElementById("btnPClozeOpenReader").addEventListener("click", () => {
-      if (practiceClozeSecId) {
-        openArticle(practiceClozeSecId, {
-          returnTo: { type: "practice", sub: "cloze", label: "Testo a scomparsa", reason: "Consultazione articolo" },
-        });
-      }
+      if (practiceClozeSecId) openArticle(practiceClozeSecId, { returnTo: { type: "practice", sub: "cloze", label: "Cloze", reason: "Lettura articolo" } });
     });
     document.getElementById("btnPClozePrev").addEventListener("click", () => {
       const idx = CLOZEABLE_SECTIONS.findIndex(s => s.id === practiceClozeSecId);
@@ -2275,13 +2240,14 @@
       if (pick) openPracticeClozeArticle(pick.id);
     });
 
-    // Reference controls
-    document.querySelectorAll("#csTabs .rail-tab").forEach(t => {
+    // Reference
+    document.querySelectorAll("#csTabs .ref-pill").forEach(t => {
       t.addEventListener("click", () => {
         csTab = t.dataset.cs;
         syncCsTabs();
         renderReference();
         setHash(`reference/${csTab}`);
+        window.scrollTo({ top: 0, behavior: "instant" });
       });
     });
     document.getElementById("csSearch").addEventListener("input", renderReference);
@@ -2323,7 +2289,7 @@
       }
     });
 
-    // Backup Modal (keyboard accessible import label + in-app reset confirm)
+    // Backup Modal
     document.getElementById("btnBackup").addEventListener("click", () => {
       renderBackupSummary();
       openModal("backupModal");
@@ -2332,19 +2298,16 @@
     document.getElementById("closeBackupModal").addEventListener("click", closeAllModals);
     document.getElementById("backupModal").addEventListener("click", e => { if (e.target.id === "backupModal") closeAllModals(); });
     document.getElementById("lblImportProgress").addEventListener("keydown", e => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        document.getElementById("inputImportProgress").click();
-      }
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); document.getElementById("inputImportProgress").click(); }
     });
     document.getElementById("btnExportProgress").addEventListener("click", () => {
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `polinetwork_studylab_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `polinetwork_studio_backup_${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
-      showToast("Backup JSON esportato.", "ok");
+      showToast("Backup esportato");
     });
     document.getElementById("inputImportProgress").addEventListener("change", e => {
       const file = e.target.files[0];
@@ -2372,9 +2335,9 @@
           buildFcQueue(false);
           startQuiz();
           closeAllModals();
-          showToast("Progressi ripristinati.", "ok");
+          showToast("Progressi ripristinati");
         } catch (_) {
-          showToast("File JSON non valido.", "warn");
+          showToast("File JSON non valido");
         }
         e.target.value = "";
       };
@@ -2393,7 +2356,7 @@
       buildFcQueue(false);
       startQuiz();
       closeAllModals();
-      showToast("Progressi azzerati.");
+      showToast("Progressi azzerati");
     });
 
     // Lightbox
@@ -2406,18 +2369,16 @@
       if (lbGallery.length > 1) { lbIdx = (lbIdx + 1) % lbGallery.length; updateLightbox(); }
     });
 
-    // Global Keyboard Shortcuts & Focus Trap
+    // Global Keyboard Shortcuts
     document.addEventListener("keydown", e => {
       if (activeTrapContainer) handleFocusTrap(e);
-
       const inInput = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         document.getElementById("btnSearchQuick").click();
         return;
       }
-      if (e.key === "Escape") { closeAllModals(); closeTocDrawer(); return; }
-
+      if (e.key === "Escape") { closeAllModals(); closeTocDrawer(); closeFontPopover(); return; }
       if (!document.getElementById("lightboxModal").classList.contains("hidden")) {
         if (e.key === "ArrowLeft") document.getElementById("btnLbPrev").click();
         if (e.key === "ArrowRight") document.getElementById("btnLbNext").click();
@@ -2451,10 +2412,9 @@
   init().catch(err => {
     console.error("Init error:", err);
     document.getElementById("mainContent").innerHTML = `
-      <div class="briefing-hero" style="display:block;">
+      <div class="ios-container"><div class="apple-card">
         <h2>Errore di caricamento</h2>
-        <p class="muted" style="margin-top:0.5rem;">Impossibile leggere i dati della normativa.</p>
-        <pre style="margin-top:0.75rem;font-size:0.8rem;overflow:auto;">${esc(String(err))}</pre>
-      </div>`;
+        <p class="muted small" style="margin-top:0.5rem;">${esc(String(err))}</p>
+      </div></div>`;
   });
 })();
