@@ -1,31 +1,41 @@
-# PoliNetwork StudyLab — Design System & Functional Architecture
+# PoliNetwork Studio — Design System & Technical Architecture (`v4.4.0`)
 
 ## 1. Information Architecture (4 Primary Destinations)
 | Destination | Route | User Intent | Key Components |
 |---|---|---|---|
-| **Panoramica** | `#overview` | Orientation, progress awareness, next best action | Editorial Briefing, Weighted Mastery Ring, Live Deadline Strip, Hairline Metric Strip, Document Directory |
-| **Normativa** | `#reader/<id>[/cloze]` | Verbatim study, cross-referencing, inline memorization | TOC Sidebar / Mobile Slide-Over Drawer, Editorial Prose Sheet, Inline `Lettura / A Memoria` Switch, Related Drills |
-| **Allenamento** | `#practice/<mode>` | Active recall & verification | Unified Practice Studio (`Flashcards`, `Quiz & Casi`, `A Memoria`), 1-Line Filter Summary + Collapsible Tray |
-| **Sinossi** | `#reference/<tab>` | Fast operational lookup during or before assemblies | Horizontal Underline Rail (`Cronoprogramma 2026`, `Quorum`, `Organi`, `Scadenze`, `Gerarchia & STV`, `Schemi PDF`) |
+| **Studio** | `#overview` | Orientation, progress ring, next best action, live election countdown & Cloud sync status | Bento Hero Card, Weighted Mastery Ring (`role="progressbar"`), iOS Calendar Event Card (`Europe/Rome`), 3-Stat Card, Inset Grouped Document List, Google Cloud Sync Card |
+| **Norme** | `#reader/<id>[/cloze]` | Verbatim legal study, cross-referencing, inline Cloze recall | TOC Sidebar / Mobile Slide-Over Drawer, Full-Bleed Reading Sheet, Sticky iOS Nav Bar, Inline `Leggi / Cloze` Tabs, Related Flashcards & Quiz |
+| **Pratica** | `#practice/<mode>[/<id>]` | Active recall & exam verification | Unified Practice Studio (`Flashcard` SM-2, `Quiz` with Fisher-Yates question+option shuffling, `Cloze` 4-level generator), Collapsible Filter Trays, Sticky Mobile Thumb Dock |
+| **Sinossi** | `#reference/<tab>` | Fast operational lookup during or before assemblies | Pill Rail (`Cronoprogramma`, `Quorum`, `Organi`, `Scadenze`, `STV`, `Schemi PDF`), Accent-Insensitive Filter, Responsive Borderless Cards on Mobile, PDF Lightbox |
 
 ## 2. Design Tokens (`styles.css`)
-- **Themes:**
-  - **Light (Default — Carta & Inchiostro):** `--bg-canvas: #f6f5f0`, `--bg-surface: #ffffff`, `--bg-subtle: #efede6`, `--ink-primary: #111827`, `--ink-secondary: #3f4957`, `--ink-tertiary: #525f70`, `--accent: #1d4ed8`.
-  - **Dark (Grafite & Cobalto):** `--bg-canvas: #0d1017`, `--bg-surface: #141923`, `--bg-subtle: #1a2130`, `--ink-primary: #f3f4f6`, `--ink-secondary: #b1bac8`, `--ink-tertiary: #939eb0`, `--accent: #3b82f6`.
+- **Light Theme (Apple Grouped Default):**
+  - Canvas `#f2f2f7` (`--bg-canvas`), Surface `#ffffff` (`--bg-surface`), Subtle `#efeff4` (`--bg-subtle`), Hover `#e5e5ea` (`--bg-hover`)
+  - Inks `#1c1c1e` / `#5c5c62` / `#59595e`, Field Border `#8a8a93`
+  - Accent Apple Blue `--accent: #0071e3`, `--accent-text: #005ec4`, `--accent-soft: #e6f2ff`
+  - Semantics: `--red-solid: #c81e1e` (≥5.7:1 AA), `--orange: #ff9500`, `--green: #34c759`, `--indigo: #5856d6`
+- **Dark Theme (True OLED Graphite):**
+  - Canvas `#000000`, Surface `#1c1c1e`, Subtle `#2c2c2e`, Hover `#3a3a3c`, Field Border `#7c7c85` (≥3.3:1 Non-Text AA)
+  - Inks `#ffffff` / `#b8b8bf` / `#a6a6ae`, `--red-solid: #d72c24` (≥4.6:1 AA)
+  - Anti-FOUC synchronous `<script>` in `<head>` applies `data-theme` and `theme-color` before first paint.
 - **Typography:**
-  - Display & Headings: `Source Serif 4`
-  - UI & Verbatim Legal Prose: `Inter` (`max-width: 70ch`, scalable `--reader-scale: 0.85–1.30`)
-  - Normative Codes, Dates, Counters & Formulas: `JetBrains Mono` (`tabular-nums`)
+  - Display & Titles: `Plus Jakarta Sans` + `-apple-system` / `SF Pro Display` / `Inter`
+  - Body & Verbatim Prose: system sans / `Inter` (`max-width: 720px`, scalable `--reader-scale: 0.88–1.28`)
+  - Code / Formulas / Diagnostic Console: `ui-monospace` (`SFMono-Regular`, `Menlo`, `Consolas`)
 - **Semantic Status Dots:**
-  - `s0` Da studiare (Neutral) · `s1` In corso (Amber) · `s2` Imparato (Emerald) · `s3` A memoria (Violet)
+  - `s0` Da studiare (Neutral) · `s1` In corso (Orange) · `s2` Imparato (Green) · `s3` A memoria (Apple Blue `--accent`)
 
-## 3. Epistemic Learning Model (Data Integrity Contract)
-The application strictly distinguishes four epistemic states:
-1. **Visualizzato:** Opening an article in `Normativa` updates `lastSecId` for session continuity only; it never claims learning.
-2. **Rivelato (passivo):** Using *Mostra testo*, *Suggerisci 1*, or `?` in Testo a scomparsa styles tokens in amber (`.peeked`), increments `revealed` (not `recalled`), and never auto-promotes mastery.
-3. **Ricordato (attivo):** Accurately typing tokens without peek (or verifying individually in click mode) increments `recalled`, displays exact recall accuracy, and promotes unstudied (`0`) articles to `In corso (1)` without downgrading higher states.
-4. **Consolidato / Appreso:** Explicit user mastery (`Imparato` / `A memoria`), SM-2 spaced repetition progression (`computeNextSM2`), and verified quiz mastery (`quizMastered`).
+## 3. Epistemic Learning & Cloze Model
+1. **Visualizzato:** Opening an article updates `lastSecId` via `saveState({ light: true })` (no `updatedAt` bump, no Cloud write, never claims learning).
+2. **Rivelato (passivo):** `+1 aiuto`, `Mostra tutte`, or `?` marks tokens as `.peeked` (amber), increments `revealed` (not `recalled`), and never promotes mastery.
+3. **Ricordato (attivo):** Matching tokens (with elision handling `l’/dell’/all’/…`, Euro/decimal normalization, and non-spoiling numeric masks) increments `recalled`; completing with ≥50% recall promotes `0 → 1`.
+4. **Consolidato / Appreso:** Explicit mastery (`Imparato` / `A memoria`), SM-2 spaced repetition with undo tombstones (`_ts.sm2Del`), and per-device quiz statistics (`quizStats.byDevice`).
 
-## 4. Responsive & Accessibility Contract (WCAG 2.2 AA)
-- **Breakpoints:** Desktop (`> 1024px`), Compact Desktop (`901–1024px`), Tablet/Mobile Bottom Nav (`<= 900px`), Compact Mobile (`<= 640px`), Small Phone (`<= 380px`, tested down to `320px`).
-- **Accessibility:** Skip-link, semantic landmarks, keyboard focus trap inside modals & mobile TOC drawer, `body.modal-open` scroll lock, `aria-live="polite"` feedback regions, zero native `alert()`/`confirm()`, `prefers-reduced-motion` support.
+## 4. Cloud Sync, Privacy & Security Architecture
+- **Firebase Cloud Sync (Schema v2):** Google Sign-In (`signInWithPopup` + mobile `signInWithRedirect`), single-collection `users/{uid}`, persistent multi-tab IndexedDB offline cache (`persistentLocalCache`), single-flight debounced push (`1.5s` / `maxWait 10s`), exponential backoff retry (`1s → 60s`), automatic token refresh on `permission-denied`, and real-time `onSnapshot` listener with active-session preservation.
+- **CRDT Lossless Merge:** Per-item last-writer-wins timestamps (`_ts.mastery`, `_ts.bookmarks`, `_ts.quizMastered`, `_ts.sm2Del`), additive per-device quiz counters, strict whitelist sanitization (`normalizeStateObject`), and shared-device account isolation (`ownerUid`).
+- **Security & GDPR:** Production Cloud Firestore Security Rules (`firestore.rules`), `<meta http-equiv="Content-Security-Policy">`, strict opt-in GDPR consent banner (Google Analytics loads only after explicit consent), PII masking in Diagnostic Console logs, and localhost-bound dev server (`avvia_app.bat --bind 127.0.0.1`).
+
+## 5. Responsive & Accessibility Contract (WCAG 2.2 AA)
+- **Breakpoints:** Desktop (`> 900px`), Mobile iOS Pill Nav (`<= 900px`), Compact (`<= 480px`), Small Phone / Short Viewport (`<= 380px` or `max-height: 700px`).
+- **A11y:** Skip-link, semantic landmarks, `<noscript>` fallback, full WAI-ARIA `tablist`/`tabpanel` + roving `tabindex` + Arrow/Home/End navigation, ARIA combobox/listbox search, focus trap with modal anti-stacking, safe-area insets (`env(safe-area-inset-*)`), `dvh` modals, and `prefers-reduced-motion` (including `transition-delay: 0s`).

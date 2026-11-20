@@ -2,6 +2,8 @@
   "use strict";
 
   const STORAGE_KEY = "polinetwork_studylab_v1";
+  const STATE_SCHEMA = 2;
+  const MAX_EPOCH_MS = 32503680000000;
 
   let CORPUS = null;
   let PACK = null;
@@ -10,7 +12,7 @@
   let CLOZEABLE_SECTIONS = [];
   let SECTION_MAP = new Map();
 
-  let state = loadState();
+  let state = null;
   let currentView = "overview";
   let readerDocFilter = "all";
   let readerStatusFilter = "all";
@@ -55,6 +57,8 @@
 
   const DIAGRAM_LABELS = {
     "21": "Allegato D — Modulo Candidatura Direttivo",
+    "22": "Allegato E — Modulo Delega",
+    "23": "Allegato F — Modulo Partecipazione a Distanza",
     "24": "Allegato G — Timeline dei Tempi (1/4)",
     "25": "Allegato G — Timeline dei Tempi (2/4)",
     "26": "Allegato G — Timeline dei Tempi (3/4)",
@@ -87,7 +91,11 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.3.0";
+  const APP_VERSION = "v4.4.0";
+  const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
+  const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
+  let fcCustomCards = null;
+  let searchIndex = [];
   let diagEvents = loadDiagEvents();
   let diagSeq = diagEvents.length;
 
@@ -340,7 +348,6 @@
   };
   const FIREBASE_SDK_VERSION = "11.0.2";
   const CLOUD_COLLECTION = "users";
-  const STATE_SCHEMA = 2;
   const CONSENT_KEY = "polinetwork_analytics_consent";
   const PUSH_DEBOUNCE_MS = 1500;
   const PUSH_MAX_WAIT_MS = 10000;
@@ -435,28 +442,99 @@
     return recomputeQuizTotals(qs);
   }
 
+  function clampEpochMs(v) {
+    const n = Math.round(Number(v) || 0);
+    return Number.isFinite(n) ? Math.max(0, Math.min(MAX_EPOCH_MS, n)) : 0;
+  }
+
+  function sanitizeTsMap(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    for (const [k, v] of Object.entries(raw)) {
+      const t = clampEpochMs(v);
+      if (t > 0) out[k] = t;
+    }
+    return out;
+  }
+
+  function sanitizeSm2Map(raw) {
+    const out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    for (const [k, rec] of Object.entries(raw)) {
+      if (!rec || typeof rec !== "object" || Array.isArray(rec)) continue;
+      const reps = Math.max(0, Math.min(1000, Math.round(Number(rec.reps) || 0)));
+      const interval = Math.max(0, Math.min(36500, Math.round(Number(rec.interval) || 0)));
+      const efRaw = Number(rec.ef);
+      const ef = Number.isFinite(efRaw) ? Number(Math.max(1.3, Math.min(5, efRaw)).toFixed(2)) : 2.5;
+      const lastReviewedAt = clampEpochMs(rec.lastReviewedAt);
+      const nextReviewRaw = clampEpochMs(rec.nextReview);
+      const nextReview = nextReviewRaw || (lastReviewedAt ? clampEpochMs(lastReviewedAt + interval * 86400000) : 0);
+      const clean = { reps, interval, ef, lastReviewedAt, nextReview };
+      const editedAt = clampEpochMs(rec._editedAt);
+      if (editedAt > 0) clean._editedAt = editedAt;
+      out[k] = clean;
+    }
+    return out;
+  }
+
   function normalizeStateObject(p) {
     const def = defaultState();
-    if (!p || typeof p !== "object") return def;
+    if (!p || typeof p !== "object" || Array.isArray(p)) return def;
+
+    const mastery = {};
+    if (p.mastery && typeof p.mastery === "object" && !Array.isArray(p.mastery)) {
+      for (const [k, v] of Object.entries(p.mastery)) {
+        const n = Math.round(Number(v));
+        if (Number.isFinite(n) && n >= 1 && n <= 3) mastery[k] = n;
+      }
+    }
+
+    const bookmarks = {};
+    if (p.bookmarks && typeof p.bookmarks === "object" && !Array.isArray(p.bookmarks)) {
+      for (const [k, v] of Object.entries(p.bookmarks)) {
+        if (v) bookmarks[k] = true;
+      }
+    }
+
+    const quizMastered = {};
+    if (p.quizMastered && typeof p.quizMastered === "object" && !Array.isArray(p.quizMastered)) {
+      for (const [k, v] of Object.entries(p.quizMastered)) {
+        if (v) quizMastered[k] = true;
+      }
+    }
+
+    const rawPrefs = (p.prefs && typeof p.prefs === "object" && !Array.isArray(p.prefs)) ? p.prefs : {};
+    const clozeLevel = ["1", "2", "3", "4"].includes(String(rawPrefs.clozeLevel)) ? String(rawPrefs.clozeLevel) : def.prefs.clozeLevel;
+    const clozeInputMode = ["click", "type"].includes(rawPrefs.clozeInputMode) ? rawPrefs.clozeInputMode : def.prefs.clozeInputMode;
+    const fcDeckMode = ["curated", "all_articles", "combined"].includes(rawPrefs.fcDeckMode) ? rawPrefs.fcDeckMode : def.prefs.fcDeckMode;
+    const scaleRaw = Number(p.readerScale);
+    const readerScale = Number.isFinite(scaleRaw) ? Number(Math.max(0.88, Math.min(1.28, scaleRaw)).toFixed(2)) : 1;
+
     return {
-      ...def,
-      ...p,
-      schema: 2,
-      mastery: p.mastery || {},
-      bookmarks: p.bookmarks || {},
-      sm2: p.sm2 || {},
+      schema: STATE_SCHEMA,
+      mastery,
+      bookmarks,
+      sm2: sanitizeSm2Map(p.sm2),
       quizStats: normalizeQuizStats(p.quizStats),
-      quizMastered: p.quizMastered || {},
-      updatedAt: Number(p.updatedAt) || 0,
-      resetAt: Number(p.resetAt) || 0,
-      ownerUid: p.ownerUid || null,
+      quizMastered,
+      theme: p.theme === "dark" ? "dark" : "light",
+      readerScale,
+      lastSecId: typeof p.lastSecId === "string" && p.lastSecId.length <= 80 ? p.lastSecId : null,
+      updatedAt: clampEpochMs(p.updatedAt),
+      resetAt: clampEpochMs(p.resetAt),
+      ownerUid: typeof p.ownerUid === "string" && p.ownerUid.length <= 128 ? p.ownerUid : null,
       _ts: {
-        mastery: p._ts?.mastery || {},
-        bookmarks: p._ts?.bookmarks || {},
-        quizMastered: p._ts?.quizMastered || {},
-        sm2Del: p._ts?.sm2Del || {},
+        mastery: sanitizeTsMap(p._ts?.mastery),
+        bookmarks: sanitizeTsMap(p._ts?.bookmarks),
+        quizMastered: sanitizeTsMap(p._ts?.quizMastered),
+        sm2Del: sanitizeTsMap(p._ts?.sm2Del),
       },
-      prefs: { ...def.prefs, ...(p.prefs || {}) },
+      prefs: {
+        highlightNums: rawPrefs.highlightNums !== false,
+        clozeLevel,
+        clozeInputMode,
+        fcDeckMode,
+      },
     };
   }
 
@@ -464,7 +542,10 @@
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return normalizeStateObject(JSON.parse(raw));
-    } catch (_) { /* ignore */ }
+    } catch (err) {
+      console.error("loadState error:", err);
+      diagLog("ERROR", "Errore lettura localStorage (ripristinato stato iniziale)", err?.message || String(err));
+    }
     return defaultState();
   }
 
@@ -771,19 +852,34 @@
     }
   }
 
-  function applyFullStateToUI() {
+  function applyFullStateToUI({ preserveActiveSession = false } = {}) {
     applyTheme(state.theme);
     applyReaderScale(state.readerScale);
     applySavedPrefsToControls();
-    if (state.lastSecId && SECTION_MAP.has(state.lastSecId) && currentView !== "reader") {
-      readerSecId = state.lastSecId;
+    if (state.lastSecId && SECTION_MAP.has(state.lastSecId)) {
+      if (currentView !== "reader" || !preserveActiveSession) readerSecId = state.lastSecId;
+    } else if (!preserveActiveSession) {
+      readerSecId = STUDYABLE_SECTIONS[0]?.id || ALL_SECTIONS[0]?.id || null;
     }
     renderOverview();
     renderReaderSidebar();
     if (readerSecId && SECTION_MAP.has(readerSecId)) {
-      renderReaderArticle(readerSecId, { skipHash: true });
+      const keepInlineCloze = preserveActiveSession && currentView === "reader" && readerMode === "cloze";
+      if (keepInlineCloze) {
+        const mSel = document.getElementById("readerMasterySelect");
+        if (mSel) { const v = String(state.mastery[readerSecId] || 0); mSel.value = v; mSel.dataset.mastery = v; }
+        document.getElementById("btnBookmarkSec")?.setAttribute("aria-pressed", state.bookmarks[readerSecId] ? "true" : "false");
+        syncReaderSidebarDots();
+      } else {
+        renderReaderArticle(readerSecId, { skipHash: true, persistLastSec: false });
+      }
     }
-    buildFcQueue(false);
+    const keepFc = preserveActiveSession && currentView === "practice" && practiceMode === "flashcards" && fcQueue.length > 0;
+    if (!keepFc) buildFcQueue(false);
+    const keepPCloze = preserveActiveSession && currentView === "practice" && practiceMode === "cloze";
+    populatePracticeClozeSecSelect(document.getElementById("clozeDocSelect").value);
+    if (!keepPCloze) renderPracticeCloze();
+    if (!preserveActiveSession) startQuiz();
     renderBackupSummary();
     updateDueBadges();
   }
@@ -819,11 +915,13 @@
   }
 
   function applyRemoteState(nextState, reason) {
+    const prevResetAt = state.resetAt || 0;
     cloudApplyingRemote = true;
     try {
       state = normalizeStateObject(nextState);
       saveState({ skipCloud: true, preserveTimestamp: true, silentLog: true });
-      applyFullStateToUI();
+      const wasRemoteReset = (state.resetAt || 0) > prevResetAt;
+      applyFullStateToUI({ preserveActiveSession: !wasRemoteReset });
       if (reason) diagLog("CLOUD-MERGE", reason, summarizeStateForLog(state));
     } finally {
       cloudApplyingRemote = false;
@@ -895,9 +993,9 @@
     const snapshotState = JSON.parse(JSON.stringify(state));
     const payload = {
       studylab_v1: snapshotState,
-      studylab_updatedAt: Math.round(Number(snapshotState.updatedAt) || Date.now()),
+      studylab_updatedAt: clampEpochMs(snapshotState.updatedAt || Date.now()),
       uid,
-      email: fbUser.email || "",
+      email: (fbUser.email || "").slice(0, 320),
       displayName: (fbUser.displayName || "").slice(0, 200),
       schema: STATE_SCHEMA,
     };
@@ -1129,7 +1227,11 @@
     document.getElementById("btnConsentDeny")?.addEventListener("click", () => setAnalyticsConsent("denied"));
     document.getElementById("btnConsentManage")?.addEventListener("click", () => {
       closeAllModals();
-      document.getElementById("consentBanner")?.classList.remove("hidden");
+      const b = document.getElementById("consentBanner");
+      if (b) {
+        b.classList.remove("hidden");
+        document.getElementById("btnConsentAccept")?.focus();
+      }
     });
     syncConsentLabel();
   }
@@ -1213,6 +1315,13 @@
         if (fbUser) {
           if (prevUid === fbUser.uid) return; // token refresh, same user
           diagLog("AUTH", "Utente autenticato", `email=${maskEmail(fbUser.email)} uid=${maskUid(fbUser.uid)}`);
+          const isGoogleProvider = Array.isArray(fbUser.providerData) && fbUser.providerData.some(p => p?.providerId === "google.com");
+          if (fbUser.emailVerified === false && !isGoogleProvider) {
+            cloudStatus = "error";
+            setCloudNotice("L'indirizzo email del tuo account non risulta verificato: verifica l'email per abilitare il backup Cloud.", true);
+            updateCloudUI();
+            return;
+          }
           claimLocalStateForUser(fbUser);
           cloudStatus = "syncing";
           updateCloudUI();
@@ -1324,19 +1433,60 @@
 
   // ==================== UTILITIES ====================
   function esc(str) {
-    return String(str)
+    return String(str ?? "")
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function isSafeAssetSrc(src) {
+    return typeof src === "string" && /^assets\/[A-Za-z0-9._\/-]+$/.test(src) && !src.includes("..");
   }
 
   function norm(s) {
-    return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[’'“”".,;:()]/g, "").trim();
+    return String(s ?? "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/^€\s*/, "")
+      .replace(/(\d)[,.](\d)/g, "$1.$2")
+      .replace(/[’'“”".,;:()]/g, m => (m === "." ? "." : ""))
+      .replace(/\.(?!\d)/g, "")
+      .trim();
+  }
+
+  function searchNorm(s) {
+    return String(s ?? "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[’`´]/g, "'")
+      .replace(/[“”]/g, '"');
+  }
+
+  function shuffleArray(arr) {
+    const out = [...arr];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  }
+
+  function debounce(fn, wait = 120) {
+    let t = null;
+    return (...args) => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => { t = null; fn(...args); }, wait);
+    };
   }
 
   function showToast(msg) {
     const region = document.getElementById("toastRegion");
+    if (!region) return;
+    while (region.children.length >= 3) region.firstElementChild.remove();
     const el = document.createElement("div");
     el.className = "toast";
     el.textContent = msg;
@@ -1348,12 +1498,40 @@
     }, 2200);
   }
 
+  function getEuropeRomeOffsetMinutes(year, month, day, hour, min) {
+    try {
+      const guessUtc = Date.UTC(year, month - 1, day, hour, min, 0);
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Europe/Rome",
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+      }).formatToParts(new Date(guessUtc));
+      const p = {};
+      for (const part of parts) p[part.type] = part.value;
+      const h = Number(p.hour) === 24 ? 0 : Number(p.hour);
+      const asUtc = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), h, Number(p.minute), Number(p.second));
+      return Math.round((asUtc - guessUtc) / 60000);
+    } catch (_) {
+      return 60; // fallback CET (+01:00)
+    }
+  }
+
   function parseItalianDate(str) {
-    const m = str.match(/(\d{2})\/(\d{2})\/(\d{4})(?:\s+(?:~)?(\d{1,2})(?::(\d{2}))?)?/);
+    const m = String(str || "").match(/(\d{2})\/(\d{2})\/(\d{4})(?:\s+\(?~?(\d{1,2})(?::(\d{2}))?\)?)?/);
     if (!m) return null;
-    const hour = m[4] !== undefined ? Number(m[4]) : 23;
-    const min = m[5] !== undefined ? Number(m[5]) : (m[4] !== undefined ? 0 : 59);
-    return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), hour, min, 0);
+    const day = Number(m[1]);
+    const month = Number(m[2]);
+    const year = Number(m[3]);
+    const hasHour = m[4] !== undefined;
+    const hour = hasHour ? Number(m[4]) : 23;
+    const min = m[5] !== undefined ? Number(m[5]) : (hasHour ? 0 : 59);
+    const sec = hasHour ? 0 : 59;
+    const offsetMin = getEuropeRomeOffsetMinutes(year, month, day, hour, min);
+    const utcMs = Date.UTC(year, month - 1, day, hour, min, sec) - offsetMin * 60000;
+    const dt = new Date(utcMs);
+    dt._itMonth = month - 1;
+    dt._itDay = day;
+    return dt;
   }
 
   function formatCountdown(ms) {
@@ -1391,16 +1569,44 @@
   }
 
   function highlightQuery(text, query) {
-    const safe = esc(text);
-    const q = (query || "").trim();
-    if (!q) return safe;
-    const escapedQ = esc(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return safe.replace(new RegExp(`(${escapedQ})`, "gi"), '<mark class="search-hit">$1</mark>');
+    const raw = String(text ?? "");
+    const qNorm = searchNorm(query).trim();
+    if (!qNorm) return esc(raw);
+    // Map normalized chars back to raw indices so accents/curly quotes highlight accurately without corrupting HTML entities
+    const rawChars = Array.from(raw);
+    let normStr = "";
+    const normToRaw = [];
+    for (let i = 0; i < rawChars.length; i++) {
+      const n = searchNorm(rawChars[i]);
+      for (let k = 0; k < n.length; k++) {
+        normStr += n[k];
+        normToRaw.push(i);
+      }
+    }
+    let out = "";
+    let rawCursor = 0;
+    let searchPos = 0;
+    while (searchPos <= normStr.length - qNorm.length) {
+      const idx = normStr.indexOf(qNorm, searchPos);
+      if (idx === -1) break;
+      const startRaw = normToRaw[idx];
+      const endRaw = normToRaw[idx + qNorm.length - 1] + 1;
+      if (startRaw >= rawCursor) {
+        out += esc(rawChars.slice(rawCursor, startRaw).join(""));
+        out += `<mark class="search-hit">${esc(rawChars.slice(startRaw, endRaw).join(""))}</mark>`;
+        rawCursor = endRaw;
+      }
+      searchPos = idx + qNorm.length;
+    }
+    out += esc(rawChars.slice(rawCursor).join(""));
+    return out;
   }
 
   function computeNextSM2(prev, quality) {
-    const base = prev || { reps: 0, interval: 0, ef: 2.5 };
-    let { reps, interval, ef } = base;
+    let reps = Math.max(0, Math.round(Number(prev?.reps) || 0));
+    let interval = Math.max(0, Math.round(Number(prev?.interval) || 0));
+    const efIn = Number(prev?.ef);
+    let ef = Number.isFinite(efIn) ? Math.max(1.3, efIn) : 2.5;
     if (quality < 3) {
       reps = 0;
       interval = 0;
@@ -1431,7 +1637,11 @@
   function getFocusable(container) {
     return Array.from(container.querySelectorAll(
       'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    )).filter(el => el.offsetParent !== null);
+    )).filter(el => {
+      if (el.closest(".hidden")) return false;
+      const st = getComputedStyle(el);
+      return st.display !== "none" && st.visibility !== "hidden" && (el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0);
+    });
   }
 
   function handleFocusTrap(e) {
@@ -1440,12 +1650,21 @@
     if (!focusables.length) return;
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    if (!activeTrapContainer.contains(document.activeElement)) {
+      e.preventDefault();
+      (e.shiftKey ? last : first).focus();
+    } else if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   // ==================== INIT ====================
   async function init() {
+    state = loadState();
     const tBoot = performance.now();
     diagLog("BOOT", `Avvio applicazione PoliNetwork Studio ${APP_VERSION}`, `${window.innerWidth}x${window.innerHeight} · theme=${state.theme}`);
     document.body.dataset.view = "overview";
@@ -1471,7 +1690,19 @@
       }
     }
     STUDYABLE_SECTIONS = ALL_SECTIONS.filter(s => s.text && s.text.trim().length > 0);
-    CLOZEABLE_SECTIONS = STUDYABLE_SECTIONS.filter(s => s.text.trim().length > 20 && s.id !== "el-b-1");
+    CLOZEABLE_SECTIONS = STUDYABLE_SECTIONS.filter(s => s.text.trim().length > 20 && !NON_CLOZE_SECTIONS.has(s.id));
+
+    // Pre-compute normalized search text once for instant accent/apostrophe-insensitive search
+    searchIndex = ALL_SECTIONS.map(s => ({
+      sec: s,
+      codeNorm: searchNorm(s.code),
+      titleNorm: searchNorm(s.title),
+      textNorm: searchNorm(s.text || ""),
+      flatText: s.text ? sanitizeSnippetText(s.text) : "",
+    }));
+    for (const item of searchIndex) {
+      item.flatNorm = searchNorm(item.flatText);
+    }
 
     diagLog("CORPUS", `Corpus e Study Pack caricati (${Math.round(performance.now() - tBoot)}ms)`, `${CORPUS.documents.length} doc · ${ALL_SECTIONS.length} sez (${STUDYABLE_SECTIONS.length} studiabili) · ${PACK.flashcards.length} flashcard · ${PACK.quizzes.length} quiz`);
 
@@ -1480,6 +1711,11 @@
       : (STUDYABLE_SECTIONS[0]?.id || ALL_SECTIONS[0]?.id);
     practiceClozeSecId = CLOZEABLE_SECTIONS[0]?.id || readerSecId;
 
+    // Platform-accurate keyboard shortcut hint (⌘ K on Apple vs Ctrl K elsewhere)
+    const isApplePlatform = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+    const kbdEl = document.querySelector("#btnSearchQuick .search-pill-kbd");
+    if (kbdEl && !isApplePlatform) kbdEl.innerHTML = "<span>Ctrl</span><span>K</span>";
+
     syncDynamicOptionLabels();
     populateFcTagFilter();
     populatePracticeClozeSecSelect(document.getElementById("clozeDocSelect").value);
@@ -1487,7 +1723,7 @@
 
     renderOverview();
     renderReaderSidebar();
-    if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
+    if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true, persistLastSec: false });
     buildFcQueue(false);
     startQuiz();
     renderPracticeCloze();
@@ -1496,7 +1732,7 @@
 
     applyRouteFromHash();
     window.addEventListener("hashchange", applyRouteFromHash);
-    setInterval(renderDeadlineCard, 60000);
+    setInterval(() => { if (!document.hidden && currentView === "overview") renderDeadlineCard(); }, 60000);
     initConsentBanner();
     updateCloudUI();
     refreshDiagConsoleUI();
@@ -1575,7 +1811,8 @@
   function syncAllViewsForStateChange(affectedSecId = null) {
     updateDueBadges();
     if (affectedSecId) {
-      syncReaderSidebarDots();
+      if (readerStatusFilter !== "all") renderReaderSidebar();
+      else syncReaderSidebarDots();
       if (readerSecId === affectedSecId) {
         const sel = document.getElementById("readerMasterySelect");
         if (sel) {
@@ -1598,6 +1835,7 @@
 
   function switchView(viewName, opts = {}) {
     if (!["overview", "reader", "practice", "reference"].includes(viewName)) viewName = "overview";
+    if (currentView === "reader" && viewName !== "reader" && !opts.keepReturn) returnStack = [];
     currentView = viewName;
     document.body.dataset.view = viewName;
     closeFontPopover();
@@ -1632,6 +1870,7 @@
       const act = b.dataset.pmode === mode;
       b.classList.toggle("active", act);
       b.setAttribute("aria-selected", act ? "true" : "false");
+      b.tabIndex = act ? 0 : -1;
     });
     ["flashcards", "quiz", "cloze"].forEach(m => {
       document.getElementById(`pane-${m}`).classList.toggle("hidden", m !== mode);
@@ -1645,7 +1884,10 @@
 
   function applyRouteFromHash() {
     const raw = (location.hash || "").replace(/^#/, "");
-    if (!raw) return;
+    if (!raw) {
+      if (currentView !== "overview") switchView("overview", { skipHash: true });
+      return;
+    }
     const [head, p1, p2] = raw.split("/");
     if (head === "overview" || head === "dashboard") {
       switchView("overview", { skipHash: true });
@@ -1654,10 +1896,13 @@
       else switchView("reader", { skipHash: true });
     } else if (head === "practice") {
       switchPracticeMode(p1 || "flashcards", { skipHash: true });
-      if (p1 === "cloze" && p2 && SECTION_MAP.has(p2)) openPracticeClozeArticle(p2, { skipHash: true });
-      else switchView("practice", { skipHash: true });
+      if (p1 === "cloze" && p2 && CLOZEABLE_SECTIONS.some(s => s.id === p2)) {
+        openPracticeClozeArticle(p2, { skipHash: true });
+      } else {
+        switchView("practice", { skipHash: true });
+      }
     } else if (head === "reference" || head === "cheatsheet") {
-      if (p1 && document.querySelector(`#csTabs .ref-pill[data-cs="${p1}"]`)) {
+      if (p1 && VALID_CS_TABS.has(p1)) {
         csTab = p1;
         syncCsTabs();
         renderReference();
@@ -1710,9 +1955,14 @@
   }
 
   // ==================== 1. STUDIO (HOME) ====================
-  function countTrulyDueReviewed() {
+  function getTrulyDueReviewedCards() {
     const now = Date.now();
-    return PACK.flashcards.filter(c => state.sm2[c.id] && now >= state.sm2[c.id].nextReview).length;
+    const allCards = getDeckCards("combined");
+    return allCards.filter(c => state.sm2[c.id] && now >= state.sm2[c.id].nextReview);
+  }
+
+  function countTrulyDueReviewed() {
+    return getTrulyDueReviewedCards().length;
   }
 
   function updateDueBadges() {
@@ -1747,8 +1997,10 @@
     const artLbl = document.getElementById("deadlineArticleLabel");
 
     if (nextItem) {
-      monthEl.textContent = MONTHS_IT[nextItem.dt.getMonth()];
-      dayEl.textContent = String(nextItem.dt.getDate());
+      const mIdx = typeof nextItem.dt._itMonth === "number" ? nextItem.dt._itMonth : nextItem.dt.getMonth();
+      const dNum = typeof nextItem.dt._itDay === "number" ? nextItem.dt._itDay : nextItem.dt.getDate();
+      monthEl.textContent = MONTHS_IT[mIdx] || "NOV";
+      dayEl.textContent = String(dNum);
       titleEl.textContent = nextItem.event;
       cdEl.textContent = formatCountdown(nextItem.dt.getTime() - now);
       if (nextItem.ref && SECTION_MAP.has(nextItem.ref)) {
@@ -1780,11 +2032,14 @@
       if (m === 3) nMem++;
     }
     const pct = Math.round((scoreSum / (STUDYABLE_SECTIONS.length * 3 || 1)) * 100);
+    const dueCards = getTrulyDueReviewedCards();
     const dueReviewed = updateDueBadges();
-    const qzMast = Object.keys(state.quizMastered).filter(k => state.quizMastered[k]).length;
+    const validQuizIds = new Set(PACK.quizzes.map(q => q.id));
+    const qzMast = Object.keys(state.quizMastered).filter(k => state.quizMastered[k] && validQuizIds.has(k)).length;
     const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k] && SECTION_MAP.has(k)).length;
 
     document.getElementById("overallPct").textContent = `${pct}%`;
+    document.getElementById("overallProgressRingWrap")?.setAttribute("aria-valuenow", String(pct));
     const circ = 2 * Math.PI * 23;
     const ringEl = document.getElementById("overallRing");
     ringEl.style.strokeDashoffset = circ * (1 - pct / 100);
@@ -1802,12 +2057,14 @@
 
     if (dueReviewed > 0) {
       kickerEl.textContent = "Ripasso di oggi";
-      titleEl.textContent = `${dueReviewed} flashcard pronte`;
+      titleEl.textContent = dueReviewed === 1 ? "1 flashcard pronta" : `${dueReviewed} flashcard pronte`;
       subEl.textContent = "Ripetizione dilazionata SM-2";
       nextLbl.textContent = "Avvia ripasso";
       nextBtn.onclick = () => {
+        document.getElementById("fcDocFilter").value = "all";
+        document.getElementById("fcTagFilter").value = "all";
         document.getElementById("fcOnlyDue").checked = true;
-        buildFcQueue(false);
+        buildFcQueue(false, dueCards, "Ripasso di oggi");
         switchPracticeMode("flashcards");
         switchView("practice");
       };
@@ -1817,7 +2074,7 @@
       subEl.textContent = `${DOC_SHORT[firstWipSec.doc]} · ${mins} min`;
       nextLbl.textContent = "Riprendi lettura";
       nextBtn.onclick = () => openArticle(firstWipSec.id);
-    } else {
+    } else if (focusSec) {
       kickerEl.textContent = "Prossimo passo";
       titleEl.textContent = `${focusSec.code.replace(/\s+/g, "\u00A0")} ·\u00A0${focusSec.title}`;
       subEl.textContent = `${DOC_SHORT[focusSec.doc]} · ${mins} min`;
@@ -1852,8 +2109,8 @@
       row.innerHTML = `
         <span class="doc-sq ${ic.cls}" aria-hidden="true"><svg class="ic sm" viewBox="0 0 24 24">${ic.svg}</svg></span>
         <span class="doc-info">
-          <div class="doc-name">${esc(DOC_CLEAN[doc.id] || doc.title)}</div>
-          <div class="doc-sub">${secs.length} ${unit}${ic.subExtra}</div>
+          <span class="doc-name">${esc(DOC_CLEAN[doc.id] || doc.title)}</span>
+          <span class="doc-sub">${secs.length} ${unit}${ic.subExtra}</span>
         </span>
         <span class="doc-right">
           ${dPct > 0 ? `<span class="doc-pct">${dPct}%</span>` : ""}
@@ -1865,7 +2122,6 @@
         readerStatusFilter = "all";
         document.getElementById("readerStatusFilter").value = "all";
         syncReaderDocPills();
-        renderReaderSidebar();
         const first = ALL_SECTIONS.find(s => s.doc === doc.id && s.text?.trim()) || ALL_SECTIONS.find(s => s.doc === doc.id);
         if (first) openArticle(first.id, { mode: "read" });
       });
@@ -1878,7 +2134,7 @@
     document.querySelectorAll("#readerDocPills .ios-seg-btn").forEach(b => {
       const act = b.dataset.doc === readerDocFilter;
       b.classList.toggle("active", act);
-      b.setAttribute("aria-selected", act ? "true" : "false");
+      b.setAttribute("aria-pressed", act ? "true" : "false");
     });
   }
 
@@ -1892,6 +2148,7 @@
       const act = b.dataset.rmode === readerMode;
       b.classList.toggle("active", act);
       b.setAttribute("aria-selected", act ? "true" : "false");
+      b.tabIndex = act ? 0 : -1;
     });
     document.getElementById("readerReadPane").classList.toggle("hidden", readerMode !== "read");
     document.getElementById("readerClozePane").classList.toggle("hidden", readerMode !== "cloze");
@@ -1901,8 +2158,9 @@
   }
 
   function getFilteredReaderSections() {
-    const q = (document.getElementById("readerSearch").value || "").trim().toLowerCase();
-    return ALL_SECTIONS.filter(s => {
+    const q = searchNorm(document.getElementById("readerSearch").value || "").trim();
+    return searchIndex.filter(entry => {
+      const s = entry.sec;
       if (readerDocFilter !== "all" && s.doc !== readerDocFilter) return false;
       const m = state.mastery[s.id] || 0;
       if (readerStatusFilter === "bookmarked" && !state.bookmarks[s.id]) return false;
@@ -1910,8 +2168,32 @@
       if (readerStatusFilter === "inprogress" && m !== 1) return false;
       if (readerStatusFilter === "memorized" && m !== 3) return false;
       if (!q) return true;
-      return s.code.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || (s.text && s.text.toLowerCase().includes(q));
-    });
+      return entry.codeNorm.includes(q) || entry.titleNorm.includes(q) || entry.textNorm.includes(q);
+    }).map(e => e.sec);
+  }
+
+  function updateReaderPager(secId = readerSecId) {
+    if (!secId) return;
+    const filteredStudyable = getFilteredReaderSections().filter(s => s.text && s.text.trim().length > 0);
+    const pool = filteredStudyable.some(s => s.id === secId) ? filteredStudyable : STUDYABLE_SECTIONS;
+    const idx = pool.findIndex(s => s.id === secId);
+    let prev = null, next = null;
+    if (idx >= 0) {
+      prev = idx > 0 ? pool[idx - 1] : null;
+      next = idx < pool.length - 1 ? pool[idx + 1] : null;
+    } else {
+      const allIdx = ALL_SECTIONS.findIndex(s => s.id === secId);
+      for (let i = allIdx - 1; i >= 0; i--) if (ALL_SECTIONS[i].text?.trim()) { prev = ALL_SECTIONS[i]; break; }
+      for (let i = allIdx + 1; i < ALL_SECTIONS.length; i++) if (ALL_SECTIONS[i].text?.trim()) { next = ALL_SECTIONS[i]; break; }
+    }
+    const btnPrev = document.getElementById("btnPrevSec");
+    const btnNext = document.getElementById("btnNextSec");
+    btnPrev.disabled = !prev;
+    btnNext.disabled = !next;
+    btnPrev.dataset.target = prev ? prev.id : "";
+    btnNext.dataset.target = next ? next.id : "";
+    document.getElementById("prevSecTitle").textContent = prev ? `${prev.code} · ${prev.title}` : "Inizio";
+    document.getElementById("nextSecTitle").textContent = next ? `${next.code} · ${next.title}` : "Fine";
   }
 
   function renderReaderSidebar() {
@@ -1983,12 +2265,13 @@
       if (isBm && !star) {
         star = document.createElement("span");
         star.className = "toc-star";
+        star.setAttribute("aria-label", "Salvato");
         star.textContent = "★";
         el.appendChild(star);
       } else if (!isBm && star) {
         star.remove();
       }
-      if (isTarget) el.scrollIntoView({ block: "nearest" });
+      if (isTarget && currentView === "reader") el.scrollIntoView({ block: "nearest" });
     });
   }
 
@@ -2020,26 +2303,28 @@
   function formatLegalText(rawText, currentDoc) {
     let html = esc(rawText);
     if (state.prefs.highlightNums !== false) {
-      const numPattern = /(\b\d{1,2}\/\d{1,2}\/\d{4}\b|\b\d{1,2}:\d{2}\b|€\s?\d+(?:,\d{2})?|\b\d+(?:,\d+)?\s*(?:giorni|giorno|ore|ora|mesi|mese|anni|anno|minuti|minuto|settimane|settimana|crediti|credito|ammonizioni|deleghe|seggi|membri|persone|candidati|semestri|semestre|volte)\b|\b(?:maggioranza assoluta|maggioranza semplice|unanimità|tre quarti|due terzi|un terzo|un sesto|metà più uno|⅔|½|⅙|3\/4|2\/3|1\/3|1\/2)\b|\b(?:trenta|novanta|sette|dieci|quindici|ventiquattro|quarantotto|cinque|sei|nove|dodici|quattro|tre|due)\s+(?:giorni|ore|mesi|anni|minuti|settimane|ammonizioni|deleghe|crediti)\b)/gi;
-      html = html.replace(numPattern, '<span class="num-hl">$1</span>');
+      // Avoid lookbehind for Safari < 16.4 compatibility; capture optional leading separator instead
+      const numPattern = /(^|[^\p{L}\p{N}])(\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}:\d{2}|€\s?\d+(?:,\d{2})?|\d+(?:,\d+)?\s*(?:giorni|giorno|ore|ora|mesi|mese|anni|anno|minuti|minuto|settimane|settimana|crediti|credito|ammonizioni|deleghe|seggi|membri|persone|candidati|semestri|semestre|volte)|maggioranza assoluta|maggioranza semplice|unanimità|tre quarti|due terzi|un terzo|un sesto|metà più uno|⅔|½|⅙|⅓|¼|¾|3\/4|2\/3|1\/3|1\/2|(?:trenta|novanta|sette|dieci|quindici|ventiquattro|quarantotto|cinque|sei|nove|dodici|quattro|tre|due)\s+(?:giorni|ore|mesi|anni|minuti|settimane|ammonizioni|deleghe|crediti))(?![\p{L}\p{N}])/giu;
+      html = html.replace(numPattern, '$1<span class="num-hl">$2</span>');
     }
 
     html = html.replace(/\b(articolo|art\.)\s+(A\.\d+(?:\.\d+)?)\b/gi, (m, _p1, code) => {
       const id = `el-${code.toLowerCase().replace(/\./g, "-")}`;
-      return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${id}">${m}</button>` : m;
+      return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${esc(id)}">${m}</button>` : m;
     });
     html = html.replace(/\b(articolo|art\.)\s+(\d{1,2})(?:\.\d+)?\b(?=[^.;]{0,45}\b(?:dello Statuto|del presente Statuto)\b)/gi, (m, _p1, num) => {
       const id = `statuto-art-${num}`;
-      return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${id}">${m}</button>` : m;
+      return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${esc(id)}">${m}</button>` : m;
     });
-    html = html.replace(/\b(articolo|art\.)\s+(\d+\.\d+(?:\.\d+)*)\b/gi, (m, _p1, code) => {
+    html = html.replace(/\b(articolo|art\.)\s+(\d+\.\d+(?:\.\d+)*)\b(?![^<]*<\/button>)/gi, (m, _p1, code) => {
       const id = `rri-${code.replace(/\./g, "-")}`;
-      return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${id}">${m}</button>` : m;
+      return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${esc(id)}">${m}</button>` : m;
     });
     if (currentDoc === "statuto") {
-      html = html.replace(/\b(articolo|art\.)\s+(\d{1,2})\b(?![^<]*<\/button>)/gi, (m, _p1, num) => {
+      // Only link internal Statuto articles; explicitly exclude external Italian/EU law citations (D.Lgs., Codice, GDPR)
+      html = html.replace(/\b(articolo|art\.)\s+(\d{1,2})\b(?![^<]*<\/button>)(?![^.;]{0,75}\b(?:D\.\s?Lgs|Decreto\s+Legislativo|Codice\s+Civile|c\.c\.|GDPR|Regolamento\s+UE)\b)/gi, (m, _p1, num) => {
         const id = `statuto-art-${num}`;
-        return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${id}">${m}</button>` : m;
+        return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${esc(id)}">${m}</button>` : m;
       });
     }
     return html;
@@ -2048,8 +2333,10 @@
   function buildBreadcrumb(sec) {
     const parts = [DOC_SHORT[sec.doc] || sec.doc];
     const chain = [];
+    const visited = new Set([sec.id]);
     let pId = sec.parent;
-    while (pId && SECTION_MAP.has(pId)) {
+    while (pId && SECTION_MAP.has(pId) && !visited.has(pId)) {
+      visited.add(pId);
       const p = SECTION_MAP.get(pId);
       chain.unshift(`${p.code} ${p.title}`);
       pId = p.parent;
@@ -2062,7 +2349,7 @@
     const sec = SECTION_MAP.get(secId);
     if (!sec) return;
     readerSecId = secId;
-    if (state.lastSecId !== secId) {
+    if (opts.persistLastSec !== false && state.lastSecId !== secId) {
       state.lastSecId = secId;
       saveState({ light: true });
     }
@@ -2147,13 +2434,14 @@
 
     const imgWrap = document.getElementById("readerArtImages");
     imgWrap.innerHTML = "";
-    if (sec.images && sec.images.length) {
-      const gallery = sec.images.map(src => ({ src, cap: `${sec.code} — ${sec.title}` }));
-      sec.images.forEach((src, i) => {
+    const safeImgs = (sec.images || []).filter(isSafeAssetSrc);
+    if (safeImgs.length) {
+      const gallery = safeImgs.map(src => ({ src, cap: `${sec.code} — ${sec.title}` }));
+      safeImgs.forEach((src, i) => {
         const card = document.createElement("button");
         card.type = "button";
         card.className = "pdf-card";
-        card.innerHTML = `<img src="${src}" alt="Schema PDF ${sec.code}" loading="lazy" /><div class="pdf-card-cap">Apri schema · ${src.split("/").pop()}</div>`;
+        card.innerHTML = `<img src="${esc(src)}" alt="Schema PDF ${esc(sec.code)}" loading="lazy" /><span class="pdf-card-cap">Apri schema · ${esc(src.split("/").pop())}</span>`;
         card.addEventListener("click", () => openLightbox(gallery, i));
         imgWrap.appendChild(card);
       });
@@ -2173,27 +2461,7 @@
     document.getElementById("btnArticleQuiz").classList.toggle("hidden", relQzs.length === 0);
     document.getElementById("artQzCount").textContent = relQzs.length;
 
-    const filteredStudyable = getFilteredReaderSections().filter(s => s.text && s.text.trim().length > 0);
-    const pool = filteredStudyable.some(s => s.id === secId) ? filteredStudyable : STUDYABLE_SECTIONS;
-    const idx = pool.findIndex(s => s.id === secId);
-    let prev = null, next = null;
-    if (idx >= 0) {
-      prev = idx > 0 ? pool[idx - 1] : null;
-      next = idx < pool.length - 1 ? pool[idx + 1] : null;
-    } else {
-      const allIdx = ALL_SECTIONS.findIndex(s => s.id === secId);
-      for (let i = allIdx - 1; i >= 0; i--) if (ALL_SECTIONS[i].text?.trim()) { prev = ALL_SECTIONS[i]; break; }
-      for (let i = allIdx + 1; i < ALL_SECTIONS.length; i++) if (ALL_SECTIONS[i].text?.trim()) { next = ALL_SECTIONS[i]; break; }
-    }
-
-    const btnPrev = document.getElementById("btnPrevSec");
-    const btnNext = document.getElementById("btnNextSec");
-    btnPrev.disabled = !prev;
-    btnNext.disabled = !next;
-    btnPrev.dataset.target = prev ? prev.id : "";
-    btnNext.dataset.target = next ? next.id : "";
-    document.getElementById("prevSecTitle").textContent = prev ? `${prev.code} · ${prev.title}` : "Inizio";
-    document.getElementById("nextSecTitle").textContent = next ? `${next.code} · ${next.title}` : "Fine";
+    updateReaderPager(secId);
   }
 
   // ==================== CLOZE ENGINE ====================
@@ -2212,11 +2480,23 @@
     return false;
   }
 
-  function renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn }) {
+  function syncClozeLevelControls(levelStr) {
+    state.prefs.clozeLevel = levelStr;
+    const inlineSel = document.getElementById("inlineClozeLevel");
+    const pracSel = document.getElementById("clozeLevelSelect");
+    if (inlineSel) inlineSel.value = levelStr;
+    if (pracSel) pracSel.value = levelStr;
+  }
+
+  function renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn, onRestart }) {
     const sec = SECTION_MAP.get(secId);
     if (!sec) return { hintOne: () => {}, revealAll: () => {} };
-    const level = Number(levelSel.value);
+    const level = Number(levelSel.value) || 1;
     const mode = modeSel.value;
+    const triggerRestart = () => {
+      if (typeof onRestart === "function") onRestart();
+      else renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn, onRestart });
+    };
 
     bodyEl.innerHTML = "";
     noticeEl.classList.add("hidden");
@@ -2226,7 +2506,15 @@
     let recalled = 0;
     let revealed = 0;
     let tokenIndex = 0;
-    const restartArgs = { secId, levelSel, modeSel, bodyEl, counterEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn };
+
+    const focusNextFrom = idx => {
+      for (let i = idx + 1; i < items.length; i++) {
+        if (!items[i].done && items[i].inputEl) { items[i].inputEl.focus(); return; }
+      }
+      for (let i = 0; i < idx; i++) {
+        if (!items[i].done && items[i].inputEl) { items[i].inputEl.focus(); return; }
+      }
+    };
 
     const updateProgress = () => {
       const total = items.length;
@@ -2244,23 +2532,23 @@
       if (revealBtn) revealBtn.disabled = done >= total;
 
       if (total > 0 && done >= total) {
+        const recallPct = Math.round((recalled / total) * 100);
         if (recalled === 0) {
           noticeEl.classList.remove("ok", "hidden");
           noticeEl.innerHTML = `
             <span><strong>Testo mostrato.</strong> Ricomincia per provarlo senza aiuti.</span>
             <div class="notice-actions"><button type="button" class="btn-apple soft sm" data-clz-retry>Ricomincia</button></div>
           `;
-          noticeEl.querySelector("[data-clz-retry]").addEventListener("click", () => renderClozeInto(restartArgs));
+          noticeEl.querySelector("[data-clz-retry]").addEventListener("click", triggerRestart);
         } else {
-          if ((state.mastery[secId] || 0) === 0) {
+          if ((state.mastery[secId] || 0) === 0 && recallPct >= 50) {
             state.mastery[secId] = 1;
             ensureTs();
             state._ts.mastery[secId] = Date.now();
             saveState();
             syncAllViewsForStateChange(secId);
           }
-          const recallPct = Math.round((recalled / total) * 100);
-          noticeEl.classList.add("ok");
+          noticeEl.classList.toggle("ok", recallPct >= 50);
           noticeEl.classList.remove("hidden");
           const nextLv = level < 4 ? `<button type="button" class="btn-apple soft sm" data-clz-lvup>Livello ${level + 1}</button>` : "";
           noticeEl.innerHTML = `
@@ -2268,15 +2556,15 @@
             <div class="notice-actions">${nextLv}<button type="button" class="btn-apple primary sm" data-clz-mem>A memoria</button></div>
           `;
           noticeEl.querySelector("[data-clz-lvup]")?.addEventListener("click", () => {
-            levelSel.value = String(level + 1);
-            state.prefs.clozeLevel = levelSel.value;
+            syncClozeLevelControls(String(level + 1));
             saveState();
-            renderClozeInto(restartArgs);
+            triggerRestart();
           });
           noticeEl.querySelector("[data-clz-mem]")?.addEventListener("click", () => {
             state.mastery[secId] = 3;
             ensureTs();
             state._ts.mastery[secId] = Date.now();
+            diagLog("ACTION", `Cloze segnato a memoria (${secId})`, "level=3");
             saveState();
             syncAllViewsForStateChange(secId);
             showToast(`${sec.code} segnato a memoria`);
@@ -2284,6 +2572,8 @@
         }
       }
     };
+
+    const elisionRe = /^((?:dell|all|dall|nell|sull|un|l|d)['’])(.+)$/i;
 
     for (const blk of sec.blocks) {
       const p = document.createElement("div");
@@ -2299,30 +2589,46 @@
           p.appendChild(document.createTextNode(tok));
           continue;
         }
-        const m = tok.match(/^([^\p{L}\p{N}€]*)([\p{L}\p{N}€.,\/:%'-]+?)([^\p{L}\p{N}%]*)$/u);
-        if (!m || !shouldBlankToken(m[2], level, tokenIndex)) {
+        const m = tok.match(/^([^\p{L}\p{N}€]*)([\p{L}\p{N}€.,\/:%'’-]+?)([^\p{L}\p{N}%]*)$/u);
+        if (!m) {
           p.appendChild(document.createTextNode(tok));
           continue;
         }
-        const [, lead, core, trail] = m;
+        let [, lead, core, trail] = m;
+        // Separate Italian elided article/preposition (L’Assemblea -> lead="L’", core="Assemblea")
+        const em = core.match(elisionRe);
+        if (em && em[2].length >= 2) {
+          lead += em[1];
+          core = em[2];
+        }
+        if (!shouldBlankToken(core, level, tokenIndex)) {
+          p.appendChild(document.createTextNode(tok));
+          continue;
+        }
         if (lead) p.appendChild(document.createTextNode(lead));
+
+        const isShortNumeric = core.length <= 2 || /^[€\d.,\/:%]+$/.test(core);
+        const itemIdx = items.length;
 
         if (mode === "click") {
           const btn = document.createElement("button");
           btn.type = "button";
           btn.className = "cloze-blank";
-          btn.textContent = level === 4 ? `${core[0]} ${"·".repeat(Math.min(core.length - 1, 5))}` : `${core[0]} ···`;
-          btn.setAttribute("aria-label", `Scopri parola che inizia per ${core[0]}`);
+          btn.textContent = isShortNumeric
+            ? "···"
+            : (level === 4 ? `${core[0]} ${"·".repeat(Math.min(core.length - 1, 5))}` : `${core[0]} ···`);
+          btn.setAttribute("aria-label", isShortNumeric ? "Scopri valore numerico" : `Scopri parola che inizia per ${core[0]}`);
           const entry = {
             done: false,
-            revealPassively: () => {
+            inputEl: null,
+            revealPassively: (batch = false) => {
               if (entry.done) return;
               entry.done = true;
               btn.classList.add("peeked");
               btn.textContent = core;
               btn.disabled = true;
               revealed++;
-              updateProgress();
+              if (!batch) updateProgress();
             },
           };
           btn.addEventListener("click", () => {
@@ -2343,8 +2649,8 @@
           const inp = document.createElement("input");
           inp.type = "text";
           inp.className = "cloze-input";
-          inp.placeholder = `${core[0]}…`;
-          inp.setAttribute("aria-label", `Scrivi parola che inizia per ${core[0]}`);
+          inp.placeholder = isShortNumeric ? "#" : `${core[0]}…`;
+          inp.setAttribute("aria-label", isShortNumeric ? "Scrivi il numero o valore" : `Scrivi parola che inizia per ${core[0]}`);
           inp.style.width = `${Math.max(72, Math.min(168, core.length * 9.2 + 20))}px`;
 
           const peek = document.createElement("button");
@@ -2363,22 +2669,27 @@
 
           const entry = {
             done: false,
-            revealPassively: () => {
+            inputEl: inp,
+            revealPassively: (batch = false) => {
               if (entry.done) return;
               entry.done = true;
+              entry.inputEl = null;
               replaceWithChip("cloze-chip-peeked", "rivelata");
               revealed++;
-              updateProgress();
-              bodyEl.querySelector(".cloze-input")?.focus();
+              if (!batch) {
+                updateProgress();
+                focusNextFrom(itemIdx);
+              }
             },
           };
           const markRecalled = () => {
             if (entry.done) return;
             entry.done = true;
+            entry.inputEl = null;
             replaceWithChip("cloze-chip-ok", "corretta");
             recalled++;
             updateProgress();
-            bodyEl.querySelector(".cloze-input")?.focus();
+            focusNextFrom(itemIdx);
           };
 
           inp.addEventListener("input", () => {
@@ -2392,12 +2703,11 @@
               else wrap.classList.add("is-bad");
             }
           });
-          peek.addEventListener("click", entry.revealPassively);
+          peek.addEventListener("click", () => entry.revealPassively(false));
           items.push(entry);
           wrap.appendChild(inp);
           wrap.appendChild(peek);
           if (trail) {
-            wrap.classList.add("has-trail");
             const group = document.createElement("span");
             group.className = "cloze-token-group";
             const tr = document.createElement("span");
@@ -2415,23 +2725,29 @@
     }
 
     if (items.length === 0) {
+      const targetLv = Math.min(4, level + 1);
       noticeEl.classList.remove("hidden");
       noticeEl.innerHTML = `
-        <span>Nessun termine chiave al Livello 1 per questo articolo.</span>
-        <button type="button" class="btn-apple primary sm" data-jump-lv2>Passa a Livello 2</button>
+        <span>Nessun termine oscurabile al Livello ${level} per questo articolo.</span>
+        ${level < 4 ? `<button type="button" class="btn-apple primary sm" data-jump-lv2>Passa a Livello ${targetLv}</button>` : ""}
       `;
-      noticeEl.querySelector("[data-jump-lv2]").addEventListener("click", () => {
-        levelSel.value = "2";
-        state.prefs.clozeLevel = "2";
+      noticeEl.querySelector("[data-jump-lv2]")?.addEventListener("click", () => {
+        syncClozeLevelControls(String(targetLv));
         saveState();
-        renderClozeInto(restartArgs);
+        triggerRestart();
       });
     }
     updateProgress();
 
     return {
-      hintOne: () => { const next = items.find(it => !it.done); if (next) next.revealPassively(); },
-      revealAll: () => { for (const it of items) if (!it.done) it.revealPassively(); },
+      hintOne: () => { const next = items.find(it => !it.done); if (next) next.revealPassively(false); },
+      revealAll: () => {
+        let changed = false;
+        for (const it of items) {
+          if (!it.done) { it.revealPassively(true); changed = true; }
+        }
+        if (changed) updateProgress();
+      },
     };
   }
 
@@ -2448,6 +2764,7 @@
       hintBtn: document.getElementById("btnInlineHint"),
       revealBtn: document.getElementById("btnInlineRevealAll"),
       resetBtn: document.getElementById("btnInlineReset"),
+      onRestart: renderInlineCloze,
     });
   }
 
@@ -2489,6 +2806,7 @@
       hintBtn: document.getElementById("btnPClozeHint"),
       revealBtn: document.getElementById("btnPClozeRevealAll"),
       resetBtn: document.getElementById("btnPClozeReset"),
+      onRestart: renderPracticeCloze,
     });
   }
 
@@ -2516,24 +2834,30 @@
 
   function populateFcTagFilter() {
     const sel = document.getElementById("fcTagFilter");
-    const tags = Array.from(new Set(PACK.flashcards.map(c => c.tag))).sort();
-    tags.push("Articoli");
+    const prevVal = sel.value || "all";
+    const deckMode = document.getElementById("fcDeckMode")?.value || state.prefs.fcDeckMode || "curated";
+    sel.innerHTML = '<option value="all">Tutti gli argomenti</option>';
+    const tags = deckMode === "all_articles"
+      ? ["Articoli"]
+      : Array.from(new Set(PACK.flashcards.map(c => c.tag))).sort().concat(deckMode === "combined" ? ["Articoli"] : []);
     for (const t of tags) {
       const opt = document.createElement("option");
       opt.value = t;
       opt.textContent = t;
       sel.appendChild(opt);
     }
+    sel.value = tags.includes(prevVal) ? prevVal : "all";
   }
 
   function buildFcQueue(shuffle = false, customCards = null, customLabel = null) {
+    fcCustomCards = customCards ? [...customCards] : null;
     fcCustomContext = customLabel;
     const mode = document.getElementById("fcDeckMode").value;
     const docF = document.getElementById("fcDocFilter").value;
     const tagF = document.getElementById("fcTagFilter").value;
     const onlyDue = document.getElementById("fcOnlyDue").checked;
 
-    let cards = customCards || getDeckCards(mode).filter(c => {
+    let cards = fcCustomCards ? [...fcCustomCards] : getDeckCards(mode).filter(c => {
       if (docF !== "all" && c.doc !== docF) return false;
       if (tagF !== "all" && c.tag !== tagF) return false;
       if (onlyDue && !isCardDue(c.id)) return false;
@@ -2542,10 +2866,15 @@
 
     cards = cards.map(c => ({ ...c, _retry: false }));
     if (shuffle) {
-      for (let i = cards.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [cards[i], cards[j]] = [cards[j], cards[i]];
-      }
+      cards = shuffleArray(cards);
+    } else if (onlyDue && !fcCustomCards) {
+      // Prioritize truly due reviewed cards ahead of never-seen cards
+      const now = Date.now();
+      cards.sort((a, b) => {
+        const aRev = state.sm2[a.id] && now >= state.sm2[a.id].nextReview ? 0 : 1;
+        const bRev = state.sm2[b.id] && now >= state.sm2[b.id].nextReview ? 0 : 1;
+        return aRev - bRev;
+      });
     }
 
     fcQueue = cards;
@@ -2565,7 +2894,7 @@
     const revealWrap = document.getElementById("fcRevealWrap");
     const ratingWrap = document.getElementById("fcRatingWrap");
 
-    const pct = fcTotalSession > 0 ? Math.round((fcCompletedSession / fcTotalSession) * 100) : 100;
+    const pct = fcTotalSession > 0 ? Math.round((fcCompletedSession / fcTotalSession) * 100) : 0;
     document.getElementById("fcBarFill").style.width = `${pct}%`;
 
     if (!fcQueue.length) {
@@ -2573,12 +2902,13 @@
       dockEl.classList.add("hidden");
       emptyEl.classList.remove("hidden");
       const onlyDue = document.getElementById("fcOnlyDue").checked;
+      const hasFilters = onlyDue || document.getElementById("fcDocFilter").value !== "all" || document.getElementById("fcTagFilter").value !== "all" || !!fcCustomContext;
       document.getElementById("fcQueueInfo").textContent = fcTotalSession > 0 ? `${fcCompletedSession} di ${fcTotalSession}` : "0 schede";
       document.getElementById("fcEmptyTitle").textContent = fcTotalSession > 0 ? "Sessione completata" : "Nessuna scheda da ripassare";
       document.getElementById("fcEmptyDesc").textContent = onlyDue
         ? "Sei in pari con il ripasso programmato."
         : "Modifica i filtri o avvia un nuovo ciclo.";
-      document.getElementById("btnFcShowAll").classList.toggle("hidden", !onlyDue && !fcCustomContext);
+      document.getElementById("btnFcShowAll").classList.toggle("hidden", !hasFilters);
       return;
     }
 
@@ -2670,10 +3000,20 @@
     });
   }
 
+  function shuffleQuizItemOptions(rawItem) {
+    const tagged = rawItem.options.map((text, idx) => ({ text, isCorrect: idx === rawItem.correct }));
+    const mixed = shuffleArray(tagged);
+    return {
+      ...rawItem,
+      options: mixed.map(x => x.text),
+      correct: mixed.findIndex(x => x.isCorrect),
+    };
+  }
+
   function startQuiz(customList = null, customLabel = null) {
     qzCustomContext = customLabel;
     const list = customList || getFilteredQuizPool();
-    qzQueue = [...list].sort(() => Math.random() - 0.5);
+    qzQueue = shuffleArray(list).map(shuffleQuizItemOptions);
     qzIdx = 0;
     qzCorrect = 0;
     qzWrong = [];
@@ -2715,6 +3055,7 @@
       if (kbdHint) kbdHint.classList.add("hidden");
       qEmpty.classList.remove("hidden");
       document.getElementById("qzCounter").textContent = "0 domande";
+      document.getElementById("qzBarFill").style.width = "0%";
       return;
     }
     qEmpty.classList.add("hidden");
@@ -2732,7 +3073,7 @@
     renderQuizScoreLive();
     document.getElementById("qzBarFill").style.width = `${(qzIdx / qzQueue.length) * 100}%`;
     document.getElementById("qzMetaLine").textContent = `${DOC_SHORT[item.doc] || item.doc} · ${MODE_LABELS[item.mode] || item.mode}`;
-    document.getElementById("qzQuestion").textContent = item.q;
+    document.getElementById("qzQuestion").textContent = formatArrows(item.q);
 
     const optsEl = document.getElementById("qzOptions");
     optsEl.innerHTML = "";
@@ -2740,7 +3081,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "quiz-opt";
-      btn.innerHTML = `<span class="opt-key">${String.fromCharCode(65 + i)}</span><span class="opt-text">${esc(txt)}</span>`;
+      btn.innerHTML = `<span class="opt-key">${String.fromCharCode(65 + i)}</span><span class="opt-text">${esc(formatArrows(txt))}</span>`;
       btn.addEventListener("click", () => handleQuizAnswer(i));
       optsEl.appendChild(btn);
     });
@@ -2863,7 +3204,10 @@
       const act = t.dataset.cs === csTab;
       t.classList.toggle("active", act);
       t.setAttribute("aria-selected", act ? "true" : "false");
+      t.tabIndex = act ? 0 : -1;
     });
+    const contentEl = document.getElementById("csContent");
+    if (contentEl) contentEl.setAttribute("aria-labelledby", `csTab-${csTab}`);
     const filterBar = document.getElementById("csFilterBar");
     const inp = document.getElementById("csSearch");
     if (filterBar) filterBar.classList.toggle("hidden", csTab === "hierarchy");
@@ -2874,15 +3218,19 @@
     const wrap = document.getElementById("csContent");
     const inp = document.getElementById("csSearch");
     const clearBtn = document.getElementById("btnClearCsSearch");
-    if (clearBtn) clearBtn.classList.toggle("hidden", !(inp.value || "").length);
-    const q = (inp.value || "").trim().toLowerCase();
+    const rawQ = (inp.value || "").trim();
+    if (clearBtn) clearBtn.classList.toggle("hidden", !rawQ.length);
+    const q = searchNorm(rawQ);
     const cs = PACK.cheatsheet;
-    const match = obj => !q || JSON.stringify(obj).toLowerCase().includes(q);
+    const matchFields = fields => !q || fields.some(f => searchNorm(f).includes(q));
 
     if (csTab === "timeline") {
       const now = Date.now();
-      let markedNext = false;
-      const rows = cs.timeline2026.filter(match);
+      const nextGlobalRow = cs.timeline2026.find(r => {
+        const dt = parseItalianDate(r.date);
+        return dt && dt.getTime() > now;
+      });
+      const rows = cs.timeline2026.filter(r => matchFields([r.date, r.event, formatSourceCitation(r.ref)]));
       wrap.innerHTML = rows.length ? `
         <div class="ref-table-wrap"><table class="ref-table">
           <thead><tr><th>Data / Ora</th><th>Adempimento</th><th class="col-source">Fonte</th></tr></thead>
@@ -2892,17 +3240,17 @@
               let cls = "";
               if (r.date.startsWith("21/11/2026") && r.event.includes("ASSEMBLEA")) cls = "tl-election";
               else if (dt && dt.getTime() < now) cls = "tl-past";
-              else if (dt && !markedNext) { markedNext = true; cls = "tl-next"; }
+              else if (r === nextGlobalRow) cls = "tl-next";
               return `<tr class="${cls}">
                 <td data-label="Data / Ora"><span class="num-hl">${esc(r.date)}</span></td>
                 <td data-label="Adempimento">${esc(r.event)}</td>
-                <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} ›</button></td>
+                <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${esc(r.ref)}">${esc(formatSourceCitation(r.ref))} ›</button></td>
               </tr>`;
             }).join("")}
           </tbody>
-        </table></div>` : `<p class="muted">Nessun risultato per «${esc(q)}».</p>`;
+        </table></div>` : `<p class="muted">Nessun risultato per «${esc(rawQ)}».</p>`;
     } else if (csTab === "quorums") {
-      const rows = cs.quorums.filter(match);
+      const rows = cs.quorums.filter(r => matchFields([r.context, r.costitutivo, r.deliberativo, formatSourceCitation(r.ref)]));
       const formatQuorumContext = raw => {
         const clean = formatOperators(String(raw).replace(/\bconv\./g, "convocazione"));
         const parts = clean.split(/\s+—\s+/);
@@ -2923,12 +3271,12 @@
               <td data-label="Organo / Seduta">${formatQuorumContext(r.context)}</td>
               <td data-label="Costitutivo">${formatQuorumMetric(r.costitutivo)}</td>
               <td data-label="Deliberativo">${formatQuorumMetric(r.deliberativo)}</td>
-              <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} ›</button></td>
+              <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${esc(r.ref)}">${esc(formatSourceCitation(r.ref))} ›</button></td>
             </tr>`).join("")}
           </tbody>
         </table></div>` : `<p class="muted">Nessun quorum trovato.</p>`;
     } else if (csTab === "organs") {
-      const rows = cs.organs.filter(match);
+      const rows = cs.organs.filter(r => matchFields([r.name, r.composition, r.term, r.powers, formatSourceCitation(r.ref)]));
       wrap.innerHTML = rows.length ? `
         <div class="ref-table-wrap"><table class="ref-table">
           <thead><tr><th>Organo</th><th>Composizione</th><th>Durata</th><th>Poteri</th><th class="col-source">Fonte</th></tr></thead>
@@ -2938,12 +3286,12 @@
               <td data-label="Composizione">${esc(formatOperators(r.composition))}</td>
               <td data-label="Durata">${esc(formatOperators(r.term))}</td>
               <td data-label="Poteri">${esc(formatOperators(r.powers))}</td>
-              <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} ›</button></td>
+              <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${esc(r.ref)}">${esc(formatSourceCitation(r.ref))} ›</button></td>
             </tr>`).join("")}
           </tbody>
         </table></div>` : `<p class="muted">Nessun organo trovato.</p>`;
     } else if (csTab === "deadlines") {
-      const rows = cs.keyDeadlines.filter(match);
+      const rows = cs.keyDeadlines.filter(r => matchFields([r.term, r.value, formatSourceCitation(r.ref)]));
       wrap.innerHTML = rows.length ? `
         <div class="ref-table-wrap"><table class="ref-table">
           <thead><tr><th>Procedura</th><th>Termine</th><th class="col-source">Fonte</th></tr></thead>
@@ -2951,7 +3299,7 @@
             ${rows.map(r => `<tr>
               <td data-label="Procedura"><strong>${esc(formatOperators(r.term))}</strong></td>
               <td data-label="Termine">${esc(formatOperators(r.value))}</td>
-              <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} ›</button></td>
+              <td class="col-source" data-label="Fonte"><button type="button" class="text-action" data-ref-jump="${esc(r.ref)}">${esc(formatSourceCitation(r.ref))} ›</button></td>
             </tr>`).join("")}
           </tbody>
         </table></div>` : `<p class="muted">Nessun termine trovato.</p>`;
@@ -2961,9 +3309,9 @@
           <thead><tr><th>Grado</th><th>Fonte</th><th>Prevalenza e note</th></tr></thead>
           <tbody>
             ${cs.hierarchy.map(r => `<tr>
-              <td data-label="Grado"><span class="num-hl">#${r.rank}</span></td>
+              <td data-label="Grado"><span class="num-hl">#${esc(r.rank)}</span></td>
               <td data-label="Fonte"><strong>${esc(r.source)}</strong></td>
-              <td data-label="Note">${esc(r.note)} ${r.ref ? `<button type="button" class="text-action" data-ref-jump="${r.ref}">${esc(formatSourceCitation(r.ref))} ›</button>` : ""}</td>
+              <td data-label="Note">${esc(r.note)} ${r.ref ? `<button type="button" class="text-action" data-ref-jump="${esc(r.ref)}">${esc(formatSourceCitation(r.ref))} ›</button>` : ""}</td>
             </tr>`).join("")}
           </tbody>
         </table></div>
@@ -2980,12 +3328,13 @@
     } else if (csTab === "diagrams") {
       const elDoc = CORPUS.documents.find(d => d.id === "elettorale");
       const entries = Object.entries(elDoc?.visualPagesRendered || {})
+        .filter(([, src]) => isSafeAssetSrc(src))
         .map(([p, src]) => ({ p, src, cap: `${DIAGRAM_LABELS[p] || `Pagina ${p}`} (Pag. ${p})` }))
-        .filter(item => !q || item.cap.toLowerCase().includes(q));
+        .filter(item => matchFields([item.cap]));
       wrap.innerHTML = entries.length ? `<div class="pdf-gallery">${entries.map((it, i) => `
         <button type="button" class="pdf-card" data-lb-idx="${i}">
-          <img src="${it.src}" alt="${esc(it.cap)}" loading="lazy" />
-          <div class="pdf-card-cap">${esc(it.cap)}</div>
+          <img src="${esc(it.src)}" alt="${esc(it.cap)}" loading="lazy" />
+          <span class="pdf-card-cap">${esc(it.cap)}</span>
         </button>
       `).join("")}</div>` : `<p class="muted">Nessuno schema trovato.</p>`;
       wrap.querySelectorAll("[data-lb-idx]").forEach(el => {
@@ -3002,20 +3351,38 @@
 
   // ==================== MODALS, SEARCH & LIGHTBOX ====================
   function openModal(id) {
-    lastFocusedEl = document.activeElement;
     const modal = document.getElementById(id);
+    if (!modal) return;
+    // Close TOC drawer or any OTHER open modal without overwriting original non-modal lastFocusedEl
+    const sidebar = document.getElementById("readerSidebar");
+    if (sidebar?.classList.contains("open")) {
+      sidebar.classList.remove("open");
+      document.getElementById("tocBackdrop")?.classList.add("hidden");
+      document.getElementById("btnOpenTocDrawer")?.setAttribute("aria-expanded", "false");
+    }
+    const alreadyInModal = !!activeTrapContainer;
+    ["searchModal", "backupModal", "lightboxModal"].forEach(mid => {
+      if (mid !== id) document.getElementById(mid)?.classList.add("hidden");
+    });
+    if (!alreadyInModal) {
+      lastFocusedEl = document.activeElement;
+    }
     modal.classList.remove("hidden");
     document.body.classList.add("modal-open");
     activeTrapContainer = modal;
+    if (!modal.contains(document.activeElement)) {
+      getFocusable(modal)[0]?.focus();
+    }
   }
 
   function closeAllModals() {
     let anyOpen = false;
     ["searchModal", "backupModal", "lightboxModal"].forEach(id => {
       const el = document.getElementById(id);
-      if (!el.classList.contains("hidden")) { el.classList.add("hidden"); anyOpen = true; }
+      if (el && !el.classList.contains("hidden")) { el.classList.add("hidden"); anyOpen = true; }
     });
-    document.getElementById("resetConfirmBox").classList.add("hidden");
+    document.getElementById("resetConfirmBox")?.classList.add("hidden");
+    document.getElementById("lightboxImg")?.removeAttribute("src");
     if (anyOpen) {
       document.body.classList.remove("modal-open");
       activeTrapContainer = null;
@@ -3037,7 +3404,9 @@
   function updateLightbox() {
     if (!lbGallery.length) return;
     const item = lbGallery[lbIdx];
-    document.getElementById("lightboxImg").src = item.src;
+    const imgEl = document.getElementById("lightboxImg");
+    if (isSafeAssetSrc(item.src)) imgEl.src = item.src;
+    imgEl.alt = item.cap || "Schema ufficiale PDF";
     document.getElementById("lightboxCap").textContent = `${item.cap} (${lbIdx + 1}/${lbGallery.length})`;
     document.getElementById("btnLbPrev").disabled = lbGallery.length <= 1;
     document.getElementById("btnLbNext").disabled = lbGallery.length <= 1;
@@ -3046,7 +3415,7 @@
   function sanitizeSnippetText(text) {
     return String(text || "")
       .replace(/\s+/g, " ")
-      .replace(/(?:(?<=^|\s)(?:s[iì]|no)(?=\s|$)\s*){2,}/gi, " · ")
+      .replace(/(^|\s)(?:(?:s[iì]|no)(?=\s|$)\s*){2,}/gi, "$1· ")
       .replace(/(?:\s*·\s*){2,}/g, " · ")
       .replace(/\s{2,}/g, " ")
       .trim();
@@ -3072,11 +3441,13 @@
     const res = document.getElementById("globalSearchResults");
     const clearBtn = document.getElementById("btnClearGlobalSearch");
     const countEl = document.getElementById("searchResultCount");
+    const inp = document.getElementById("globalSearchInput");
     if (clearBtn) clearBtn.classList.toggle("hidden", !query.length);
 
-    const q = query.trim().toLowerCase();
+    const q = searchNorm(query).trim();
     gsResults = [];
     gsActiveIdx = -1;
+    inp?.removeAttribute("aria-activedescendant");
 
     if (!q) {
       res.innerHTML = `<p class="muted small">Cerca articoli, quorum, date o termini (es. <em>Droop</em>, <em>delega</em>, <em>90 giorni</em>).</p>`;
@@ -3084,28 +3455,49 @@
       return;
     }
 
-    const artMatches = ALL_SECTIONS
-      .filter(s => s.code.toLowerCase().includes(q) || s.title.toLowerCase().includes(q) || (s.text && s.text.toLowerCase().includes(q)))
-      .slice(0, 24)
-      .map(s => {
-        const flat = s.text ? sanitizeSnippetText(s.text) : "";
-        const pos = flat ? flat.toLowerCase().indexOf(q) : -1;
-        return { kind: "article", meta: `${DOC_SHORT[s.doc]} · ${s.code}`, title: s.title, snip: flat ? sliceCleanSnippet(flat, pos) : "Sezione", target: s.id };
-      });
+    const scoredArticles = [];
+    for (const entry of searchIndex) {
+      const inCode = entry.codeNorm.includes(q);
+      const inTitle = entry.titleNorm.includes(q);
+      const pos = entry.flatNorm.indexOf(q);
+      const inBody = pos !== -1 || entry.textNorm.includes(q);
+      if (!inCode && !inTitle && !inBody) continue;
+      const score = (inCode ? 100 : 0) + (inTitle ? 50 : 0) + (inBody ? 10 : 0);
+      scoredArticles.push({ entry, pos, score });
+    }
+    scoredArticles.sort((a, b) => b.score - a.score);
+
+    const artMatches = scoredArticles.slice(0, 24).map(({ entry, pos }) => ({
+      kind: "article",
+      meta: `${DOC_SHORT[entry.sec.doc]} · ${entry.sec.code}`,
+      title: entry.sec.title,
+      snip: entry.flatText ? sliceCleanSnippet(entry.flatText, pos) : "Sezione",
+      target: entry.sec.id,
+    }));
 
     const sinMatches = [];
     PACK.cheatsheet.quorums.forEach(r => {
-      if (JSON.stringify(r).toLowerCase().includes(q)) {
+      if ([r.context, r.costitutivo, r.deliberativo].some(f => searchNorm(f).includes(q))) {
         sinMatches.push({ kind: "reference", meta: "Sinossi · Quorum", title: r.context, snip: `${r.costitutivo} · ${r.deliberativo}`, target: "quorums" });
       }
     });
     PACK.cheatsheet.timeline2026.forEach(r => {
-      if (JSON.stringify(r).toLowerCase().includes(q)) {
+      if ([r.date, r.event].some(f => searchNorm(f).includes(q))) {
         sinMatches.push({ kind: "reference", meta: `Sinossi · ${r.date}`, title: "Cronoprogramma 2026", snip: r.event, target: "timeline" });
       }
     });
+    PACK.cheatsheet.organs.forEach(r => {
+      if ([r.name, r.composition, r.term, r.powers].some(f => searchNorm(f).includes(q))) {
+        sinMatches.push({ kind: "reference", meta: "Sinossi · Organi", title: r.name, snip: r.powers, target: "organs" });
+      }
+    });
+    PACK.cheatsheet.keyDeadlines.forEach(r => {
+      if ([r.term, r.value].some(f => searchNorm(f).includes(q))) {
+        sinMatches.push({ kind: "reference", meta: "Sinossi · Scadenze", title: r.term, snip: r.value, target: "deadlines" });
+      }
+    });
 
-    const combined = [...artMatches, ...sinMatches.slice(0, 6)];
+    const combined = [...artMatches, ...sinMatches.slice(0, 8)];
     if (!combined.length) {
       res.innerHTML = `<p class="muted small">Nessun risultato per «${esc(query)}».</p>`;
       if (countEl) countEl.textContent = "0 risultati";
@@ -3119,21 +3511,27 @@
     combined.forEach((item, idx) => {
       const btn = document.createElement("button");
       btn.type = "button";
+      btn.id = `srOpt-${idx}`;
+      btn.setAttribute("role", "option");
+      btn.setAttribute("aria-selected", idx === 0 ? "true" : "false");
       btn.className = `sr-item ${idx === 0 ? "active" : ""}`;
       btn.innerHTML = `
-        <div class="sr-item-meta">${esc(item.meta)}</div>
-        <div class="sr-item-title">${highlightQuery(item.title, query)}</div>
-        <div class="sr-item-snip">${highlightQuery(item.snip, query)}</div>
+        <span class="sr-item-meta">${esc(item.meta)}</span>
+        <span class="sr-item-title">${highlightQuery(item.title, query)}</span>
+        <span class="sr-item-snip">${highlightQuery(item.snip, query)}</span>
       `;
       btn.addEventListener("click", () => executeSearchResult(item));
       res.appendChild(btn);
     });
+    inp?.setAttribute("aria-activedescendant", "srOpt-0");
   }
 
   function executeSearchResult(item) {
     closeAllModals();
     if (item.kind === "article") openArticle(item.target);
     else {
+      const csInp = document.getElementById("csSearch");
+      if (csInp) csInp.value = "";
       csTab = item.target;
       syncCsTabs();
       renderReference();
@@ -3144,7 +3542,7 @@
   function renderBackupSummary() {
     const studied = STUDYABLE_SECTIONS.filter(s => (state.mastery[s.id] || 0) >= 2).length;
     const sm2Count = Object.keys(state.sm2).length;
-    const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k]).length;
+    const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k] && SECTION_MAP.has(k)).length;
     document.getElementById("backupSummary").textContent =
       `Sezioni: ${studied}/${STUDYABLE_SECTIONS.length} · Flashcard: ${sm2Count} · Salvati: ${bmCount} · Quiz: ${state.quizStats.total}`;
   }
@@ -3178,11 +3576,16 @@
       renderReference();
       switchView("reference");
     });
-    document.getElementById("metricNormativa").addEventListener("click", () => openArticle(readerSecId || STUDYABLE_SECTIONS[0].id));
+    document.getElementById("metricNormativa").addEventListener("click", () => {
+      const target = readerSecId || STUDYABLE_SECTIONS[0]?.id;
+      if (target) openArticle(target);
+    });
     document.getElementById("metricQuiz").addEventListener("click", () => { switchPracticeMode("quiz"); switchView("practice"); });
     document.getElementById("metricBookmarks").addEventListener("click", () => {
+      returnStack = [];
       readerDocFilter = "all";
       syncReaderDocPills();
+      document.getElementById("readerSearch").value = "";
       readerStatusFilter = "bookmarked";
       document.getElementById("readerStatusFilter").value = "bookmarked";
       renderReaderSidebar();
@@ -3197,6 +3600,26 @@
       saveState();
     });
 
+    // WAI-ARIA APG keyboard navigation for role="tablist"
+    ["readerModeSwitch", "practiceModeSwitch", "csTabs"].forEach(listId => {
+      const list = document.getElementById(listId);
+      if (!list) return;
+      list.addEventListener("keydown", e => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+        const tabs = Array.from(list.querySelectorAll('[role="tab"]:not([disabled])'));
+        const cur = tabs.indexOf(document.activeElement);
+        if (cur === -1 || !tabs.length) return;
+        e.preventDefault();
+        let next = cur;
+        if (e.key === "ArrowRight") next = (cur + 1) % tabs.length;
+        else if (e.key === "ArrowLeft") next = (cur - 1 + tabs.length) % tabs.length;
+        else if (e.key === "Home") next = 0;
+        else if (e.key === "End") next = tabs.length - 1;
+        tabs[next].focus();
+        tabs[next].click();
+      });
+    });
+
     // Reader & TOC
     document.getElementById("btnOpenTocDrawer").addEventListener("click", openTocDrawer);
     document.getElementById("btnCloseTocDrawer").addEventListener("click", closeTocDrawer);
@@ -3207,17 +3630,22 @@
         readerDocFilter = b.dataset.doc;
         syncReaderDocPills();
         renderReaderSidebar();
+        updateReaderPager();
       });
     });
-    document.getElementById("readerSearch").addEventListener("input", renderReaderSidebar);
+    document.getElementById("readerSearch").addEventListener("input", debounce(() => {
+      renderReaderSidebar();
+      updateReaderPager();
+    }, 110));
     document.getElementById("readerStatusFilter").addEventListener("change", e => {
       readerStatusFilter = e.target.value;
       renderReaderSidebar();
+      updateReaderPager();
     });
 
     document.querySelectorAll("#readerModeSwitch .ios-seg-btn").forEach(b => {
       b.addEventListener("click", () => {
-        if (b.disabled) return;
+        if (b.disabled || b.dataset.rmode === readerMode) return;
         readerMode = b.dataset.rmode;
         syncReaderModeTabs();
         if (readerMode === "cloze") renderInlineCloze();
@@ -3233,8 +3661,7 @@
     });
 
     document.getElementById("inlineClozeLevel").addEventListener("change", e => {
-      state.prefs.clozeLevel = e.target.value;
-      document.getElementById("clozeLevelSelect").value = e.target.value;
+      syncClozeLevelControls(e.target.value);
       saveState();
       renderInlineCloze();
     });
@@ -3256,8 +3683,16 @@
     });
     document.getElementById("fontPopover").addEventListener("click", e => e.stopPropagation());
     document.addEventListener("click", closeFontPopover);
-    document.getElementById("btnFontDec").addEventListener("click", () => { applyReaderScale(state.readerScale - 0.08); saveState(); });
-    document.getElementById("btnFontInc").addEventListener("click", () => { applyReaderScale(state.readerScale + 0.08); saveState(); });
+    document.getElementById("btnFontDec").addEventListener("click", () => {
+      const prev = state.readerScale;
+      applyReaderScale(prev - 0.08);
+      if (state.readerScale !== prev) saveState();
+    });
+    document.getElementById("btnFontInc").addEventListener("click", () => {
+      const prev = state.readerScale;
+      applyReaderScale(prev + 0.08);
+      if (state.readerScale !== prev) saveState();
+    });
 
     document.getElementById("btnToggleNums").addEventListener("click", () => {
       state.prefs.highlightNums = !(state.prefs.highlightNums !== false);
@@ -3283,11 +3718,18 @@
       if (!readerSecId) return;
       ensureTs();
       state._ts.bookmarks[readerSecId] = Date.now();
-      if (state.bookmarks[readerSecId]) { delete state.bookmarks[readerSecId]; showToast("Rimosso dai salvati"); }
-      else { state.bookmarks[readerSecId] = true; showToast("Salvato"); }
-      diagLog("ACTION", `Segnalibro articolo (${readerSecId})`, state.bookmarks[readerSecId] ? "Aggiunto" : "Rimosso");
+      const active = !state.bookmarks[readerSecId];
+      if (active) { state.bookmarks[readerSecId] = true; showToast("Salvato"); }
+      else { delete state.bookmarks[readerSecId]; showToast("Rimosso dai salvati"); }
+      diagLog("ACTION", `Segnalibro articolo (${readerSecId})`, active ? "Aggiunto" : "Rimosso");
       saveState();
-      renderReaderArticle(readerSecId, { skipHash: true });
+      document.getElementById("btnBookmarkSec").setAttribute("aria-pressed", active ? "true" : "false");
+      if (readerStatusFilter === "bookmarked") {
+        renderReaderSidebar();
+        updateReaderPager();
+      } else {
+        syncReaderSidebarDots();
+      }
     });
 
     document.getElementById("btnContextReturn").addEventListener("click", () => {
@@ -3346,6 +3788,7 @@
 
     document.getElementById("fcDeckMode").addEventListener("change", e => {
       state.prefs.fcDeckMode = e.target.value;
+      populateFcTagFilter();
       saveState();
       buildFcQueue(false);
     });
@@ -3353,9 +3796,19 @@
       document.getElementById(id).addEventListener("change", () => buildFcQueue(false));
     });
     document.getElementById("btnFcClearFocus").addEventListener("click", () => buildFcQueue(false));
-    document.getElementById("btnFcShuffle").addEventListener("click", () => { buildFcQueue(true); showToast("Mazzo mescolato"); });
+    document.getElementById("btnFcShuffle").addEventListener("click", () => {
+      buildFcQueue(true, fcCustomCards, fcCustomContext);
+      showToast("Mazzo mescolato");
+    });
     document.getElementById("btnFcUndo").addEventListener("click", undoLastFlashcard);
-    document.getElementById("flashcardEl").addEventListener("click", flipFlashcard);
+    const fcCardEl = document.getElementById("flashcardEl");
+    fcCardEl.addEventListener("click", flipFlashcard);
+    fcCardEl.addEventListener("keydown", e => {
+      if (e.target === fcCardEl && (e.key === "Enter" || e.code === "Space")) {
+        e.preventDefault();
+        flipFlashcard();
+      }
+    });
     document.getElementById("btnFcReveal").addEventListener("click", flipFlashcard);
     document.getElementById("btnFcSource").addEventListener("click", e => {
       e.stopPropagation();
@@ -3369,9 +3822,11 @@
     });
     document.getElementById("btnFcShowAll").addEventListener("click", () => {
       document.getElementById("fcOnlyDue").checked = false;
+      document.getElementById("fcDocFilter").value = "all";
+      document.getElementById("fcTagFilter").value = "all";
       buildFcQueue(false);
     });
-    document.getElementById("btnFcRestartSession").addEventListener("click", () => buildFcQueue(true));
+    document.getElementById("btnFcRestartSession").addEventListener("click", () => buildFcQueue(true, fcCustomCards, fcCustomContext));
 
     // Quiz
     ["qzModeFilter", "qzDocFilter", "qzOnlyUnmastered"].forEach(id => {
@@ -3386,8 +3841,13 @@
     document.getElementById("btnQzRestart").addEventListener("click", () => startQuiz());
     document.getElementById("btnRetryWrong").addEventListener("click", () => startQuiz([...qzWrong], "Errori"));
     document.getElementById("btnQzRetryWrong2").addEventListener("click", () => startQuiz([...qzWrong], "Errori"));
-    document.getElementById("btnQzNext").addEventListener("click", () => { qzIdx++; renderQuizQuestion(); window.scrollTo({ top: 0, behavior: "instant" }); });
-    document.getElementById("btnQzMobileNext").addEventListener("click", () => { qzIdx++; renderQuizQuestion(); window.scrollTo({ top: 0, behavior: "instant" }); });
+    const advanceQuizQuestion = () => {
+      qzIdx++;
+      renderQuizQuestion();
+      window.scrollTo({ top: 0, behavior: "instant" });
+    };
+    document.getElementById("btnQzNext").addEventListener("click", advanceQuizQuestion);
+    document.getElementById("btnQzMobileNext").addEventListener("click", advanceQuizQuestion);
     document.getElementById("btnQzExpandOpts").addEventListener("click", e => {
       const pane = document.getElementById("pane-quiz");
       const expanded = pane.classList.toggle("show-all-opts");
@@ -3398,13 +3858,18 @@
       if (lbl) lbl.textContent = expanded ? "Nascondi altre opzioni" : `Mostra le altre ${hiddenCount} opzioni`;
     });
 
-    // Dynamic stuck state for sticky inline Cloze strip
+    // Dynamic stuck state for sticky inline Cloze strip (rAF-throttled)
+    let stickyRaf = 0;
     const syncClozeStickyState = () => {
-      const bar = document.getElementById("inlineClozeStickyBar");
-      if (!bar || bar.closest(".hidden") || currentView !== "reader") return;
-      const stickyTop = window.innerWidth <= 900 ? 52 : 108;
-      const stuck = window.scrollY > 12 && bar.getBoundingClientRect().top <= stickyTop + 2;
-      bar.classList.toggle("is-stuck", stuck);
+      if (stickyRaf) return;
+      stickyRaf = requestAnimationFrame(() => {
+        stickyRaf = 0;
+        const bar = document.getElementById("inlineClozeStickyBar");
+        if (!bar || bar.closest(".hidden") || currentView !== "reader") return;
+        const stickyTop = window.innerWidth <= 900 ? 52 : 108;
+        const stuck = window.scrollY > 12 && bar.getBoundingClientRect().top <= stickyTop + 2;
+        bar.classList.toggle("is-stuck", stuck);
+      });
     };
     window.addEventListener("scroll", syncClozeStickyState, { passive: true });
     window.addEventListener("resize", syncClozeStickyState, { passive: true });
@@ -3413,14 +3878,19 @@
     document.getElementById("clozeDocSelect").addEventListener("change", e => {
       populatePracticeClozeSecSelect(e.target.value);
       renderPracticeCloze();
+      if (currentView === "practice" && practiceMode === "cloze" && practiceClozeSecId) {
+        setHash(`practice/cloze/${practiceClozeSecId}`);
+      }
     });
     document.getElementById("clozeSecSelect").addEventListener("change", e => {
       practiceClozeSecId = e.target.value;
       renderPracticeCloze();
+      if (currentView === "practice" && practiceMode === "cloze" && practiceClozeSecId) {
+        setHash(`practice/cloze/${practiceClozeSecId}`);
+      }
     });
     document.getElementById("clozeLevelSelect").addEventListener("change", e => {
-      state.prefs.clozeLevel = e.target.value;
-      document.getElementById("inlineClozeLevel").value = e.target.value;
+      syncClozeLevelControls(e.target.value);
       saveState();
       renderPracticeCloze();
     });
@@ -3455,7 +3925,8 @@
       if (idx >= 0 && idx < CLOZEABLE_SECTIONS.length - 1) openPracticeClozeArticle(CLOZEABLE_SECTIONS[idx + 1].id);
     });
     document.getElementById("btnClozeRandom").addEventListener("click", () => {
-      const pool = CLOZEABLE_SECTIONS.filter(s => (state.mastery[s.id] || 0) < 3 && s.id !== practiceClozeSecId);
+      let pool = CLOZEABLE_SECTIONS.filter(s => (state.mastery[s.id] || 0) < 3 && s.id !== practiceClozeSecId);
+      if (!pool.length) pool = CLOZEABLE_SECTIONS.filter(s => s.id !== practiceClozeSecId);
       const pick = pool.length ? pool[Math.floor(Math.random() * pool.length)] : CLOZEABLE_SECTIONS[0];
       if (pick) openPracticeClozeArticle(pick.id);
     });
@@ -3470,7 +3941,7 @@
         window.scrollTo({ top: 0, behavior: "instant" });
       });
     });
-    document.getElementById("csSearch").addEventListener("input", renderReference);
+    document.getElementById("csSearch").addEventListener("input", debounce(renderReference, 110));
     document.getElementById("btnClearCsSearch").addEventListener("click", () => {
       const inp = document.getElementById("csSearch");
       inp.value = "";
@@ -3488,7 +3959,7 @@
     });
     document.getElementById("closeSearchModal").addEventListener("click", closeAllModals);
     document.getElementById("searchModal").addEventListener("click", e => { if (e.target.id === "searchModal") closeAllModals(); });
-    document.getElementById("globalSearchInput").addEventListener("input", e => renderGlobalSearch(e.target.value));
+    document.getElementById("globalSearchInput").addEventListener("input", debounce(e => renderGlobalSearch(e.target.value), 100));
     document.getElementById("btnClearGlobalSearch").addEventListener("click", () => {
       const inp = document.getElementById("globalSearchInput");
       inp.value = "";
@@ -3501,7 +3972,14 @@
         e.preventDefault();
         gsActiveIdx = e.key === "ArrowDown" ? (gsActiveIdx + 1) % gsResults.length : (gsActiveIdx - 1 + gsResults.length) % gsResults.length;
         const els = document.querySelectorAll("#globalSearchResults .sr-item");
-        els.forEach((el, i) => el.classList.toggle("active", i === gsActiveIdx));
+        els.forEach((el, i) => {
+          const act = i === gsActiveIdx;
+          el.classList.toggle("active", act);
+          el.setAttribute("aria-selected", act ? "true" : "false");
+        });
+        if (els[gsActiveIdx]?.id) {
+          document.getElementById("globalSearchInput")?.setAttribute("aria-activedescendant", els[gsActiveIdx].id);
+        }
         els[gsActiveIdx]?.scrollIntoView({ block: "nearest" });
       } else if (e.key === "Enter" && gsActiveIdx >= 0) {
         e.preventDefault();
@@ -3547,33 +4025,53 @@
 
     document.getElementById("closeBackupModal").addEventListener("click", closeAllModals);
     document.getElementById("backupModal").addEventListener("click", e => { if (e.target.id === "backupModal") closeAllModals(); });
-    document.getElementById("lblImportProgress").addEventListener("keydown", e => {
-      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); document.getElementById("inputImportProgress").click(); }
+    document.getElementById("btnImportProgress").addEventListener("click", () => {
+      document.getElementById("inputImportProgress").click();
     });
     document.getElementById("btnExportProgress").addEventListener("click", () => {
       diagLog("BACKUP", "Esportazione file JSON locale avviata", summarizeStateForLog(state));
-      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      // Strip ownerUid from exported JSON so sharing/importing on another account never triggers ownership wipe
+      const exportObj = { ...normalizeStateObject(state), ownerUid: null };
+      const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
+      a.href = url;
       a.download = `polinetwork_studio_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(a.href);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
       showToast("Backup esportato");
     });
     document.getElementById("inputImportProgress").addEventListener("change", e => {
       const file = e.target.files[0];
       if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        showToast("File troppo grande (max 2 MB)");
+        e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
+      reader.onerror = () => {
+        diagLog("BACKUP-ERR", "Errore lettura file JSON", reader.error?.message || "read error");
+        showToast("Impossibile leggere il file");
+        e.target.value = "";
+      };
       reader.onload = () => {
         try {
           const imp = JSON.parse(reader.result);
-          if (!imp || typeof imp !== "object") throw new Error("invalid");
+          if (!imp || typeof imp !== "object" || Array.isArray(imp)) throw new Error("Formato non valido");
+          const hasKnownKeys = ["mastery", "bookmarks", "sm2", "quizStats", "quizMastered", "prefs"].some(k => k in imp);
+          if (!hasKnownKeys) throw new Error("Il file non sembra un backup di PoliNetwork Studio");
+          // Sanitize & neutralize ownerUid and resetAt so manual import merges safely without wiping local data
+          const safeImp = normalizeStateObject(imp);
+          safeImp.ownerUid = null;
+          safeImp.resetAt = 0;
           const beforeSum = summarizeStateForLog(state);
-          state = mergeCloudAndLocalState(state, imp);
+          state = mergeCloudAndLocalState(state, safeImp);
           diagLog("BACKUP", `File JSON importato e unito (${file.name})`, `Prima=[${beforeSum}] → Dopo=[${summarizeStateForLog(state)}]`);
           saveState();
-          applyFullStateToUI();
-          startQuiz();
+          applyFullStateToUI({ preserveActiveSession: false });
           closeAllModals();
           showToast("Progressi uniti e sincronizzati");
         } catch (err) {
@@ -3595,8 +4093,7 @@
       }
       diagLog("RESET", "Progressi azzerati dall'utente", `resetAt=${new Date(now).toISOString()}`);
       saveState({ preserveTimestamp: true });
-      applyFullStateToUI();
-      startQuiz();
+      applyFullStateToUI({ preserveActiveSession: false });
       closeAllModals();
       showToast("Progressi azzerati");
     });
@@ -3614,7 +4111,6 @@
     // Global Keyboard Shortcuts
     document.addEventListener("keydown", e => {
       if (activeTrapContainer) handleFocusTrap(e);
-      const inInput = ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         document.getElementById("btnSearchQuick").click();
@@ -3626,10 +4122,14 @@
         if (e.key === "ArrowRight") document.getElementById("btnLbNext").click();
         return;
       }
-      if (inInput) return;
+      // Never fire view-level shortcuts while any modal/drawer is open, with Ctrl/Cmd/Alt pressed, or inside form/interactive controls
+      if (activeTrapContainer || e.ctrlKey || e.metaKey || e.altKey) return;
+      const activeEl = document.activeElement;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(activeEl?.tagName)) return;
+      const onInteractive = !!activeEl?.closest('button, a[href], summary, [role="button"], [role="tab"]');
 
       if (currentView === "practice" && practiceMode === "flashcards") {
-        if (e.code === "Space") { e.preventDefault(); flipFlashcard(); }
+        if (e.code === "Space" && !onInteractive) { e.preventDefault(); flipFlashcard(); }
         else if (e.key.toLowerCase() === "z" && fcLastAction) undoLastFlashcard();
         else if (fcFlipped) {
           if (e.key === "1") rateFlashcard(1);
@@ -3642,10 +4142,9 @@
           const map = { a: 0, b: 1, c: 2, d: 3, "1": 0, "2": 1, "3": 2, "4": 3 };
           const k = e.key.toLowerCase();
           if (map[k] !== undefined && qzQueue[qzIdx]?.options[map[k]] !== undefined) handleQuizAnswer(map[k]);
-        } else if (e.key === "Enter" || e.key === "ArrowRight") {
+        } else if ((e.key === "Enter" && !onInteractive) || e.key === "ArrowRight") {
           e.preventDefault();
-          qzIdx++;
-          renderQuizQuestion();
+          advanceQuizQuestion();
         }
       }
     });

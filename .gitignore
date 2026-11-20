@@ -1,3 +1,16 @@
 raw/
 scripts/
 avvia_app.bat
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.env
+.env.*
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

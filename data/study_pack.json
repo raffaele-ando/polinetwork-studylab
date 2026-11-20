@@ -286,7 +286,7 @@
       "refLabel": "RRI Art. 1.6.1.2-1.6.1.4",
       "tag": "Elezioni & Scrutinio",
       "q": "Com'è composta la Commissione Elettorale del Direttivo, entro quando si riunisce e quando si scioglie?",
-      "a": "• Sorteggiata su base volontaria dai Probiviri (se mancano volontari, tra tutti i Soci): 3 Soci (Presidente, Segretario che verbalizza l'Assemblea, 1 membro). Non candidabili al Direttivo.\n• Si riunisce entro 3 giorni dalla nomina; candidature non possono chiudere a meno di 7 giorni dall'Assemblea (nota: nel Reg. 2026 chiudono 3 gg prima per delega speciale/coordinamento).\n• In Assemblea: presentazione ≥5 min/candidato, domande, arringa max 2 min, riflessione opzionale max 2 ore.\n• Ricorsi entro 15 gg, decisi entro 30 gg, poi scioglimento automatico."
+      "a": "• Sorteggiata su base volontaria dai Probiviri (se mancano volontari, tra tutti i Soci): 3 Soci (Presidente, Segretario che verbalizza l'Assemblea, 1 membro). Non candidabili al Direttivo.\n• Si riunisce entro 3 giorni dalla nomina; nella RRI le candidature non possono chiudere a meno di 7 giorni dall'Assemblea (nota: nel Reg. Elettorale 2026 Art. A.1 c.6 chiudono il 18/11, 3 giorni prima dell'Assemblea).\n• In Assemblea: presentazione ≥5 min/candidato, domande, arringa max 2 min, riflessione opzionale max 2 ore.\n• Ricorsi entro 15 gg, decisi entro 30 gg, poi scioglimento automatico."
     },
     {
       "id": "fc-rri-11",
@@ -319,7 +319,7 @@
       "id": "fc-rri-14",
       "doc": "rri",
       "ref": "rri-1-7-3-1",
-      "refLabel": "RRI Art. 1.7.3 & 1.7.5",
+      "refLabel": "RRI Art. 1.7.3.1, 1.7.5.1 & 1.7.5.5",
       "tag": "Quorum & Maggioranze",
       "q": "Come si eleggono (1) i membri del Collegio dei Probiviri e (2) le sue cariche interne?",
       "a": "• Elezione Probiviri (1.7.5.1): nomina diretta Assemblea; serve almeno 2/3 dei soci votanti E più di 1/2 di tutti i soci. Entrano in carica dopo 10 giorni salvo ricorsi.\n• Cariche interne (Presidente & Segretario Collegio, 1.7.3.1): eletti dal Collegio a maggioranza dei 2/3 dei componenti; durano 12 mesi (rieleggibili, NON prorogabili).\n• Garanzia se Collegio vuoto (1.7.5.5): Commissione Elettorale Permanente nomina 1 Socio entro 5 gg (nel frattempo Direttivo fermo salvo obblighi di legge); altrimenti 1/6 dei soci può impugnare ogni decisione Direttivo."
@@ -688,8 +688,8 @@
       "id": "qz-11",
       "mode": "blitz",
       "doc": "rri",
-      "ref": "rri-1-7-2-1",
-      "refLabel": "RRI Art. 1.7.2.1 & 1.7.5.1",
+      "ref": "rri-1-7-5-1",
+      "refLabel": "RRI Art. 1.7.5.1",
       "q": "Quale maggioranza serve all'Assemblea per eleggere un membro del Collegio dei Probiviri?",
       "options": [
         "Maggioranza semplice dei presenti",
@@ -1089,7 +1089,7 @@
       "mode": "scenario",
       "doc": "statuto",
       "ref": "statuto-art-13",
-      "refLabel": "Statuto Art. 13 c.10 & Art. 15 c.3",
+      "refLabel": "Statuto Art. 13 c.5(b), c.11 & Art. 15 c.3",
       "q": "SCENARIO: In un Direttivo di 7 membri, si dimette il Presidente. Cosa succede esattamente?",
       "options": [
         "Si convocano subito nuove elezioni per l'intero Direttivo",
@@ -1383,7 +1383,7 @@
       },
       {
         "date": "20/11/2026 09:00",
-        "event": "Scadenza richiesta partecipazione a distanza (24h prima dell'inizio lavori; Modulo F)",
+        "event": "Scadenza indicativa richiesta partecipazione a distanza (24h prima dell'inizio lavori; Modulo F)",
         "ref": "el-a-10"
       },
       {
@@ -1402,8 +1402,8 @@
         "ref": "el-a-7"
       },
       {
-        "date": "21/11/2026 (~9-13)",
-        "event": "ASSEMBLEA ELETTIVA — Campus Leonardo PoliMi (appello, presentazioni ≥5', domande, arringhe ≤2', voto test, voto STV ≥10', scrutinio live, proclamazione)",
+        "date": "21/11/2026 09:00",
+        "event": "ASSEMBLEA ELETTIVA (~9:00–13:00) — Campus Leonardo PoliMi (appello, presentazioni ≥5', domande, arringhe ≤2', voto test, voto STV ≥10', scrutinio live, proclamazione)",
         "ref": "el-a-13"
       },
       {
@@ -1428,7 +1428,12 @@
       },
       {
         "date": "12/01/2027",
-        "event": "Scadenza appello al Collegio dei Probiviri (entro 7 gg dalla decisione, max 12/01; decidono entro 15 gg)",
+        "event": "Scadenza appello al Collegio dei Probiviri (entro 7 gg dalla decisione, max 12/01)",
+        "ref": "el-a-19"
+      },
+      {
+        "date": "27/01/2027",
+        "event": "Scadenza decisione definitiva del Collegio dei Probiviri sugli appelli (entro 15 giorni)",
         "ref": "el-a-19"
       }
     ],

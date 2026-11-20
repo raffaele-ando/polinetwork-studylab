@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // ===============================================================
-// PoliNetwork Studio - Cloud Firestore Security Rules (prototype)
+// PoliNetwork Studio - Cloud Firestore Security Rules — v4.4.0 (production-ready)
 // Firebase project: polinetwork
 // ===============================================================
 //
@@ -18,14 +18,15 @@ rules_version = '2';
 //                                 prefs, _ts, theme, readerScale, lastSecId,
 //                                 updatedAt, resetAt, ownerUid, schema, ...)
 //                                 Overall doc size capped by Firestore (1 MiB).
-//   - studylab_updatedAt: number (required) ms epoch, >= 0
-//   - uid:                string (required, immutable) == request.auth.uid == {uid}
+//   - studylab_updatedAt: int    (required) integer ms epoch, 0..32503680000000
+//   - uid:                string (required, immutable once set) == request.auth.uid == {uid}
 //   - email:              string (required, 0..320 chars) "" or == auth token email
 //   - displayName:        string (required, 0..200 chars)
-//   - schema:             number (optional) integer schema version, 0..1000
+//   - schema:             int    (optional) integer schema version, 0..1000
 //
-// Access: only the authenticated, email-verified owner may get/create/update/
-// delete their own document. No list/query across users. Everything else denied.
+// Access: only the authenticated owner (email-verified or Google sign-in
+// provider) may get/create/update/delete their own document. No list/query
+// across users. Everything else denied.
 // ===============================================================
 
 service cloud.firestore {
@@ -39,23 +40,33 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Google accounts are verified; reject unverified email/password sign-ups.
+    // Allow email-verified accounts and Google-authenticated users (including
+    // Google Workspace / federated non-Gmail sign-ins where email_verified may
+    // be false or omitted), while still blocking unverified email/password sign-ups.
     function isVerified() {
-      return request.auth.token.email_verified == true;
+      return isAuthenticated() &&
+             (request.auth.token.get('email_verified', false) == true ||
+              ('firebase' in request.auth.token &&
+               request.auth.token.firebase is map &&
+               request.auth.token.firebase.get('sign_in_provider', '') == 'google.com'));
     }
 
     function isOwner(userId) {
       return isAuthenticated() && isVerified() && request.auth.uid == userId;
     }
 
-    // On create: uid field must be the caller's uid.
+    // On create: uid field must be present and equal to the caller's uid.
     function uidUnchanged() {
-      return request.resource.data.uid == request.auth.uid;
+      return 'uid' in request.resource.data &&
+             request.resource.data.uid == request.auth.uid;
     }
 
-    // On update: uid field must not change.
+    // On update: uid field must not change (tolerates pre-existing legacy docs
+    // missing a uid field; isValidUserDoc enforces uid == request.auth.uid == userId).
     function uidNotModified() {
-      return request.resource.data.uid == resource.data.uid;
+      return !('uid' in resource.data) ||
+             ('uid' in request.resource.data &&
+              request.resource.data.uid == resource.data.uid);
     }
 
     function isValidOptionalInt(data, field, minV, maxV) {
@@ -74,8 +85,8 @@ service cloud.firestore {
              // App state: must be a map with bounded top-level keys
              data.studylab_v1 is map &&
              data.studylab_v1.size() <= 24 &&
-             // Timestamp (ms epoch)
-             data.studylab_updatedAt is number &&
+             // Timestamp (integer ms epoch)
+             data.studylab_updatedAt is int &&
              data.studylab_updatedAt >= 0 &&
              data.studylab_updatedAt <= 32503680000000 &&   // < year 3000
              // Identity

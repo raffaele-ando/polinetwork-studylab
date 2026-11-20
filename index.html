@@ -3,20 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
   <meta name="theme-color" content="#f2f2f7" />
+  <meta name="referrer" content="strict-origin-when-cross-origin" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="PoliNetwork Studio" />
   <meta name="description" content="PoliNetwork Studio — Statuto, Regolamenti Interni e Regolamento Elettorale 2026: lettura, Cloze, flashcard e quiz." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="PoliNetwork Studio" />
+  <meta property="og:description" content="Statuto, Regolamenti Interni e Regolamento Elettorale 2026: lettura integrale, Cloze, flashcard SM-2, quiz e sync Cloud." />
+  <meta property="og:image" content="https://polinetwork.theproject.world/assets/icon-512.png" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.googletagmanager.com https://*.googletagmanager.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com; connect-src 'self' https://www.gstatic.com https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com; frame-src 'self' https://polinetwork.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self';" />
   <title>PoliNetwork Studio</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23007aff'/%3E%3Ctext x='32' y='42' font-family='-apple-system,system-ui,sans-serif' font-size='26' font-weight='800' fill='%23ffffff' text-anchor='middle'%3EPN%3C/text%3E%3C/svg%3E" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=4.3.0" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230071e3'/%3E%3Ctext x='32' y='42' font-family='-apple-system,system-ui,sans-serif' font-size='26' font-weight='800' fill='%23ffffff' text-anchor='middle'%3EPN%3C/text%3E%3C/svg%3E" />
+  <script>
+    try {
+      var _s = JSON.parse(localStorage.getItem("polinetwork_studylab_v1") || "null");
+      var _t = (_s && _s.theme === "dark") ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", _t);
+      var _m = document.querySelector('meta[name="theme-color"]');
+      if (_m) _m.setAttribute("content", _t === "dark" ? "#000000" : "#f2f2f7");
+    } catch (_) {}
+  </script>
+  <link rel="stylesheet" href="styles.css?v=4.4.0" />
 </head>
 <body>
   <a href="#mainContent" class="skip-link">Salta al contenuto principale</a>
 
   <!-- ==================== DESKTOP / TABLET TOP BAR ==================== -->
-  <header class="topbar" id="globalTopbar" role="banner">
+  <header class="topbar" id="globalTopbar">
     <div class="topbar-inner">
       <button type="button" class="brand" id="brandHome" aria-label="PoliNetwork Studio — Home">
         <span class="brand-mark" aria-hidden="true">PN</span>
@@ -65,6 +83,12 @@
 
   <!-- ==================== MAIN WORKSPACE ==================== -->
   <main class="main-shell" id="mainContent" tabindex="-1">
+    <noscript>
+      <div class="ios-container"><div class="apple-card">
+        <h2>JavaScript richiesto</h2>
+        <p class="muted small" style="margin-top:0.5rem;">PoliNetwork Studio richiede JavaScript attivo nel browser per caricare i testi normativi, le flashcard, i quiz e la sincronizzazione Cloud.</p>
+      </div></div>
+    </noscript>
 
     <!-- ==================== 1. STUDIO (HOME) ==================== -->
     <section class="view active" id="view-overview" aria-labelledby="overviewHeading">
@@ -95,9 +119,9 @@
                 <h2 class="hero-title" id="nextBestTitle">Art. 1 · Denominazione</h2>
                 <p class="hero-meta" id="nextBestSub">Statuto · 1 min</p>
               </div>
-              <div class="mini-ring-wrap" aria-label="Avanzamento complessivo dello studio">
+              <div class="mini-ring-wrap" id="overallProgressRingWrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Avanzamento complessivo dello studio">
                 <div class="mini-ring">
-                  <svg viewBox="0 0 56 56" role="img" aria-labelledby="overallPct">
+                  <svg viewBox="0 0 56 56" aria-hidden="true">
                     <circle class="ring-track" cx="28" cy="28" r="23"></circle>
                     <circle class="ring-fill" id="overallRing" cx="28" cy="28" r="23" stroke-dasharray="144.51" stroke-dashoffset="144.51"></circle>
                   </svg>
@@ -123,18 +147,18 @@
           <div class="home-side-stack">
             <div class="apple-card event-card-box">
               <button type="button" class="event-card-main" id="btnOpenTimeline">
-                <div class="ios-cal" aria-hidden="true">
+                <span class="ios-cal" aria-hidden="true">
                   <span class="ios-cal-month" id="calMonth">NOV</span>
                   <span class="ios-cal-day" id="calDay">21</span>
-                </div>
-                <div class="event-copy">
+                </span>
+                <span class="event-copy">
                   <strong class="event-title" id="deadlineText">Assemblea Elettiva</strong>
-                  <div class="event-meta-chips" id="deadlineSub">
+                  <span class="event-meta-chips" id="deadlineSub">
                     <span class="event-countdown" id="deadlineCountdown">Caricamento…</span>
                     <span class="event-sep" aria-hidden="true">·</span>
                     <span class="event-origin">Cronoprogramma</span>
-                  </div>
-                </div>
+                  </span>
+                </span>
                 <svg class="ic chev-right" viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
               <div class="event-card-foot hidden" id="deadlineFootRow">
@@ -234,11 +258,11 @@
           </div>
 
           <div class="toc-controls">
-            <div class="ios-seg" id="readerDocPills" role="tablist" aria-label="Filtra documento">
-              <button type="button" class="ios-seg-btn active" data-doc="all" role="tab" aria-selected="true">Tutti</button>
-              <button type="button" class="ios-seg-btn" data-doc="statuto" role="tab" aria-selected="false">Statuto</button>
-              <button type="button" class="ios-seg-btn" data-doc="rri" role="tab" aria-selected="false">RRI</button>
-              <button type="button" class="ios-seg-btn" data-doc="elettorale" role="tab" aria-selected="false">Elettorale</button>
+            <div class="ios-seg" id="readerDocPills" role="group" aria-label="Filtra documento">
+              <button type="button" class="ios-seg-btn active" data-doc="all" aria-pressed="true">Tutti</button>
+              <button type="button" class="ios-seg-btn" data-doc="statuto" aria-pressed="false">Statuto</button>
+              <button type="button" class="ios-seg-btn" data-doc="rri" aria-pressed="false">RRI</button>
+              <button type="button" class="ios-seg-btn" data-doc="elettorale" aria-pressed="false">Elettorale</button>
             </div>
             <div class="ios-search-wrap">
               <svg class="ic xs search-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
@@ -252,11 +276,11 @@
                 <option value="inprogress">In corso</option>
                 <option value="memorized">A memoria</option>
               </select>
-              <span class="toc-count" id="readerMatchCount">137</span>
+              <span class="toc-count" id="readerMatchCount">137 sez.</span>
             </div>
           </div>
 
-          <div class="toc-list" id="readerTocList" role="navigation" aria-label="Elenco articoli"></div>
+          <nav class="toc-list" id="readerTocList" aria-label="Elenco articoli"></nav>
         </aside>
 
         <!-- Clean Pure-White Reading Canvas -->
@@ -272,8 +296,8 @@
             </div>
 
             <div class="ios-seg compact" id="readerModeSwitch" role="tablist" aria-label="Modalità">
-              <button type="button" class="ios-seg-btn active" data-rmode="read" role="tab" aria-selected="true">Leggi</button>
-              <button type="button" class="ios-seg-btn" data-rmode="cloze" role="tab" aria-selected="false" id="tabInlineCloze">Cloze</button>
+              <button type="button" class="ios-seg-btn active" id="tabReaderRead" data-rmode="read" role="tab" aria-selected="true" aria-controls="readerReadPane">Leggi</button>
+              <button type="button" class="ios-seg-btn" id="tabInlineCloze" data-rmode="cloze" role="tab" aria-selected="false" aria-controls="readerClozePane" tabindex="-1">Cloze</button>
             </div>
 
             <div class="reader-nav-right">
@@ -319,13 +343,13 @@
             </header>
 
             <!-- MODE A: VERBATIM PROSE -->
-            <div id="readerReadPane">
+            <div id="readerReadPane" role="tabpanel" aria-labelledby="tabReaderRead">
               <div class="legal-prose" id="readerArtBody"></div>
               <div class="pdf-gallery" id="readerArtImages"></div>
             </div>
 
             <!-- MODE B: INLINE CLOZE -->
-            <div id="readerClozePane" class="hidden">
+            <div id="readerClozePane" class="hidden" role="tabpanel" aria-labelledby="tabInlineCloze">
               <div class="cloze-selects-card">
                 <div class="cloze-bar-selects">
                   <select id="inlineClozeLevel" class="ios-field sm" aria-label="Livello Cloze">
@@ -389,14 +413,14 @@
         <div class="practice-header">
           <h1 class="large-title compact-title" id="practiceHeading">Pratica</h1>
           <div class="ios-seg" id="practiceModeSwitch" role="tablist" aria-label="Modalità di pratica">
-            <button type="button" class="ios-seg-btn active" data-pmode="flashcards" role="tab" aria-selected="true">Flashcard</button>
-            <button type="button" class="ios-seg-btn" data-pmode="quiz" role="tab" aria-selected="false">Quiz</button>
-            <button type="button" class="ios-seg-btn" data-pmode="cloze" role="tab" aria-selected="false">Cloze</button>
+            <button type="button" class="ios-seg-btn active" id="tabPracticeFc" data-pmode="flashcards" role="tab" aria-selected="true" aria-controls="pane-flashcards">Flashcard</button>
+            <button type="button" class="ios-seg-btn" id="tabPracticeQz" data-pmode="quiz" role="tab" aria-selected="false" aria-controls="pane-quiz" tabindex="-1">Quiz</button>
+            <button type="button" class="ios-seg-btn" id="tabPracticeClz" data-pmode="cloze" role="tab" aria-selected="false" aria-controls="pane-cloze" tabindex="-1">Cloze</button>
           </div>
         </div>
 
         <!-- SUB-MODE 3A: FLASHCARD FOCUS DECK -->
-        <div class="practice-pane" id="pane-flashcards" role="tabpanel">
+        <div class="practice-pane" id="pane-flashcards" role="tabpanel" aria-labelledby="tabPracticeFc">
           <div class="deck-top-bar">
             <div class="deck-top-left">
               <button type="button" class="circle-btn sm hidden" id="btnFcUndo" aria-label="Annulla ultimo voto" title="Annulla voto">
@@ -442,7 +466,7 @@
               </select>
             </div>
             <div class="filter-field">
-              <label for="fcOnlyDue">Stato</label>
+              <span class="filter-label">Stato</span>
               <label class="ios-switch-row" for="fcOnlyDue">
                 <span class="ios-switch-label">Solo da ripassare</span>
                 <input type="checkbox" id="fcOnlyDue" class="ios-switch-input" />
@@ -497,7 +521,7 @@
         </div>
 
         <!-- SUB-MODE 3B: QUIZ -->
-        <div class="practice-pane hidden" id="pane-quiz" role="tabpanel">
+        <div class="practice-pane hidden" id="pane-quiz" role="tabpanel" aria-labelledby="tabPracticeQz">
           <div class="deck-top-bar">
             <div class="deck-top-left">
               <button type="button" class="warn-chip hidden" id="btnRetryWrong">
@@ -521,9 +545,9 @@
               <label for="qzModeFilter">Tipologia</label>
               <select id="qzModeFilter" class="ios-field sm">
                 <option value="all">Tutte (40)</option>
-                <option value="blitz">Blitz Numeri &amp; Quorum (18)</option>
+                <option value="blitz">Blitz Numeri (18)</option>
                 <option value="mc">Normativa (12)</option>
-                <option value="scenario">Scenari Pratici (10)</option>
+                <option value="scenario">Scenari (10)</option>
               </select>
             </div>
             <div class="filter-field">
@@ -536,7 +560,7 @@
               </select>
             </div>
             <div class="filter-field">
-              <label for="qzOnlyUnmastered">Stato</label>
+              <span class="filter-label">Stato</span>
               <label class="ios-switch-row" for="qzOnlyUnmastered">
                 <span class="ios-switch-label">Solo da superare</span>
                 <input type="checkbox" id="qzOnlyUnmastered" class="ios-switch-input" />
@@ -608,7 +632,7 @@
         </div>
 
         <!-- SUB-MODE 3C: PERCORSO CLOZE -->
-        <div class="practice-pane hidden" id="pane-cloze" role="tabpanel">
+        <div class="practice-pane hidden" id="pane-cloze" role="tabpanel" aria-labelledby="tabPracticeClz">
           <div class="deck-top-bar">
             <button type="button" class="btn-apple soft sm" id="btnClozeRandom">Casuale</button>
             <span class="status-pill" id="clozeQueueSummary">Statuto · Art. 1</span>
@@ -677,8 +701,8 @@
               <button type="button" class="text-action" id="btnPClozeOpenReader">Apri in Norme ›</button>
               <div class="cloze-btn-group">
                 <button type="button" class="btn-apple soft sm" id="btnPClozeMarkMem">Segna a memoria</button>
-                <button type="button" class="btn-apple soft sm" id="btnPClozePrev">‹</button>
-                <button type="button" class="btn-apple primary sm" id="btnPClozeNext">Succ. ›</button>
+                <button type="button" class="btn-apple soft sm" id="btnPClozePrev" aria-label="Articolo precedente">‹</button>
+                <button type="button" class="btn-apple primary sm" id="btnPClozeNext" aria-label="Articolo successivo">Succ. ›</button>
               </div>
             </div>
           </div>
@@ -694,12 +718,12 @@
         </div>
 
         <div class="ref-pills-rail" id="csTabs" role="tablist" aria-label="Categorie sinossi">
-          <button type="button" class="ref-pill active" data-cs="timeline" role="tab" aria-selected="true">Cronoprogramma</button>
-          <button type="button" class="ref-pill" data-cs="quorums" role="tab" aria-selected="false">Quorum</button>
-          <button type="button" class="ref-pill" data-cs="organs" role="tab" aria-selected="false">Organi</button>
-          <button type="button" class="ref-pill" data-cs="deadlines" role="tab" aria-selected="false">Scadenze</button>
-          <button type="button" class="ref-pill" data-cs="hierarchy" role="tab" aria-selected="false">STV</button>
-          <button type="button" class="ref-pill" data-cs="diagrams" role="tab" aria-selected="false">Schemi PDF</button>
+          <button type="button" class="ref-pill active" id="csTab-timeline" data-cs="timeline" role="tab" aria-selected="true" aria-controls="csContent">Cronoprogramma</button>
+          <button type="button" class="ref-pill" id="csTab-quorums" data-cs="quorums" role="tab" aria-selected="false" aria-controls="csContent" tabindex="-1">Quorum</button>
+          <button type="button" class="ref-pill" id="csTab-organs" data-cs="organs" role="tab" aria-selected="false" aria-controls="csContent" tabindex="-1">Organi</button>
+          <button type="button" class="ref-pill" id="csTab-deadlines" data-cs="deadlines" role="tab" aria-selected="false" aria-controls="csContent" tabindex="-1">Scadenze</button>
+          <button type="button" class="ref-pill" id="csTab-hierarchy" data-cs="hierarchy" role="tab" aria-selected="false" aria-controls="csContent" tabindex="-1">STV</button>
+          <button type="button" class="ref-pill" id="csTab-diagrams" data-cs="diagrams" role="tab" aria-selected="false" aria-controls="csContent" tabindex="-1">Schemi PDF</button>
         </div>
 
         <div class="ref-filter-row" id="csFilterBar">
@@ -712,7 +736,7 @@
           </div>
         </div>
 
-        <div class="ref-content" id="csContent"></div>
+        <div class="ref-content" id="csContent" role="tabpanel" aria-labelledby="csTab-timeline"></div>
       </div>
     </section>
   </main>
@@ -753,12 +777,12 @@
       </div>
       <div class="ios-search-wrap">
         <svg class="ic sm search-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="search" id="globalSearchInput" class="ios-field has-ic has-clear" placeholder="Articolo, quorum, Droop, delega, 90 giorni…" aria-label="Cerca nella normativa" />
+        <input type="search" id="globalSearchInput" class="ios-field has-ic has-clear" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls="globalSearchResults" placeholder="Articolo, quorum, Droop, delega, 90 giorni…" aria-label="Cerca nella normativa" />
         <button type="button" class="clear-ic-btn hidden" id="btnClearGlobalSearch" aria-label="Cancella ricerca">
           <svg class="ic-clear" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="currentColor"/><path d="M7.2 7.2l5.6 5.6M12.8 7.2l-5.6 5.6" stroke="var(--bg-surface)" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
       </div>
-      <div class="search-results" id="globalSearchResults"></div>
+      <div class="search-results" id="globalSearchResults" role="listbox" aria-label="Risultati ricerca"></div>
       <div class="search-modal-foot" id="searchModalFoot">
         <span id="searchResultCount">Ricerca rapida</span>
         <span class="search-kbd-hints desktop-only">↑↓ Naviga · ↵ Apri · Esc Chiudi</span>
@@ -817,10 +841,8 @@
       <div class="backup-summary" id="backupSummary"></div>
       <div class="modal-actions">
         <button type="button" class="btn-apple soft sm" id="btnExportProgress">Esporta JSON</button>
-        <label class="btn-apple soft sm" id="lblImportProgress" tabindex="0" role="button">
-          Importa JSON
-          <input type="file" id="inputImportProgress" accept=".json" class="sr-only" />
-        </label>
+        <button type="button" class="btn-apple soft sm" id="btnImportProgress">Importa JSON</button>
+        <input type="file" id="inputImportProgress" accept=".json,application/json" class="hidden" tabindex="-1" aria-hidden="true" />
         <button type="button" class="btn-apple danger-soft sm" id="btnResetAsk">Azzera</button>
       </div>
       <div class="confirm-box hidden" id="resetConfirmBox">
@@ -874,12 +896,12 @@
           </button>
         </div>
       </div>
-      <img id="lightboxImg" src="" alt="Schema ufficiale PDF" />
+      <img id="lightboxImg" alt="Schema ufficiale PDF" />
     </div>
   </div>
 
   <!-- ==================== GDPR ANALYTICS CONSENT BANNER ==================== -->
-  <aside class="consent-banner hidden" id="consentBanner" role="dialog" aria-label="Preferenze statistiche">
+  <div class="consent-banner hidden" id="consentBanner" role="dialog" aria-modal="false" aria-label="Preferenze statistiche">
     <div class="consent-banner-text">
       <strong>Statistiche anonime di utilizzo</strong>
       <p class="muted small">Con il tuo consenso attiviamo Google Analytics per migliorare PoliNetwork Studio. La sincronizzazione Cloud e tutti i progressi funzionano comunque anche se rifiuti.</p>
@@ -888,11 +910,11 @@
       <button type="button" class="btn-apple soft sm" id="btnConsentDeny">Solo essenziali</button>
       <button type="button" class="btn-apple primary sm" id="btnConsentAccept">Accetta</button>
     </div>
-  </aside>
+  </div>
 
   <!-- ==================== TOAST ==================== -->
   <div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=4.3.0"></script>
+  <script src="app.js?v=4.4.0"></script>
 </body>
 </html>
