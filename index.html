@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=4.2.1" />
+  <link rel="stylesheet" href="styles.css?v=4.3.0" />
 </head>
 <body>
   <a href="#mainContent" class="skip-link">Salta al contenuto principale</a>
@@ -831,6 +831,11 @@
         </div>
       </div>
 
+      <div class="consent-modal-row">
+        <span class="muted small" id="consentStatusLabel">Statistiche anonime: non scelto</span>
+        <button type="button" class="text-action" id="btnConsentManage">Preferenze privacy</button>
+      </div>
+
       <!-- In-App Diagnostic & Cloud Telemetry Console -->
       <div class="diag-console-section" id="diagConsoleSection">
         <div class="diag-console-head">
@@ -873,9 +878,21 @@
     </div>
   </div>
 
+  <!-- ==================== GDPR ANALYTICS CONSENT BANNER ==================== -->
+  <aside class="consent-banner hidden" id="consentBanner" role="dialog" aria-label="Preferenze statistiche">
+    <div class="consent-banner-text">
+      <strong>Statistiche anonime di utilizzo</strong>
+      <p class="muted small">Con il tuo consenso attiviamo Google Analytics per migliorare PoliNetwork Studio. La sincronizzazione Cloud e tutti i progressi funzionano comunque anche se rifiuti.</p>
+    </div>
+    <div class="consent-banner-actions">
+      <button type="button" class="btn-apple soft sm" id="btnConsentDeny">Solo essenziali</button>
+      <button type="button" class="btn-apple primary sm" id="btnConsentAccept">Accetta</button>
+    </div>
+  </aside>
+
   <!-- ==================== TOAST ==================== -->
   <div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=4.2.1"></script>
+  <script src="app.js?v=4.3.0"></script>
 </body>
 </html>

@@ -1,0 +1,126 @@
+rules_version = '2';
+
+// ===============================================================
+// PoliNetwork Studio - Cloud Firestore Security Rules (prototype)
+// Firebase project: polinetwork
+// ===============================================================
+//
+// Assumed Data Model
+// ---------------------------------------------------------------
+// Collection: users
+// Document ID: {uid}  == Firebase Auth (Google) uid of the owner
+// Written with setDoc(ref, payload, { merge: true }); rules validate the
+// RESULTING document (request.resource.data), so merge writes are covered.
+// Fields (top-level, no others allowed):
+//   - studylab_v1:        map    (required) full app progress state; free-form
+//                                 nested content, max 24 top-level keys
+//                                 (mastery, bookmarks, sm2, quizStats, quizMastered,
+//                                 prefs, _ts, theme, readerScale, lastSecId,
+//                                 updatedAt, resetAt, ownerUid, schema, ...)
+//                                 Overall doc size capped by Firestore (1 MiB).
+//   - studylab_updatedAt: number (required) ms epoch, >= 0
+//   - uid:                string (required, immutable) == request.auth.uid == {uid}
+//   - email:              string (required, 0..320 chars) "" or == auth token email
+//   - displayName:        string (required, 0..200 chars)
+//   - schema:             number (optional) integer schema version, 0..1000
+//
+// Access: only the authenticated, email-verified owner may get/create/update/
+// delete their own document. No list/query across users. Everything else denied.
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Google accounts are verified; reject unverified email/password sign-ups.
+    function isVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && isVerified() && request.auth.uid == userId;
+    }
+
+    // On create: uid field must be the caller's uid.
+    function uidUnchanged() {
+      return request.resource.data.uid == request.auth.uid;
+    }
+
+    // On update: uid field must not change.
+    function uidNotModified() {
+      return request.resource.data.uid == resource.data.uid;
+    }
+
+    function isValidOptionalInt(data, field, minV, maxV) {
+      return !(field in data) ||
+             (data[field] is int && data[field] >= minV && data[field] <= maxV);
+    }
+
+    // ===============================================================
+    // Domain Validator (called in BOTH create and update)
+    // ===============================================================
+    function isValidUserDoc(data, userId) {
+      return data.keys().hasOnly(
+               ['studylab_v1', 'studylab_updatedAt', 'uid', 'email', 'displayName', 'schema']) &&
+             data.keys().hasAll(
+               ['studylab_v1', 'studylab_updatedAt', 'uid', 'email', 'displayName']) &&
+             // App state: must be a map with bounded top-level keys
+             data.studylab_v1 is map &&
+             data.studylab_v1.size() <= 24 &&
+             // Timestamp (ms epoch)
+             data.studylab_updatedAt is number &&
+             data.studylab_updatedAt >= 0 &&
+             data.studylab_updatedAt <= 32503680000000 &&   // < year 3000
+             // Identity
+             data.uid is string &&
+             data.uid == request.auth.uid &&
+             data.uid == userId &&
+             data.email is string &&
+             data.email.size() <= 320 &&
+             (data.email == '' || data.email == request.auth.token.get('email', '')) &&
+             data.displayName is string &&
+             data.displayName.size() <= 200 &&
+             // Optional schema version
+             isValidOptionalInt(data, 'schema', 0, 1000);
+    }
+
+    // ===============================================================
+    // users/{uid} - owner-only private document (contains PII: email)
+    // ===============================================================
+    match /users/{userId} {
+      // Single-document reads only (getDoc / onSnapshot on the doc ref).
+      allow get: if isOwner(userId);
+      // No collection queries across users.
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       uidUnchanged() &&
+                       isValidUserDoc(request.resource.data, userId);
+
+      allow update: if isOwner(userId) &&
+                       uidNotModified() &&
+                       isValidUserDoc(request.resource.data, userId);
+
+      allow delete: if isOwner(userId);
+
+      // No subcollections are used: deny everything beneath a user doc.
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    // ===============================================================
+    // Catch-all: default deny for every other path
+    // ===============================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

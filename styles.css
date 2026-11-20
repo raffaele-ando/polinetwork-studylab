@@ -1607,3 +1607,66 @@ mark.search-hit {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+/* ==================== GDPR ANALYTICS CONSENT BANNER ==================== */
+.consent-modal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--r-md);
+  background: var(--bg-grouped);
+  border: 0.5px solid var(--sep);
+}
+.consent-banner {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 1rem;
+  z-index: 95;
+  width: min(560px, calc(100vw - 1.5rem));
+  background: var(--bg-surface);
+  border: 0.5px solid var(--sep);
+  border-radius: var(--r-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+  padding: 0.9rem 1.05rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+.consent-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.consent-banner-text strong {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--ink-primary);
+}
+.consent-banner-text p {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+.consent-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .consent-banner {
+    bottom: calc(var(--fnav-h) + 0.75rem);
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+  .consent-banner-actions {
+    justify-content: flex-end;
+  }
+}

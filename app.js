@@ -87,7 +87,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.2.1";
+  const APP_VERSION = "v4.3.0";
   let diagEvents = loadDiagEvents();
   let diagSeq = diagEvents.length;
 
@@ -159,10 +159,10 @@
       `Tema / Scala       : theme=${state?.theme} scale=${state?.readerScale}`,
       `--- STATO FIREBASE & CLOUD ---`,
       `Firebase ProjectId : ${FIREBASE_CONFIG.projectId} (${FIREBASE_CONFIG.authDomain})`,
-      `SDK Inizializzato  : app=${!!fbApp} auth=${!!fbAuth} firestore=${!!fbDb}`,
-      `Utente Google      : ${fbUser ? `CONNESSO (uid=${fbUser.uid}, email=${fbUser.email || "-"}, name=${fbUser.displayName || "-"})` : "NON CONNESSO"}`,
-      `Collezione Cloud   : ${fbCollectionName}`,
-      `Stato Sync Cloud   : status=${cloudStatus} pendingPush=${cloudPendingPush} lastSyncedAt=${cloudLastSyncedAt ? new Date(cloudLastSyncedAt).toISOString() : "mai"} liveListener=${!!fbUnsubSnapshot}`,
+      `SDK Inizializzato  : app=${!!fbApp} auth=${!!fbAuth} firestore=${!!fbDb} cache=${fbCacheMode} analytics=${getAnalyticsConsent() || "non-scelto"}`,
+      `Utente Google      : ${fbUser ? `CONNESSO (uid=${maskUid(fbUser.uid)}, email=${maskEmail(fbUser.email)})` : "NON CONNESSO"}`,
+      `Collezione Cloud   : ${CLOUD_COLLECTION}`,
+      `Stato Sync Cloud   : status=${cloudStatus} pendingPush=${cloudPendingPush} lastSyncedAt=${cloudLastSyncedAt ? new Date(cloudLastSyncedAt).toISOString() : "mai"} liveListener=${cloudLiveActive} retries=${pushRetryAttempt}`,
       "",
       `=== CRONOLOGIA EVENTI (${diagEvents.length} registrati) ===`,
       ...diagEvents,
@@ -181,58 +181,79 @@
     }
   }
 
+  let diagTestRunning = false;
+  let diagLastRunAt = 0;
+
+  function maskEmail(email) {
+    const e = String(email || "");
+    const at = e.indexOf("@");
+    if (at < 1) return e ? "***" : "-";
+    return `${e.slice(0, Math.min(3, at))}***${e.slice(at)}`;
+  }
+
+  function maskUid(uid) {
+    const u = String(uid || "");
+    return u ? `${u.slice(0, 6)}…` : "-";
+  }
+
   async function runFullCloudAndAppDiagnostic() {
-    diagLog("SELF-TEST", "Avvio test diagnostico completo App + Cloud…");
-    // 1. LocalStorage test
+    if (diagTestRunning || (Date.now() - diagLastRunAt) < 1200) {
+      diagLog("SELF-TEST", "Test già in corso o appena eseguito — doppio tap ignorato");
+      return;
+    }
+    diagTestRunning = true;
+    diagLastRunAt = Date.now();
+    const btn = document.getElementById("btnDiagTestCloud");
+    if (btn) { btn.disabled = true; btn.textContent = "Test in corso…"; }
     try {
-      const testKey = `${STORAGE_KEY}_diag_probe`;
-      const probeVal = String(Date.now());
-      localStorage.setItem(testKey, probeVal);
-      const readBack = localStorage.getItem(testKey);
-      localStorage.removeItem(testKey);
-      diagLog("SELF-TEST", "1/4 LocalStorage R/W", readBack === probeVal ? "PASS (lettura/scrittura OK)" : "FAIL (mismatch)");
-    } catch (e) {
-      diagLog("SELF-TEST", "1/4 LocalStorage R/W", `FAIL (${e.message || e})`);
-    }
+      diagLog("SELF-TEST", "Avvio test diagnostico completo App + Cloud…");
+      // 1. LocalStorage test
+      try {
+        const testKey = `${STORAGE_KEY}_diag_probe`;
+        const probeVal = String(Date.now());
+        localStorage.setItem(testKey, probeVal);
+        const readBack = localStorage.getItem(testKey);
+        localStorage.removeItem(testKey);
+        diagLog("SELF-TEST", "1/4 LocalStorage R/W", readBack === probeVal ? "PASS (lettura/scrittura OK)" : "FAIL (mismatch)");
+      } catch (e) {
+        diagLog("SELF-TEST", "1/4 LocalStorage R/W", `FAIL (${e.message || e})`);
+      }
 
-    // 2. Corpus & UI integrity test
-    const domChecks = ["view-overview", "view-reader", "view-practice", "view-reference", "backupModal", "searchModal"]
-      .every(id => !!document.getElementById(id));
-    diagLog(
-      "SELF-TEST",
-      "2/4 Integrità Corpus & DOM",
-      CORPUS && PACK && ALL_SECTIONS.length === 160 && domChecks
-        ? `PASS (160 sezioni, ${PACK.flashcards.length} flashcard, ${PACK.quizzes.length} quiz, DOM completo)`
-        : `WARN (sezioni=${ALL_SECTIONS.length}, dom=${domChecks})`
-    );
+      // 2. Corpus & UI integrity test
+      const domChecks = ["view-overview", "view-reader", "view-practice", "view-reference", "backupModal", "searchModal"]
+        .every(id => !!document.getElementById(id));
+      diagLog(
+        "SELF-TEST",
+        "2/4 Integrità Corpus & DOM",
+        CORPUS && PACK && ALL_SECTIONS.length === 160 && domChecks
+          ? `PASS (160 sezioni, ${PACK.flashcards.length} flashcard, ${PACK.quizzes.length} quiz, DOM completo)`
+          : `WARN (sezioni=${ALL_SECTIONS.length}, dom=${domChecks})`
+      );
 
-    // 3. Firebase SDK & Auth check
-    if (!fbApp || !fbAuth || !fbDb) {
-      diagLog("SELF-TEST", "3/4 Firebase SDK", "Non ancora inizializzato, tento init…");
-      await initFirebaseCloud();
-    }
-    diagLog(
-      "SELF-TEST",
-      "3/4 Firebase SDK & Auth",
-      `app=${!!fbApp} auth=${!!fbAuth} firestore=${!!fbDb} user=${fbUser ? `${fbUser.email} (uid=${fbUser.uid})` : "NON LOGGATO"}`
-    );
+      // 3. Firebase SDK & Auth check
+      if (!fbApp || !fbAuth || !fbDb) {
+        diagLog("SELF-TEST", "3/4 Firebase SDK", "Non ancora inizializzato, attendo init…");
+        await initFirebaseCloud();
+      }
+      diagLog(
+        "SELF-TEST",
+        "3/4 Firebase SDK & Auth",
+        `app=${!!fbApp} auth=${!!fbAuth} firestore=${!!fbDb} cache=${fbCacheMode} user=${fbUser ? `${maskEmail(fbUser.email)} (uid=${maskUid(fbUser.uid)})` : "NON LOGGATO"}`
+      );
 
-    // 4. Cloud Firestore Live Round-Trip R/W Probe
-    if (!fbUser) {
-      diagLog("SELF-TEST", "4/4 Test Cloud Firestore R/W", "SKIP — Effettua prima 'Accedi con Google' per testare lettura/scrittura Cloud sul tuo documento utente.");
-      showToast("Test locale OK · Accedi con Google per il test Cloud");
-    } else {
-      // 4. Cloud Firestore Live Round-Trip R/W Probe (with 4500ms timeout + direct REST diagnosis)
+      // 4. Cloud Firestore round-trip
+      if (!fbUser) {
+        diagLog("SELF-TEST", "4/4 Test Cloud Firestore R/W", "SKIP — Effettua prima 'Accedi con Google' per testare lettura/scrittura Cloud.");
+        showToast("Test locale OK · Accedi con Google per il test Cloud");
+        return;
+      }
+      const uid = fbUser.uid;
       const t0 = performance.now();
-      diagLog("SELF-TEST", "4/4 Test Cloud Firestore R/W", "Avvio test SDK + REST API diretta su Firestore…");
-      refreshDiagConsoleUI();
+      diagLog("SELF-TEST", "4/4 Test Cloud Firestore R/W", "Avvio test REST API + SDK…");
       try {
         const token = await fbUser.getIdToken();
-        const restUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/${fbCollectionName}/${fbUser.uid}`;
-        const restRes = await fetch(restUrl, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const restUrl = `https://firestore.googleapis.com/v1/projects/${FIREBASE_CONFIG.projectId}/databases/(default)/documents/${CLOUD_COLLECTION}/${uid}`;
+        const restRes = await fetch(restUrl, { method: "GET", headers: { Authorization: `Bearer ${token}` } });
         const restMs = Math.round(performance.now() - t0);
         if (restRes.status === 200 || restRes.status === 404) {
           diagLog("SELF-TEST", "4a/4 Firestore REST API", `HTTP ${restRes.status} OK in ${restMs}ms — Database raggiungibile e permessi validi`);
@@ -242,40 +263,39 @@
           try {
             const parsed = JSON.parse(errBody);
             errReason = `${parsed?.error?.status || ""} — ${parsed?.error?.message || errReason}`;
-          } catch (_) {}
+          } catch (_) { /* ignore */ }
           diagLog("SELF-TEST", "4a/4 Firestore REST API", `HTTP ${restRes.status} in ${restMs}ms — ${errReason}`);
-          if (restRes.status === 403 || restRes.status === 404) {
-            setCloudNotice(
-              `Firestore restituisce HTTP ${restRes.status} (${errReason}). Vai su Firebase Console → progetto "polinetwork" → Firestore Database → Crea database (o nella scheda "Regole" imposta: allow read, write: if request.auth != null;).`,
-              true
-            );
+          if (restRes.status === 403) {
+            setCloudNotice(`Firestore risponde HTTP 403 (${errReason}). Verifica che il database esista e che le regole consentano l'accesso al proprio documento users/{uid}.`, true);
           }
         }
       } catch (restErr) {
         diagLog("SELF-TEST", "4a/4 Firestore REST API", `ERRORE RETE — ${restErr?.message || restErr}`);
       }
 
+      const sdkT0 = performance.now();
+      const pushed = await pushStateToCloud({ reason: "self-test" });
       try {
-        const sdkT0 = performance.now();
-        await withCloudTimeout(pushStateToCloud(false), 4500, "pushStateToCloud");
-        const ref = fbModules.doc(fbDb, fbCollectionName, fbUser.uid);
-        const snap = await withCloudTimeout(fbModules.getDoc(ref), 4500, "getDoc");
+        const ref = fbModules.doc(fbDb, CLOUD_COLLECTION, uid);
+        const snap = await withCloudTimeout(fbModules.getDocFromServer(ref), 8000, "getDocFromServer");
         const ms = Math.round(performance.now() - sdkT0);
-        if (snap && snap.exists()) {
-          const data = snap.data();
-          const remoteSummary = summarizeStateForLog(data?.studylab_v1);
-          diagLog("SELF-TEST", "4b/4 Firestore SDK Round-Trip", `PASS in ${ms}ms — Documento '${fbCollectionName}/${fbUser.uid}' scritto e riletto dal Cloud (${remoteSummary})`);
+        if (pushed && snap.exists()) {
+          diagLog("SELF-TEST", "4b/4 Firestore SDK Round-Trip", `PASS in ${ms}ms — '${CLOUD_COLLECTION}/${maskUid(uid)}' scritto e riletto dal server (${summarizeStateForLog(snap.data()?.studylab_v1)})`);
           showToast(`Test Cloud PASS (${ms}ms) ✓`);
         } else {
-          diagLog("SELF-TEST", "4b/4 Firestore SDK Round-Trip", `WARN in ${ms}ms — Documento '${fbCollectionName}/${fbUser.uid}' non trovato o bloccato dalle regole Firestore.`);
+          diagLog("SELF-TEST", "4b/4 Firestore SDK Round-Trip", `WARN in ${ms}ms — push=${pushed ? "OK" : "FALLITO"} documento=${snap.exists() ? "presente" : "assente"}`);
+          showToast("Test Cloud parziale (vedi log)");
         }
       } catch (err) {
-        const ms = Math.round(performance.now() - t0);
-        diagLog("SELF-TEST", "4b/4 Firestore SDK Round-Trip", `FAIL in ${ms}ms — code=${err?.code || "timeout"} msg=${err?.message || err}`);
-        showToast("Verifica regole/creazione Firestore (vedi log)");
+        const ms = Math.round(performance.now() - sdkT0);
+        diagLog("SELF-TEST", "4b/4 Firestore SDK Round-Trip", `FAIL in ${ms}ms — push=${pushed ? "OK" : "FALLITO"} code=${err?.code || "timeout"} msg=${err?.message || err}`);
+        showToast("Test Cloud fallito (vedi log)");
       }
+    } finally {
+      diagTestRunning = false;
+      if (btn) { btn.disabled = false; btn.textContent = "⚡ Testa Cloud"; }
+      refreshDiagConsoleUI();
     }
-    refreshDiagConsoleUI();
   }
 
   async function copyDiagnosticReportToClipboard() {
@@ -283,18 +303,20 @@
     const report = buildFullDiagnosticReport();
     const out = document.getElementById("diagConsoleOutput");
     if (out) out.value = report;
+    const hint = document.getElementById("diagStatusHint");
     try {
       await navigator.clipboard.writeText(report);
       showToast("Log completo copiato negli appunti ✓");
-      const hint = document.getElementById("diagStatusHint");
       if (hint) hint.textContent = `✓ Copiati ${report.length} caratteri (${diagEvents.length} eventi). Incollali in chat!`;
     } catch (_) {
+      let ok = false;
       if (out) {
         out.focus();
         out.select();
-        document.execCommand("copy");
-        showToast("Log selezionato e copiato ✓");
+        try { ok = document.execCommand && document.execCommand("copy"); } catch (_) { ok = false; }
       }
+      showToast(ok ? "Log selezionato e copiato ✓" : "Seleziona il testo e copialo manualmente");
+      if (hint && !ok) hint.textContent = "Copia automatica non disponibile: tieni premuto sul testo → Seleziona tutto → Copia.";
     }
   }
 
@@ -316,33 +338,67 @@
     appId: "1:234080938640:web:d5fd10c99545d7130e4615",
     measurementId: "G-ZRVKLNBHLF",
   };
+  const FIREBASE_SDK_VERSION = "11.0.2";
+  const CLOUD_COLLECTION = "users";
+  const STATE_SCHEMA = 2;
+  const CONSENT_KEY = "polinetwork_analytics_consent";
+  const PUSH_DEBOUNCE_MS = 1500;
+  const PUSH_MAX_WAIT_MS = 10000;
+  const CLOUD_OP_TIMEOUT_MS = 10000;
 
   let fbApp = null;
   let fbAuth = null;
   let fbDb = null;
   let fbModules = null;
   let fbUser = null;
+  let fbInitPromise = null;
+  let fbCacheMode = "n/d";
+  let fbAnalytics = null;
+  let fbAnalyticsMod = null;
   let fbUnsubSnapshot = null;
-  let fbCollectionName = "users";
-  let cloudSyncTimer = null;
+  let fbLiveRestartTimer = null;
+  let cloudLiveActive = false;
   let cloudPendingPush = false;
   let cloudLastSyncedAt = 0;
   let cloudApplyingRemote = false;
   let cloudStatus = "idle"; // idle | syncing | online | pending | error
+  let pushInFlight = null;
+  let pushQueued = false;
+  let pushDebounceTimer = null;
+  let pushDebounceFirstAt = 0;
+  let pushRetryTimer = null;
+  let pushRetryAttempt = 0;
+  let localRev = 0;
+
+  function getDeviceId() {
+    const k = "polinetwork_studylab_device_id";
+    try {
+      let id = localStorage.getItem(k);
+      if (!id) {
+        id = `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+        localStorage.setItem(k, id);
+      }
+      return id;
+    } catch (_) {
+      return "d-unknown";
+    }
+  }
 
   function defaultState() {
     return {
+      schema: 2,
       mastery: {},
       bookmarks: {},
       sm2: {},
-      quizStats: { total: 0, correct: 0 },
+      quizStats: { total: 0, correct: 0, byDevice: {} },
       quizMastered: {},
       theme: "light",
       readerScale: 1,
       lastSecId: null,
       updatedAt: 0,
       resetAt: 0,
-      _ts: { mastery: {}, bookmarks: {} },
+      ownerUid: null,
+      _ts: { mastery: {}, bookmarks: {}, quizMastered: {}, sm2Del: {} },
       prefs: {
         highlightNums: true,
         clozeLevel: "1",
@@ -352,22 +408,53 @@
     };
   }
 
+  function recomputeQuizTotals(qs) {
+    let total = 0;
+    let correct = 0;
+    for (const d of Object.values(qs.byDevice || {})) {
+      total += Number(d?.total) || 0;
+      correct += Number(d?.correct) || 0;
+    }
+    qs.total = total;
+    qs.correct = correct;
+    return qs;
+  }
+
+  function normalizeQuizStats(raw) {
+    const qs = { total: 0, correct: 0, byDevice: {} };
+    if (raw && typeof raw === "object") {
+      if (raw.byDevice && typeof raw.byDevice === "object") {
+        for (const [id, d] of Object.entries(raw.byDevice)) {
+          qs.byDevice[id] = { total: Number(d?.total) || 0, correct: Number(d?.correct) || 0 };
+        }
+      } else if ((Number(raw.total) || 0) > 0) {
+        // Legacy (pre-v4.3) aggregate counters → single "legacy" bucket
+        qs.byDevice.legacy = { total: Number(raw.total) || 0, correct: Number(raw.correct) || 0 };
+      }
+    }
+    return recomputeQuizTotals(qs);
+  }
+
   function normalizeStateObject(p) {
     const def = defaultState();
     if (!p || typeof p !== "object") return def;
     return {
       ...def,
       ...p,
+      schema: 2,
       mastery: p.mastery || {},
       bookmarks: p.bookmarks || {},
       sm2: p.sm2 || {},
-      quizStats: p.quizStats || { total: 0, correct: 0 },
+      quizStats: normalizeQuizStats(p.quizStats),
       quizMastered: p.quizMastered || {},
       updatedAt: Number(p.updatedAt) || 0,
       resetAt: Number(p.resetAt) || 0,
+      ownerUid: p.ownerUid || null,
       _ts: {
         mastery: p._ts?.mastery || {},
         bookmarks: p._ts?.bookmarks || {},
+        quizMastered: p._ts?.quizMastered || {},
+        sm2Del: p._ts?.sm2Del || {},
       },
       prefs: { ...def.prefs, ...(p.prefs || {}) },
     };
@@ -381,112 +468,193 @@
     return defaultState();
   }
 
+  function freshStateKeepingPrefs() {
+    return normalizeStateObject({
+      ...defaultState(),
+      theme: state.theme,
+      readerScale: state.readerScale,
+      prefs: { ...state.prefs },
+    });
+  }
+
+  /**
+   * saveState options:
+   *  - light: UI-only change (e.g. last opened article). No timestamp bump, no Cloud push, no log.
+   *  - preserveTimestamp / skipCloud / silentLog: fine-grained control (used when applying remote state).
+   */
   function saveState(opts = {}) {
-    if (!opts.preserveTimestamp) {
+    const light = !!opts.light;
+    if (!light && !opts.preserveTimestamp) {
       state.updatedAt = Date.now();
     }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      if (!opts.silentLog) {
+      if (!light && !opts.silentLog) {
         diagLog("STATE", "Salvato in localStorage", summarizeStateForLog(state));
       }
     } catch (e) {
       diagLog("ERROR", "Errore scrittura localStorage", e?.message || e);
     }
-    if (!cloudApplyingRemote && fbUser && !opts.skipCloud) {
-      scheduleCloudPush();
+    if (light || opts.skipCloud || cloudApplyingRemote) return;
+    localRev++;
+    if (fbUser) scheduleCloudPush();
+  }
+
+  function ensureTs() {
+    if (!state._ts) state._ts = {};
+    state._ts.mastery ||= {};
+    state._ts.bookmarks ||= {};
+    state._ts.quizMastered ||= {};
+    state._ts.sm2Del ||= {};
+    return state._ts;
+  }
+
+  function recordQuizAnswer(itemId, ok) {
+    const qs = state.quizStats || (state.quizStats = { total: 0, correct: 0, byDevice: {} });
+    qs.byDevice ||= {};
+    const dev = getDeviceId();
+    const d = qs.byDevice[dev] || (qs.byDevice[dev] = { total: 0, correct: 0 });
+    d.total++;
+    if (ok) d.correct++;
+    recomputeQuizTotals(qs);
+    const ts = ensureTs();
+    if (ok) state.quizMastered[itemId] = true;
+    else delete state.quizMastered[itemId];
+    ts.quizMastered[itemId] = Date.now();
+  }
+
+  function sm2RecordTs(rec) {
+    if (!rec) return 0;
+    const last = Number(rec.lastReviewedAt) || 0;
+    const edited = Number(rec._editedAt) || 0;
+    const derived = last || ((Number(rec.nextReview) || 0) - (Number(rec.interval) || 0) * 86400000);
+    return Math.max(derived > 0 ? derived : 0, edited);
+  }
+
+  function stableStringify(v) {
+    if (v === null || typeof v !== "object") return JSON.stringify(v);
+    if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
+    return `{${Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => `${JSON.stringify(k)}:${stableStringify(v[k])}`).join(",")}}`;
+  }
+
+  function mergeFlagMap(lMap, rMap, lTsMap, rTsMap) {
+    const out = {};
+    const outTs = {};
+    const keys = new Set([
+      ...Object.keys(lMap || {}), ...Object.keys(rMap || {}),
+      ...Object.keys(lTsMap || {}), ...Object.keys(rTsMap || {}),
+    ]);
+    for (const k of keys) {
+      const lTs = Number(lTsMap?.[k]) || 0;
+      const rTs = Number(rTsMap?.[k]) || 0;
+      let active;
+      if (lTs > 0 || rTs > 0) {
+        if (rTs > lTs) active = !!rMap?.[k];
+        else if (lTs > rTs) active = !!lMap?.[k];
+        else active = !!(lMap?.[k] || rMap?.[k]);
+        outTs[k] = Math.max(lTs, rTs);
+      } else {
+        active = !!(lMap?.[k] || rMap?.[k]);
+      }
+      if (active) out[k] = true;
     }
+    return { map: out, ts: outTs };
   }
 
   function mergeCloudAndLocalState(localRaw, remoteRaw) {
     const local = normalizeStateObject(localRaw);
     const remote = normalizeStateObject(remoteRaw);
 
-    // If one side executed an explicit full reset more recently than the other side's updates
+    // Explicit full reset more recent than every change on the other side wins entirely
     if (remote.resetAt > local.updatedAt && remote.resetAt > local.resetAt) {
-      return { ...remote };
+      return normalizeStateObject({ ...remote, ownerUid: local.ownerUid || remote.ownerUid });
     }
     if (local.resetAt > remote.updatedAt && local.resetAt > remote.resetAt) {
-      return { ...local };
+      return normalizeStateObject({ ...local });
     }
 
     const baseResetAt = Math.max(local.resetAt || 0, remote.resetAt || 0);
     const newerIsRemote = (remote.updatedAt || 0) > (local.updatedAt || 0);
     const primary = newerIsRemote ? remote : local;
 
+    // Mastery: per-section last-writer-wins (timestamps kept even for level 0 to propagate downgrades)
     const mergedMastery = {};
     const mergedMasteryTs = {};
-    const allMasteryKeys = new Set([...Object.keys(local.mastery), ...Object.keys(remote.mastery)]);
+    const allMasteryKeys = new Set([
+      ...Object.keys(local.mastery), ...Object.keys(remote.mastery),
+      ...Object.keys(local._ts.mastery), ...Object.keys(remote._ts.mastery),
+    ]);
     for (const k of allMasteryKeys) {
-      const lTs = Number(local._ts?.mastery?.[k]) || 0;
-      const rTs = Number(remote._ts?.mastery?.[k]) || 0;
+      const lTs = Number(local._ts.mastery[k]) || 0;
+      const rTs = Number(remote._ts.mastery[k]) || 0;
       const lVal = Number(local.mastery[k]) || 0;
       const rVal = Number(remote.mastery[k]) || 0;
+      let val;
       if (lTs > 0 || rTs > 0) {
-        if (rTs > lTs) { mergedMastery[k] = rVal; mergedMasteryTs[k] = rTs; }
-        else if (lTs > rTs) { mergedMastery[k] = lVal; mergedMasteryTs[k] = lTs; }
-        else { mergedMastery[k] = Math.max(lVal, rVal); mergedMasteryTs[k] = Math.max(lTs, rTs); }
+        if (rTs > lTs) val = rVal;
+        else if (lTs > rTs) val = lVal;
+        else val = Math.max(lVal, rVal);
+        mergedMasteryTs[k] = Math.max(lTs, rTs);
       } else {
-        mergedMastery[k] = Math.max(lVal, rVal);
+        val = Math.max(lVal, rVal);
       }
-      if (mergedMastery[k] === 0) delete mergedMastery[k];
+      if (val > 0) mergedMastery[k] = val;
     }
 
-    const mergedBookmarks = {};
-    const mergedBookmarksTs = {};
-    const allBmKeys = new Set([
-      ...Object.keys(local.bookmarks),
-      ...Object.keys(remote.bookmarks),
-      ...Object.keys(local._ts?.bookmarks || {}),
-      ...Object.keys(remote._ts?.bookmarks || {}),
-    ]);
-    for (const k of allBmKeys) {
-      const lTs = Number(local._ts?.bookmarks?.[k]) || 0;
-      const rTs = Number(remote._ts?.bookmarks?.[k]) || 0;
-      if (lTs > 0 || rTs > 0) {
-        const active = rTs > lTs ? !!remote.bookmarks[k] : (lTs > rTs ? !!local.bookmarks[k] : !!(local.bookmarks[k] || remote.bookmarks[k]));
-        mergedBookmarksTs[k] = Math.max(lTs, rTs);
-        if (active) mergedBookmarks[k] = true;
-      } else if (local.bookmarks[k] || remote.bookmarks[k]) {
-        mergedBookmarks[k] = true;
-      }
-    }
+    const bm = mergeFlagMap(local.bookmarks, remote.bookmarks, local._ts.bookmarks, remote._ts.bookmarks);
+    const qm = mergeFlagMap(local.quizMastered, remote.quizMastered, local._ts.quizMastered, remote._ts.quizMastered);
 
+    // SM-2: newest record wins; tombstones (undo of a first review) win if newer than any record
     const mergedSm2 = {};
-    const allSm2Keys = new Set([...Object.keys(local.sm2), ...Object.keys(remote.sm2)]);
+    const mergedSm2Del = {};
+    const allSm2Keys = new Set([
+      ...Object.keys(local.sm2), ...Object.keys(remote.sm2),
+      ...Object.keys(local._ts.sm2Del), ...Object.keys(remote._ts.sm2Del),
+    ]);
     for (const k of allSm2Keys) {
       const lRec = local.sm2[k];
       const rRec = remote.sm2[k];
-      if (lRec && !rRec) mergedSm2[k] = lRec;
-      else if (rRec && !lRec) mergedSm2[k] = rRec;
-      else if (lRec && rRec) {
-        const lRev = Number(lRec.lastReviewedAt) || Number(lRec.nextReview) || 0;
-        const rRev = Number(rRec.lastReviewedAt) || Number(rRec.nextReview) || 0;
-        if (rRev > lRev) mergedSm2[k] = rRec;
-        else if (lRev > rRev) mergedSm2[k] = lRec;
-        else mergedSm2[k] = (Number(rRec.reps) || 0) >= (Number(lRec.reps) || 0) ? rRec : lRec;
+      const lT = sm2RecordTs(lRec);
+      const rT = sm2RecordTs(rRec);
+      let best = null;
+      let bestTs = 0;
+      if (lRec && rRec) {
+        if (rT > lT) { best = rRec; bestTs = rT; }
+        else if (lT > rT) { best = lRec; bestTs = lT; }
+        else { best = (Number(rRec.reps) || 0) >= (Number(lRec.reps) || 0) ? rRec : lRec; bestTs = lT; }
+      } else if (lRec) { best = lRec; bestTs = lT; }
+      else if (rRec) { best = rRec; bestTs = rT; }
+      const delTs = Math.max(Number(local._ts.sm2Del[k]) || 0, Number(remote._ts.sm2Del[k]) || 0);
+      if (delTs > 0 && delTs >= bestTs) {
+        mergedSm2Del[k] = delTs;
+      } else if (best) {
+        mergedSm2[k] = best;
+        if (delTs > 0) mergedSm2Del[k] = delTs;
       }
     }
 
-    const mergedQuizMastered = { ...remote.quizMastered, ...local.quizMastered };
-    const mergedQuizStats = {
-      total: Math.max(Number(local.quizStats?.total) || 0, Number(remote.quizStats?.total) || 0),
-      correct: Math.max(Number(local.quizStats?.correct) || 0, Number(remote.quizStats?.correct) || 0),
-    };
+    // Quiz stats: per-device monotonic counters → take max per device, then sum
+    const byDevice = {};
+    for (const id of new Set([...Object.keys(local.quizStats.byDevice), ...Object.keys(remote.quizStats.byDevice)])) {
+      const l = local.quizStats.byDevice[id] || { total: 0, correct: 0 };
+      const r = remote.quizStats.byDevice[id] || { total: 0, correct: 0 };
+      byDevice[id] = r.total > l.total ? { ...r } : (l.total > r.total ? { ...l } : { total: l.total, correct: Math.max(l.correct, r.correct) });
+    }
 
     return normalizeStateObject({
       ...primary,
       mastery: mergedMastery,
-      bookmarks: mergedBookmarks,
+      bookmarks: bm.map,
       sm2: mergedSm2,
-      quizMastered: mergedQuizMastered,
-      quizStats: mergedQuizStats,
+      quizMastered: qm.map,
+      quizStats: recomputeQuizTotals({ total: 0, correct: 0, byDevice }),
       theme: primary.theme || local.theme || "light",
       readerScale: primary.readerScale || local.readerScale || 1,
       lastSecId: primary.lastSecId || local.lastSecId || remote.lastSecId || null,
-      updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0, Date.now()),
+      updatedAt: Math.max(local.updatedAt || 0, remote.updatedAt || 0),
       resetAt: baseResetAt,
-      _ts: { mastery: mergedMasteryTs, bookmarks: mergedBookmarksTs },
+      ownerUid: local.ownerUid || remote.ownerUid || null,
+      _ts: { mastery: mergedMasteryTs, bookmarks: bm.ts, quizMastered: qm.ts, sm2Del: mergedSm2Del },
       prefs: { ...local.prefs, ...remote.prefs, ...primary.prefs },
     });
   }
@@ -620,11 +788,11 @@
     updateDueBadges();
   }
 
-  function withCloudTimeout(promise, ms = 5000, opName = "firestore") {
+  function withCloudTimeout(promise, ms = CLOUD_OP_TIMEOUT_MS, opName = "firestore") {
     let timer = null;
     const timeoutPromise = new Promise((_, reject) => {
       timer = setTimeout(() => {
-        const err = new Error(`Timeout ${ms}ms superato durante ${opName} (verifica che Firestore Database sia creato e le regole consentano request.auth != null)`);
+        const err = new Error(`Timeout ${ms}ms durante ${opName}`);
         err.code = "timeout";
         reject(err);
       }, ms);
@@ -632,85 +800,157 @@
     return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timer));
   }
 
-  async function resolveCloudDocRef(uid) {
-    const { doc } = fbModules;
-    return doc(fbDb, fbCollectionName, uid);
+  function userMirrorKey(uid) {
+    return `${STORAGE_KEY}_cloud_${uid}`;
   }
 
-  async function pushStateToCloud(immediate = false) {
-    if (!fbUser || !fbDb || !fbModules) return;
-    if (cloudSyncTimer) {
-      clearTimeout(cloudSyncTimer);
-      cloudSyncTimer = null;
-    }
-    if (!navigator.onLine) {
-      cloudPendingPush = true;
-      cloudStatus = "pending";
-      updateCloudUI();
-      return;
-    }
+  function writeUserMirror(uid, s = state) {
+    if (!uid) return;
+    try { localStorage.setItem(userMirrorKey(uid), JSON.stringify(s)); } catch (_) { /* ignore */ }
+  }
 
-    cloudStatus = "syncing";
-    updateCloudUI();
-
-    const payload = {
-      studylab_v1: JSON.parse(JSON.stringify(state)),
-      studylab_updatedAt: state.updatedAt || Date.now(),
-      uid: fbUser.uid,
-      email: fbUser.email || "",
-      displayName: fbUser.displayName || "",
-    };
-
-    const collectionsToTry = [fbCollectionName, "users", "studylab_users", "backups"].filter((v, i, a) => a.indexOf(v) === i);
-    const payloadBytes = JSON.stringify(payload).length;
-    for (const col of collectionsToTry) {
-      const t0 = performance.now();
-      try {
-        const ref = fbModules.doc(fbDb, col, fbUser.uid);
-        await withCloudTimeout(fbModules.setDoc(ref, payload, { merge: true }), 4500, `setDoc(${col})`);
-        const ms = Math.round(performance.now() - t0);
-        fbCollectionName = col;
-        cloudPendingPush = false;
-        cloudLastSyncedAt = Date.now();
-        cloudStatus = "online";
-        setCloudNotice("");
-        try {
-          localStorage.setItem(`${STORAGE_KEY}_cloud_${fbUser.uid}`, JSON.stringify(state));
-        } catch (_) { /* ignore */ }
-        diagLog("CLOUD-PUSH", `OK -> Firestore '${col}/${fbUser.uid}' (${ms}ms, ${payloadBytes}B)`, summarizeStateForLog(state));
-        updateCloudUI();
-        if (immediate) showToast("Sincronizzato nel Cloud ✓");
-        return;
-      } catch (err) {
-        const ms = Math.round(performance.now() - t0);
-        diagLog("CLOUD-PUSH", `WARN tentativo '${col}/${fbUser.uid}' (${ms}ms)`, `code=${err?.code || "err"} msg=${err?.message || err}`);
-        if (err?.code === "unavailable" || err?.code === "timeout") {
-          // If Firestore backend is unreachable/uncreated or offline, don't waste 3x timeout on other collection names
-          break;
-        }
-        if (err?.code === "permission-denied") continue;
-        console.warn("Cloud push warning:", err);
-      }
-    }
-
-    // Fallback: cache under user-scoped local mirror and display helpful message if Firestore rules need enabling
+  function readUserMirror(uid) {
     try {
-      localStorage.setItem(`${STORAGE_KEY}_cloud_${fbUser.uid}`, JSON.stringify(state));
-    } catch (_) { /* ignore */ }
-    cloudStatus = "error";
-    diagLog("CLOUD-PUSH", "FALLBACK LOCALE — Nessuna collezione Firestore scrivibile (verifica regole Firestore)", summarizeStateForLog(state));
-    setCloudNotice("Accesso Google attivo. Nota: verifica che le regole Cloud Firestore nel progetto Firebase 'polinetwork' consentano la scrittura agli utenti autenticati (request.auth != null). I dati sono comunque salvati in locale.");
-    updateCloudUI();
+      const raw = localStorage.getItem(userMirrorKey(uid));
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function applyRemoteState(nextState, reason) {
+    cloudApplyingRemote = true;
+    try {
+      state = normalizeStateObject(nextState);
+      saveState({ skipCloud: true, preserveTimestamp: true, silentLog: true });
+      applyFullStateToUI();
+      if (reason) diagLog("CLOUD-MERGE", reason, summarizeStateForLog(state));
+    } finally {
+      cloudApplyingRemote = false;
+    }
   }
 
   function scheduleCloudPush() {
     cloudPendingPush = true;
+    if (!fbUser) return;
+    if (cloudStatus !== "syncing") {
+      cloudStatus = "syncing";
+      updateCloudUI();
+    }
+    const now = Date.now();
+    if (!pushDebounceFirstAt) pushDebounceFirstAt = now;
+    const wait = Math.max(0, Math.min(PUSH_DEBOUNCE_MS, PUSH_MAX_WAIT_MS - (now - pushDebounceFirstAt)));
+    if (pushDebounceTimer) clearTimeout(pushDebounceTimer);
+    pushDebounceTimer = setTimeout(() => {
+      pushDebounceTimer = null;
+      pushStateToCloud({ reason: "debounce" });
+    }, wait);
+  }
+
+  function scheduleCloudRetry() {
+    if (pushRetryTimer || !fbUser) return;
+    const delay = Math.min(60000, 1000 * Math.pow(2, pushRetryAttempt));
+    pushRetryAttempt++;
+    diagLog("CLOUD-PUSH", `Nuovo tentativo programmato tra ${Math.round(delay / 1000)}s`, `tentativo #${pushRetryAttempt}`);
+    pushRetryTimer = setTimeout(() => {
+      pushRetryTimer = null;
+      if (fbUser && cloudPendingPush) pushStateToCloud({ reason: "retry" });
+    }, delay);
+  }
+
+  /** Pushes the full state to users/{uid}. Single-flight; returns true on server-acknowledged success. */
+  async function pushStateToCloud({ immediate = false, reason = "" } = {}) {
+    if (!fbUser || !fbDb || !fbModules) return false;
+    if (pushDebounceTimer) { clearTimeout(pushDebounceTimer); pushDebounceTimer = null; }
+    pushDebounceFirstAt = 0;
+    if (pushInFlight) {
+      pushQueued = true;
+      return pushInFlight;
+    }
+    pushInFlight = doPushStateToCloud(immediate, reason);
+    try {
+      return await pushInFlight;
+    } finally {
+      pushInFlight = null;
+      if (pushQueued) {
+        pushQueued = false;
+        if (cloudPendingPush) scheduleCloudPush();
+      }
+    }
+  }
+
+  async function doPushStateToCloud(immediate, reason) {
+    const uid = fbUser.uid;
+    if (!navigator.onLine) {
+      cloudPendingPush = true;
+      cloudStatus = "pending";
+      updateCloudUI();
+      diagLog("CLOUD-PUSH", "Offline — push in coda fino al ritorno della rete");
+      return false;
+    }
     cloudStatus = "syncing";
     updateCloudUI();
-    if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
-    cloudSyncTimer = setTimeout(() => {
-      pushStateToCloud(false);
-    }, 300);
+
+    const revAtStart = localRev;
+    const snapshotState = JSON.parse(JSON.stringify(state));
+    const payload = {
+      studylab_v1: snapshotState,
+      studylab_updatedAt: Math.round(Number(snapshotState.updatedAt) || Date.now()),
+      uid,
+      email: fbUser.email || "",
+      displayName: (fbUser.displayName || "").slice(0, 200),
+      schema: STATE_SCHEMA,
+    };
+    const payloadBytes = JSON.stringify(payload).length;
+    const ref = fbModules.doc(fbDb, CLOUD_COLLECTION, uid);
+
+    let tokenRefreshed = false;
+    for (;;) {
+      const t0 = performance.now();
+      try {
+        await withCloudTimeout(fbModules.setDoc(ref, payload, { merge: true }), CLOUD_OP_TIMEOUT_MS, "setDoc");
+        if (fbUser?.uid !== uid) return false;
+        const ms = Math.round(performance.now() - t0);
+        if (localRev === revAtStart) cloudPendingPush = false;
+        cloudLastSyncedAt = Date.now();
+        cloudStatus = cloudPendingPush ? "syncing" : "online";
+        pushRetryAttempt = 0;
+        if (pushRetryTimer) { clearTimeout(pushRetryTimer); pushRetryTimer = null; }
+        setCloudNotice("");
+        writeUserMirror(uid, snapshotState);
+        diagLog("CLOUD-PUSH", `OK -> '${CLOUD_COLLECTION}/${maskUid(uid)}' (${ms}ms, ${payloadBytes}B${reason ? `, ${reason}` : ""})`, summarizeStateForLog(snapshotState));
+        updateCloudUI();
+        if (immediate) showToast("Sincronizzato nel Cloud ✓");
+        return true;
+      } catch (err) {
+        const ms = Math.round(performance.now() - t0);
+        const code = err?.code || "err";
+        diagLog("CLOUD-PUSH", `WARN '${CLOUD_COLLECTION}/${maskUid(uid)}' (${ms}ms)`, `code=${code} msg=${err?.message || err}`);
+        if (code === "permission-denied" && !tokenRefreshed && fbUser?.uid === uid) {
+          tokenRefreshed = true;
+          try {
+            await fbUser.getIdToken(true);
+            await new Promise(r => setTimeout(r, 400));
+            diagLog("AUTH", "Token ID aggiornato dopo permission-denied — ritento subito");
+            continue;
+          } catch (_) { /* fall through */ }
+        }
+        writeUserMirror(uid);
+        cloudPendingPush = true;
+        if (code === "timeout" || code === "unavailable") {
+          cloudStatus = "pending";
+          diagLog("CLOUD-PUSH", "Scrittura in coda (rete lenta/offline): verrà completata automaticamente");
+        } else {
+          cloudStatus = "error";
+          if (code === "permission-denied") {
+            setCloudNotice("Il Cloud ha rifiutato il salvataggio (permessi). I progressi sono al sicuro su questo dispositivo e verranno ritentati automaticamente.", true);
+          }
+        }
+        updateCloudUI();
+        scheduleCloudRetry();
+        return false;
+      }
+    }
   }
 
   async function pullAndMergeFromCloud(uid, showNotification = false) {
@@ -718,127 +958,248 @@
     cloudStatus = "syncing";
     updateCloudUI();
 
-    const collectionsToTry = [fbCollectionName, "users", "studylab_users", "backups"].filter((v, i, a) => a.indexOf(v) === i);
+    const ref = fbModules.doc(fbDb, CLOUD_COLLECTION, uid);
+    let serverRemote = null;
     let remoteState = null;
-
-    for (const col of collectionsToTry) {
+    let tokenRefreshed = false;
+    for (;;) {
       const t0 = performance.now();
       try {
-        const ref = fbModules.doc(fbDb, col, uid);
-        const snap = await withCloudTimeout(fbModules.getDoc(ref), 4500, `getDoc(${col})`);
+        const snap = await withCloudTimeout(fbModules.getDoc(ref), CLOUD_OP_TIMEOUT_MS, "getDoc");
         const ms = Math.round(performance.now() - t0);
-        fbCollectionName = col;
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data?.studylab_v1) {
-            remoteState = data.studylab_v1;
-            diagLog("CLOUD-PULL", `Trovato documento Cloud '${col}/${uid}' (${ms}ms)`, summarizeStateForLog(remoteState));
-          } else {
-            diagLog("CLOUD-PULL", `Documento '${col}/${uid}' esiste ma senza campo studylab_v1 (${ms}ms)`);
-          }
+        const src = snap.metadata?.fromCache ? "cache locale" : "server";
+        if (snap.exists() && snap.data()?.studylab_v1) {
+          serverRemote = snap.data().studylab_v1;
+          remoteState = serverRemote;
+          diagLog("CLOUD-PULL", `Documento Cloud trovato (${ms}ms, ${src})`, summarizeStateForLog(remoteState));
+        } else if (snap.exists()) {
+          diagLog("CLOUD-PULL", `Documento presente ma senza studylab_v1 (${ms}ms)`);
         } else {
-          diagLog("CLOUD-PULL", `Primo accesso su '${col}/${uid}' (${ms}ms) — documento verrà creato ora`);
+          diagLog("CLOUD-PULL", `Primo accesso (${ms}ms) — il documento verrà creato ora`);
         }
         break;
       } catch (err) {
         const ms = Math.round(performance.now() - t0);
-        diagLog("CLOUD-PULL", `WARN lettura '${col}/${uid}' (${ms}ms)`, `code=${err?.code || "err"} msg=${err?.message || err}`);
-        if (err?.code === "unavailable" || err?.code === "timeout") break;
-        if (err?.code === "permission-denied") continue;
+        const code = err?.code || "err";
+        diagLog("CLOUD-PULL", `WARN lettura (${ms}ms)`, `code=${code} msg=${err?.message || err}`);
+        if (code === "permission-denied" && !tokenRefreshed && fbUser?.uid === uid) {
+          tokenRefreshed = true;
+          try {
+            await fbUser.getIdToken(true);
+            await new Promise(r => setTimeout(r, 400));
+            diagLog("AUTH", "Token ID aggiornato dopo permission-denied — rileggo");
+            continue;
+          } catch (_) { /* fall through */ }
+        }
+        break;
       }
     }
+    if (fbUser?.uid !== uid) return;
 
-    // Also merge any user-scoped local cache
-    try {
-      const cachedRaw = localStorage.getItem(`${STORAGE_KEY}_cloud_${uid}`);
-      if (cachedRaw) {
-        const cachedState = JSON.parse(cachedRaw);
-        remoteState = remoteState ? mergeCloudAndLocalState(cachedState, remoteState) : cachedState;
-      }
-    } catch (_) { /* ignore */ }
+    // Merge per-user local mirror (data saved offline / before last logout)
+    const mirror = readUserMirror(uid);
+    if (mirror) remoteState = remoteState ? mergeCloudAndLocalState(mirror, remoteState) : mirror;
 
     if (remoteState) {
-      const beforeSummary = summarizeStateForLog(state);
-      cloudApplyingRemote = true;
-      state = mergeCloudAndLocalState(state, remoteState);
-      diagLog("CLOUD-MERGE", "Unione locale + Cloud completata", `PRIMA=[${beforeSummary}] -> DOPO=[${summarizeStateForLog(state)}]`);
-      saveState({ skipCloud: true, preserveTimestamp: true, silentLog: true });
-      applyFullStateToUI();
-      cloudApplyingRemote = false;
+      const before = summarizeStateForLog(state);
+      const merged = mergeCloudAndLocalState(state, remoteState);
+      if (stableStringify(merged) !== stableStringify(state)) {
+        applyRemoteState(merged, `Unione locale + Cloud completata — PRIMA=[${before}]`);
+      } else {
+        diagLog("CLOUD-MERGE", "Locale e Cloud già allineati");
+      }
     }
 
-    await pushStateToCloud(showNotification);
+    const needsPush = showNotification || !serverRemote || (stableStringify(state) !== stableStringify(normalizeStateObject(serverRemote)));
+    if (needsPush) {
+      cloudPendingPush = true;
+      await pushStateToCloud({ immediate: showNotification, reason: showNotification ? "manual-sync" : "login-sync" });
+    } else {
+      cloudPendingPush = false;
+      cloudLastSyncedAt = Date.now();
+      cloudStatus = "online";
+      writeUserMirror(uid, state);
+      updateCloudUI();
+      diagLog("CLOUD-PULL", "Nessuna scrittura necessaria: Cloud già aggiornato");
+    }
     startRealtimeCloudListener(uid);
   }
 
-  function startRealtimeCloudListener(uid) {
+  function stopRealtimeCloudListener() {
+    if (fbLiveRestartTimer) { clearTimeout(fbLiveRestartTimer); fbLiveRestartTimer = null; }
     if (fbUnsubSnapshot) {
-      fbUnsubSnapshot();
+      try { fbUnsubSnapshot(); } catch (_) { /* ignore */ }
       fbUnsubSnapshot = null;
     }
-    if (!fbDb || !fbModules || !uid) return;
-    try {
-      const ref = fbModules.doc(fbDb, fbCollectionName, uid);
-      diagLog("CLOUD-LIVE", `Listener real-time onSnapshot attivo su '${fbCollectionName}/${uid}'`);
-      fbUnsubSnapshot = fbModules.onSnapshot(ref, snap => {
-        if (!snap.exists() || cloudPendingPush) return;
-        const data = snap.data();
-        const remote = data?.studylab_v1;
-        if (!remote) return;
-        const remoteTs = Number(remote.updatedAt) || Number(data.studylab_updatedAt) || 0;
-        if (remoteTs > (state.updatedAt || 0)) {
-          diagLog("CLOUD-LIVE", `Ricevuto aggiornamento live dal Cloud (remoteTs=${remoteTs} > localTs=${state.updatedAt || 0})`, summarizeStateForLog(remote));
-          cloudApplyingRemote = true;
-          state = mergeCloudAndLocalState(state, remote);
-          saveState({ skipCloud: true, preserveTimestamp: true, silentLog: true });
-          cloudLastSyncedAt = Date.now();
-          cloudStatus = "online";
-          applyFullStateToUI();
-          updateCloudUI();
-          cloudApplyingRemote = false;
-        }
-      }, err => {
-        diagLog("CLOUD-LIVE", "WARN onSnapshot error", `code=${err?.code || "err"} msg=${err?.message || err}`);
-      });
-    } catch (_) { /* ignore */ }
+    cloudLiveActive = false;
   }
 
-  async function initFirebaseCloud() {
-    const t0 = performance.now();
-    diagLog("FIREBASE-INIT", `Caricamento Firebase SDK v11.0.2 (projectId=${FIREBASE_CONFIG.projectId})…`);
+  function startRealtimeCloudListener(uid) {
+    stopRealtimeCloudListener();
+    if (!fbDb || !fbModules || !uid) return;
     try {
-      const [appMod, authMod, fsMod, anMod] = await Promise.all([
-        import("https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js"),
-        import("https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js"),
-        import("https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js"),
-        import("https://www.gstatic.com/firebasejs/11.0.2/firebase-analytics.js").catch(() => null),
+      const ref = fbModules.doc(fbDb, CLOUD_COLLECTION, uid);
+      fbUnsubSnapshot = fbModules.onSnapshot(ref, snap => {
+        if (fbUser?.uid !== uid) return;
+        if (!cloudLiveActive) {
+          cloudLiveActive = true;
+          diagLog("CLOUD-LIVE", `Listener real-time attivo su '${CLOUD_COLLECTION}/${maskUid(uid)}'`);
+        }
+        if (snap.metadata?.hasPendingWrites || !snap.exists()) return;
+        const remote = snap.data()?.studylab_v1;
+        if (!remote) return;
+        const merged = mergeCloudAndLocalState(state, remote);
+        if (stableStringify(merged) !== stableStringify(state)) {
+          applyRemoteState(merged, "Aggiornamento live ricevuto dal Cloud");
+          cloudLastSyncedAt = Date.now();
+          if (!cloudPendingPush) cloudStatus = "online";
+          updateCloudUI();
+        }
+        // Only push back if the snapshot came from server (not stale local cache) and we have newer local data
+        if (!snap.metadata?.fromCache && stableStringify(merged) !== stableStringify(normalizeStateObject(remote))) {
+          cloudPendingPush = true;
+          scheduleCloudPush();
+        }
+      }, err => {
+        cloudLiveActive = false;
+        fbUnsubSnapshot = null;
+        const code = err?.code || "err";
+        diagLog("CLOUD-LIVE", "Listener interrotto — riavvio tra 5s", `code=${code} msg=${err?.message || err}`);
+        updateCloudUI();
+        fbLiveRestartTimer = setTimeout(async () => {
+          fbLiveRestartTimer = null;
+          if (fbUser?.uid !== uid) return;
+          if (code === "permission-denied") {
+            try { await fbUser.getIdToken(true); } catch (_) { /* ignore */ }
+          }
+          startRealtimeCloudListener(uid);
+        }, 5000);
+      });
+    } catch (err) {
+      diagLog("CLOUD-LIVE", "Impossibile avviare il listener", err?.message || String(err));
+    }
+  }
+
+  // ---------- Analytics consent (GDPR) ----------
+  function getAnalyticsConsent() {
+    try { return localStorage.getItem(CONSENT_KEY); } catch (_) { return null; }
+  }
+
+  async function enableAnalyticsIfConsented() {
+    if (getAnalyticsConsent() !== "granted" || !fbApp) return;
+    try {
+      if (!fbAnalyticsMod) {
+        fbAnalyticsMod = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/firebase-analytics.js`);
+      }
+      if (!(await fbAnalyticsMod.isSupported())) return;
+      if (!fbAnalytics) {
+        fbAnalytics = fbAnalyticsMod.getAnalytics(fbApp);
+        diagLog("ANALYTICS", "Google Analytics attivato (consenso dato)", FIREBASE_CONFIG.measurementId);
+      } else {
+        fbAnalyticsMod.setAnalyticsCollectionEnabled(fbAnalytics, true);
+      }
+    } catch (err) {
+      diagLog("ANALYTICS", "Analytics non disponibile", err?.message || String(err));
+    }
+  }
+
+  function setAnalyticsConsent(value) {
+    try { localStorage.setItem(CONSENT_KEY, value); } catch (_) { /* ignore */ }
+    document.getElementById("consentBanner")?.classList.add("hidden");
+    diagLog("ANALYTICS", `Consenso statistiche: ${value === "granted" ? "ACCETTATO" : "RIFIUTATO"}`);
+    if (value === "granted") {
+      enableAnalyticsIfConsented();
+    } else if (fbAnalytics && fbAnalyticsMod) {
+      try { fbAnalyticsMod.setAnalyticsCollectionEnabled(fbAnalytics, false); } catch (_) { /* ignore */ }
+    }
+    syncConsentLabel();
+  }
+
+  function syncConsentLabel() {
+    const lbl = document.getElementById("consentStatusLabel");
+    if (!lbl) return;
+    const c = getAnalyticsConsent();
+    lbl.textContent = c === "granted" ? "Statistiche anonime: attive" : (c === "denied" ? "Statistiche anonime: disattivate" : "Statistiche anonime: non scelto");
+  }
+
+  function initConsentBanner() {
+    const banner = document.getElementById("consentBanner");
+    if (banner && !getAnalyticsConsent()) banner.classList.remove("hidden");
+    document.getElementById("btnConsentAccept")?.addEventListener("click", () => setAnalyticsConsent("granted"));
+    document.getElementById("btnConsentDeny")?.addEventListener("click", () => setAnalyticsConsent("denied"));
+    document.getElementById("btnConsentManage")?.addEventListener("click", () => {
+      closeAllModals();
+      document.getElementById("consentBanner")?.classList.remove("hidden");
+    });
+    syncConsentLabel();
+  }
+
+  // ---------- Account ownership (shared devices) ----------
+  function claimLocalStateForUser(user) {
+    const prevOwner = state.ownerUid;
+    if (prevOwner && prevOwner !== user.uid) {
+      writeUserMirror(prevOwner);
+      diagLog("ACCOUNT", "Progressi locali appartenenti a un altro account messi da parte", `owner=${maskUid(prevOwner)} → nuovo=${maskUid(user.uid)}`);
+      cloudApplyingRemote = true;
+      try {
+        state = freshStateKeepingPrefs();
+      } finally {
+        cloudApplyingRemote = false;
+      }
+      applyFullStateToUI();
+      showToast("Progressi dell'altro account separati da questo");
+    }
+    if (state.ownerUid !== user.uid) {
+      state.ownerUid = user.uid;
+      saveState({ light: true });
+    }
+  }
+
+  // ---------- Firebase bootstrap (memoized, safe to call many times) ----------
+  function initFirebaseCloud() {
+    if (!fbInitPromise) {
+      fbInitPromise = doInitFirebaseCloud().then(ok => {
+        if (!ok) fbInitPromise = null;
+        return ok;
+      });
+    }
+    return fbInitPromise;
+  }
+
+  async function doInitFirebaseCloud() {
+    const t0 = performance.now();
+    diagLog("FIREBASE-INIT", `Caricamento Firebase SDK v${FIREBASE_SDK_VERSION} (projectId=${FIREBASE_CONFIG.projectId})…`);
+    try {
+      const base = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}`;
+      const [appMod, authMod, fsMod] = await Promise.all([
+        import(`${base}/firebase-app.js`),
+        import(`${base}/firebase-auth.js`),
+        import(`${base}/firebase-firestore.js`),
       ]);
 
-      fbApp = appMod.initializeApp(FIREBASE_CONFIG);
-      if (anMod && typeof anMod.isSupported === "function") {
-        anMod.isSupported().then(yes => {
-          if (yes) {
-            anMod.getAnalytics(fbApp);
-            diagLog("FIREBASE-INIT", "Firebase Analytics attivo", FIREBASE_CONFIG.measurementId);
-          }
-        }).catch(() => {});
-      }
+      fbApp = appMod.getApps().length ? appMod.getApp() : appMod.initializeApp(FIREBASE_CONFIG);
       fbAuth = authMod.getAuth(fbApp);
       try {
         fbDb = fsMod.initializeFirestore(fbApp, {
+          localCache: fsMod.persistentLocalCache({ tabManager: fsMod.persistentMultipleTabManager() }),
           experimentalAutoDetectLongPolling: true,
         });
+        fbCacheMode = "persistent-indexeddb";
       } catch (_) {
-        fbDb = fsMod.getFirestore(fbApp);
+        try {
+          fbDb = fsMod.initializeFirestore(fbApp, { experimentalAutoDetectLongPolling: true });
+          fbCacheMode = "memory";
+        } catch (_) {
+          fbDb = fsMod.getFirestore(fbApp);
+          fbCacheMode = "default";
+        }
       }
       fbModules = { ...authMod, ...fsMod };
-      diagLog("FIREBASE-INIT", `SDK inizializzato in ${Math.round(performance.now() - t0)}ms`, "App + Auth + Firestore pronti");
+      diagLog("FIREBASE-INIT", `SDK inizializzato in ${Math.round(performance.now() - t0)}ms`, `App + Auth + Firestore pronti (cache=${fbCacheMode})`);
+      enableAnalyticsIfConsented();
 
-      // Check redirect result if user signed in via mobile redirect fallback
       authMod.getRedirectResult(fbAuth).then(res => {
-        if (res?.user) {
-          diagLog("AUTH", "Login via Redirect completato", `email=${res.user.email} uid=${res.user.uid}`);
-        }
+        if (res?.user) diagLog("AUTH", "Login via Redirect completato", `email=${maskEmail(res.user.email)} uid=${maskUid(res.user.uid)}`);
       }).catch(err => {
         diagLog("AUTH", "Errore getRedirectResult", `code=${err?.code} msg=${err?.message}`);
         if (err?.code === "auth/unauthorized-domain") {
@@ -847,46 +1208,58 @@
       });
 
       authMod.onAuthStateChanged(fbAuth, async user => {
+        const prevUid = fbUser?.uid || null;
         fbUser = user || null;
         if (fbUser) {
-          diagLog("AUTH", "Utente autenticato (onAuthStateChanged)", `email=${fbUser.email || "-"} name=${fbUser.displayName || "-"} uid=${fbUser.uid}`);
+          if (prevUid === fbUser.uid) return; // token refresh, same user
+          diagLog("AUTH", "Utente autenticato", `email=${maskEmail(fbUser.email)} uid=${maskUid(fbUser.uid)}`);
+          claimLocalStateForUser(fbUser);
           cloudStatus = "syncing";
           updateCloudUI();
           await pullAndMergeFromCloud(fbUser.uid, false);
         } else {
-          diagLog("AUTH", "Stato Auth: nessun utente Google attivo (modalità locale pronta)");
-          if (fbUnsubSnapshot) { fbUnsubSnapshot(); fbUnsubSnapshot = null; }
+          diagLog("AUTH", "Nessun utente Google attivo (modalità locale)");
+          stopRealtimeCloudListener();
+          if (pushRetryTimer) { clearTimeout(pushRetryTimer); pushRetryTimer = null; }
+          if (pushDebounceTimer) { clearTimeout(pushDebounceTimer); pushDebounceTimer = null; }
           cloudStatus = "idle";
           updateCloudUI();
         }
       });
 
       window.addEventListener("online", () => {
-        diagLog("NETWORK", "Connessione internet tornata ONLINE");
-        if (fbUser && cloudPendingPush) pushStateToCloud(false);
+        diagLog("NETWORK", "Connessione tornata ONLINE");
+        if (fbUser && cloudPendingPush) pushStateToCloud({ reason: "online" });
+        if (fbUser && !fbUnsubSnapshot) startRealtimeCloudListener(fbUser.uid);
       });
       window.addEventListener("offline", () => {
         diagLog("NETWORK", "Dispositivo OFFLINE — salvataggio locale attivo, push Cloud in coda");
+        cloudStatus = fbUser ? "pending" : cloudStatus;
+        updateCloudUI();
       });
-      document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "hidden" && fbUser && cloudPendingPush) {
-          diagLog("LIFECYCLE", "App in background — flush immediato dati pendenti al Cloud");
-          pushStateToCloud(false);
+      const flushOnHide = () => {
+        if (fbUser && cloudPendingPush) {
+          diagLog("LIFECYCLE", "App in background — flush immediato al Cloud");
+          writeUserMirror(fbUser.uid);
+          pushStateToCloud({ reason: "background" });
         }
-      });
+      };
+      document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushOnHide(); });
+      window.addEventListener("pagehide", flushOnHide);
+      return true;
     } catch (err) {
       diagLog("ERROR", "Errore caricamento Firebase SDK", err?.message || String(err));
-      console.warn("Firebase init offline/fallback:", err);
+      return false;
     }
   }
 
   async function handleGoogleLogin() {
     diagLog("AUTH", "Click 'Accedi con Google'");
     if (!fbAuth || !fbModules) {
-      showToast("Connessione a Firebase in corso, riprova tra un istante…");
-      await initFirebaseCloud();
-      if (!fbAuth || !fbModules) {
-        setCloudNotice("Impossibile caricare Firebase SDK. Verifica la connessione internet.", true);
+      showToast("Connessione a Firebase in corso…");
+      const ok = await initFirebaseCloud();
+      if (!ok || !fbAuth) {
+        setCloudNotice("Impossibile caricare Firebase. Verifica la connessione internet e riprova.", true);
         return;
       }
     }
@@ -897,14 +1270,14 @@
       diagLog("AUTH", "Apertura popup signInWithPopup…");
       const res = await fbModules.signInWithPopup(fbAuth, provider);
       if (res?.user) {
-        diagLog("AUTH", "signInWithPopup RIUSCITO", `email=${res.user.email} uid=${res.user.uid}`);
+        diagLog("AUTH", "signInWithPopup riuscito", `email=${maskEmail(res.user.email)}`);
         showToast(`Connesso come ${res.user.displayName || res.user.email}`);
       }
     } catch (err) {
       diagLog("AUTH", "WARN signInWithPopup", `code=${err?.code || "err"} msg=${err?.message || err}`);
-      if (err?.code === "auth/popup-blocked" || err?.code === "auth/cancelled-popup-request") {
+      if (err?.code === "auth/popup-blocked" || err?.code === "auth/operation-not-supported-in-this-environment") {
         try {
-          diagLog("AUTH", "Popup bloccato dal browser mobile — passo a signInWithRedirect…");
+          diagLog("AUTH", "Popup non disponibile — passo a signInWithRedirect…");
           await fbModules.signInWithRedirect(fbAuth, provider);
           return;
         } catch (e2) {
@@ -912,10 +1285,9 @@
           setCloudNotice(`Errore accesso Google: ${e2.message || e2.code}`, true);
         }
       } else if (err?.code === "auth/unauthorized-domain") {
-        const msg = `Dominio "${location.hostname}" da autorizzare in Firebase Console → Authentication → Settings → Authorized domains.`;
-        setCloudNotice(msg, true);
+        setCloudNotice(`Dominio "${location.hostname}" da autorizzare in Firebase Console → Authentication → Settings → Authorized domains.`, true);
         openModal("backupModal");
-      } else if (err?.code !== "auth/popup-closed-by-user") {
+      } else if (err?.code !== "auth/popup-closed-by-user" && err?.code !== "auth/cancelled-popup-request") {
         setCloudNotice(`Accesso Google non riuscito (${err?.code || "errore"}).`, true);
         openModal("backupModal");
       }
@@ -923,13 +1295,28 @@
   }
 
   async function handleGoogleLogout() {
-    if (!fbAuth || !fbModules) return;
+    if (!fbAuth || !fbModules || !fbUser) return;
+    const uid = fbUser.uid;
     try {
-      diagLog("AUTH", "Richiesta disconnessione Google (signOut)…");
-      if (cloudPendingPush) await pushStateToCloud(false);
+      diagLog("AUTH", "Richiesta disconnessione Google…");
+      let flushed = true;
+      if (cloudPendingPush) flushed = await pushStateToCloud({ reason: "logout" });
+      writeUserMirror(uid);
+      stopRealtimeCloudListener();
       await fbModules.signOut(fbAuth);
-      diagLog("AUTH", "Disconnessione completata");
-      showToast("Disconnesso da Google Cloud (progressi conservati in locale)");
+      // Clear this device's working copy so the next person doesn't see / merge these progress data
+      cloudApplyingRemote = true;
+      try {
+        state = freshStateKeepingPrefs();
+        saveState({ light: true });
+      } finally {
+        cloudApplyingRemote = false;
+      }
+      cloudPendingPush = false;
+      applyFullStateToUI();
+      startQuiz();
+      diagLog("AUTH", "Disconnessione completata", flushed ? "Cloud allineato" : "Ultime modifiche conservate in copia locale dell'account");
+      showToast(flushed ? "Disconnesso · Progressi al sicuro nel Cloud" : "Disconnesso · Progressi salvati, verranno inviati al prossimo accesso");
     } catch (e) {
       diagLog("ERROR", "Errore signOut", e?.message || e);
     }
@@ -1060,16 +1447,18 @@
   // ==================== INIT ====================
   async function init() {
     const tBoot = performance.now();
-    diagLog("BOOT", "Avvio applicazione PoliNetwork Studio v4.2.0", `${window.innerWidth}x${window.innerHeight} · theme=${state.theme}`);
+    diagLog("BOOT", `Avvio applicazione PoliNetwork Studio ${APP_VERSION}`, `${window.innerWidth}x${window.innerHeight} · theme=${state.theme}`);
     document.body.dataset.view = "overview";
     applyTheme(state.theme);
     applyReaderScale(state.readerScale);
     applySavedPrefsToControls();
 
     const [corpusRes, packRes] = await Promise.all([
-      fetch("data/corpus.json?v=4.2.0"),
-      fetch("data/study_pack.json?v=4.2.0"),
+      fetch(`data/corpus.json?v=${APP_VERSION}`),
+      fetch(`data/study_pack.json?v=${APP_VERSION}`),
     ]);
+    if (!corpusRes.ok) throw new Error(`Impossibile caricare corpus.json (HTTP ${corpusRes.status})`);
+    if (!packRes.ok) throw new Error(`Impossibile caricare study_pack.json (HTTP ${packRes.status})`);
     CORPUS = await corpusRes.json();
     PACK = await packRes.json();
 
@@ -1108,6 +1497,7 @@
     applyRouteFromHash();
     window.addEventListener("hashchange", applyRouteFromHash);
     setInterval(renderDeadlineCard, 60000);
+    initConsentBanner();
     updateCloudUI();
     refreshDiagConsoleUI();
     initFirebaseCloud();
@@ -1672,8 +2062,10 @@
     const sec = SECTION_MAP.get(secId);
     if (!sec) return;
     readerSecId = secId;
-    state.lastSecId = secId;
-    saveState();
+    if (state.lastSecId !== secId) {
+      state.lastSecId = secId;
+      saveState({ light: true });
+    }
 
     syncReaderSidebarDots();
     syncReaderModeTabs();
@@ -1862,7 +2254,7 @@
         } else {
           if ((state.mastery[secId] || 0) === 0) {
             state.mastery[secId] = 1;
-            if (!state._ts) state._ts = { mastery: {}, bookmarks: {} };
+            ensureTs();
             state._ts.mastery[secId] = Date.now();
             saveState();
             syncAllViewsForStateChange(secId);
@@ -1883,7 +2275,7 @@
           });
           noticeEl.querySelector("[data-clz-mem]")?.addEventListener("click", () => {
             state.mastery[secId] = 3;
-            if (!state._ts) state._ts = { mastery: {}, bookmarks: {} };
+            ensureTs();
             state._ts.mastery[secId] = Date.now();
             saveState();
             syncAllViewsForStateChange(secId);
@@ -2246,8 +2638,15 @@
   function undoLastFlashcard() {
     if (!fcLastAction) return;
     const { card, prevRec, prevCompleted, queueSnapshot } = fcLastAction;
-    if (prevRec) state.sm2[card.id] = prevRec;
-    else delete state.sm2[card.id];
+    const now = Date.now();
+    const ts = ensureTs();
+    if (prevRec) {
+      state.sm2[card.id] = { ...prevRec, _editedAt: now };
+    } else {
+      delete state.sm2[card.id];
+      ts.sm2Del[card.id] = now;
+    }
+    diagLog("ACTION", `Voto flashcard annullato (${card.id})`, prevRec ? "Ripristinato stato precedente" : "Rimosso (tombstone)");
     saveState();
     updateDueBadges();
     fcQueue = [card, ...queueSnapshot];
@@ -2368,15 +2767,9 @@
     });
 
     const ok = chosenIdx === item.correct;
-    state.quizStats.total++;
-    if (ok) {
-      qzCorrect++;
-      state.quizStats.correct++;
-      state.quizMastered[item.id] = true;
-    } else {
-      qzWrong.push(item);
-      delete state.quizMastered[item.id];
-    }
+    if (ok) qzCorrect++;
+    else qzWrong.push(item);
+    recordQuizAnswer(item.id, ok);
     diagLog("ACTION", `Risposta Quiz (${item.id})`, `${ok ? "CORRETTA" : "ERRATA"} · Scelta=${String.fromCharCode(65 + chosenIdx)} · Tot=${state.quizStats.correct}/${state.quizStats.total}`);
     saveState();
 
@@ -2876,8 +3269,9 @@
     document.getElementById("readerMasterySelect").addEventListener("change", e => {
       if (!readerSecId) return;
       const val = Number(e.target.value);
-      state.mastery[readerSecId] = val;
-      if (!state._ts) state._ts = { mastery: {}, bookmarks: {} };
+      if (val > 0) state.mastery[readerSecId] = val;
+      else delete state.mastery[readerSecId];
+      ensureTs();
       state._ts.mastery[readerSecId] = Date.now();
       diagLog("ACTION", `Stato articolo aggiornato (${readerSecId})`, `${STATUS_LABELS[val]} (level=${val})`);
       saveState();
@@ -2887,7 +3281,7 @@
 
     document.getElementById("btnBookmarkSec").addEventListener("click", () => {
       if (!readerSecId) return;
-      if (!state._ts) state._ts = { mastery: {}, bookmarks: {} };
+      ensureTs();
       state._ts.bookmarks[readerSecId] = Date.now();
       if (state.bookmarks[readerSecId]) { delete state.bookmarks[readerSecId]; showToast("Rimosso dai salvati"); }
       else { state.bookmarks[readerSecId] = true; showToast("Salvato"); }
@@ -3042,8 +3436,9 @@
     document.getElementById("btnPClozeMarkMem").addEventListener("click", () => {
       if (!practiceClozeSecId) return;
       state.mastery[practiceClozeSecId] = 3;
-      if (!state._ts) state._ts = { mastery: {}, bookmarks: {} };
+      ensureTs();
       state._ts.mastery[practiceClozeSecId] = Date.now();
+      diagLog("ACTION", `Cloze segnato a memoria (${practiceClozeSecId})`, "level=3");
       saveState();
       syncAllViewsForStateChange(practiceClozeSecId);
       showToast("Segnato a memoria");
@@ -3118,6 +3513,7 @@
     const openBackupModalWithDiag = (scrollToConsole = false) => {
       renderBackupSummary();
       updateCloudUI();
+      syncConsentLabel();
       refreshDiagConsoleUI();
       openModal("backupModal");
       if (scrollToConsole) {
@@ -3193,12 +3589,12 @@
     document.getElementById("btnResetConfirm").addEventListener("click", () => {
       const theme = state.theme;
       const now = Date.now();
-      state = { ...defaultState(), theme, updatedAt: now, resetAt: now };
+      state = normalizeStateObject({ ...defaultState(), theme, updatedAt: now, resetAt: now, ownerUid: fbUser?.uid || state.ownerUid || null });
       if (fbUser) {
-        try { localStorage.removeItem(`${STORAGE_KEY}_cloud_${fbUser.uid}`); } catch (_) {}
+        try { localStorage.removeItem(userMirrorKey(fbUser.uid)); } catch (_) {}
       }
       diagLog("RESET", "Progressi azzerati dall'utente", `resetAt=${new Date(now).toISOString()}`);
-      saveState();
+      saveState({ preserveTimestamp: true });
       applyFullStateToUI();
       startQuiz();
       closeAllModals();
@@ -3256,6 +3652,7 @@
   }
 
   init().catch(err => {
+    diagLog("ERROR", "Errore fatale init()", err?.stack || err?.message || String(err));
     console.error("Init error:", err);
     document.getElementById("mainContent").innerHTML = `
       <div class="ios-container"><div class="apple-card">
