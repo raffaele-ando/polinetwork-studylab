@@ -194,11 +194,15 @@ body.modal-open { overflow: hidden; }
   background: none; border: none; cursor: pointer; padding: 0.2rem 0;
   border-radius: var(--r-xs); flex-shrink: 0;
 }
-.brand-mark {
-  width: 30px; height: 30px; border-radius: 9px;
-  background: var(--accent); color: #fff;
-  font-family: var(--font-display); font-weight: 800; font-size: 0.78rem;
-  display: grid; place-items: center; letter-spacing: -0.02em;
+.brand-logo {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: block; flex-shrink: 0;
+}
+.brand-heading {
+  display: inline-flex; align-items: center; gap: 0.6rem;
+}
+.mobile-brand-logo {
+  display: none; width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
 }
 .brand-title {
   font-family: var(--font-display); font-weight: 800; font-size: 1.02rem;
@@ -1471,6 +1475,7 @@ body.consent-open .reader-inner { padding-bottom: 6.5rem; }
 @media (max-width: 900px) {
   .topbar { display: none; }
   .desktop-only { display: none !important; }
+  .mobile-brand-logo { display: block; }
   .mobile-head-actions { display: flex; }
   .mobile-head-actions .circle-btn { width: 44px; height: 44px; }
   .floating-nav-wrap { display: block; }

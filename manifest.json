@@ -1,14 +1,20 @@
 {
   "name": "PoliNetwork Studio",
-  "short_name": "PN Studio",
+  "short_name": "PoliNetwork",
   "description": "Studio normativo PoliNetwork APS: Statuto, Regolamenti Interni e Regolamento Elettorale 2026 con Cloze, Flashcard SM-2, Quiz e Sync Cloud.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f2f2f7",
-  "theme_color": "#0071e3",
+  "theme_color": "#1055AD",
   "lang": "it-IT",
   "icons": [
+    {
+      "src": "assets/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "assets/icon-192.png",
       "sizes": "192x192",

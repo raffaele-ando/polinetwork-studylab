@@ -17,8 +17,9 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://www.googletagmanager.com https://*.googletagmanager.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com; connect-src 'self' https://www.gstatic.com https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://www.googletagmanager.com https://*.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://cloudflareinsights.com; frame-src 'self' https://polinetwork.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self';" />
   <title>PoliNetwork Studio</title>
   <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png" />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230071e3'/%3E%3Ctext x='32' y='42' font-family='-apple-system,system-ui,sans-serif' font-size='26' font-weight='800' fill='%23ffffff' text-anchor='middle'%3EPN%3C/text%3E%3C/svg%3E" />
   <script>
     try {
       var _s = JSON.parse(localStorage.getItem("polinetwork_studylab_v1") || "null");
@@ -28,7 +29,7 @@
       if (_m) _m.setAttribute("content", _t === "dark" ? "#000000" : "#f2f2f7");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="styles.css?v=4.4.1" />
+  <link rel="stylesheet" href="styles.css?v=4.4.2" />
 </head>
 <body>
   <a href="#mainContent" class="skip-link">Salta al contenuto principale</a>
@@ -37,7 +38,7 @@
   <header class="topbar" id="globalTopbar">
     <div class="topbar-inner">
       <button type="button" class="brand" id="brandHome" aria-label="PoliNetwork Studio — Home">
-        <span class="brand-mark" aria-hidden="true">PN</span>
+        <img class="brand-logo" src="assets/logo.svg" alt="" width="32" height="32" aria-hidden="true" />
         <span class="brand-title">Studio</span>
       </button>
 
@@ -94,7 +95,10 @@
     <section class="view active" id="view-overview" aria-labelledby="overviewHeading">
       <div class="ios-container">
         <div class="view-large-head">
-          <h1 class="large-title" id="overviewHeading">Studio</h1>
+          <h1 class="large-title brand-heading" id="overviewHeading">
+            <img class="mobile-brand-logo" src="assets/logo.svg" alt="" width="34" height="34" aria-hidden="true" />
+            <span>Studio</span>
+          </h1>
           <div class="mobile-head-actions">
             <button type="button" class="circle-btn" data-proxy-click="btnSearchQuick" aria-label="Cerca">
               <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
@@ -930,6 +934,6 @@
   <!-- ==================== TOAST ==================== -->
   <div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=4.4.1"></script>
+  <script src="app.js?v=4.4.2"></script>
 </body>
 </html>
