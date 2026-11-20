@@ -28,7 +28,7 @@
       if (_m) _m.setAttribute("content", _t === "dark" ? "#000000" : "#f2f2f7");
     } catch (_) {}
   </script>
-  <link rel="stylesheet" href="styles.css?v=4.4.0" />
+  <link rel="stylesheet" href="styles.css?v=4.4.1" />
 </head>
 <body>
   <a href="#mainContent" class="skip-link">Salta al contenuto principale</a>
@@ -387,8 +387,8 @@
             <!-- Linked Practice Strip -->
             <section class="art-connect" id="articleConnections" aria-label="Esercizi collegati">
               <button type="button" class="btn-apple primary" id="btnSwitchInlineCloze">Allenati in Cloze</button>
-              <button type="button" class="btn-apple soft hidden" id="btnArticleFlashcards">Flashcard (<span id="artFcCount">0</span>)</button>
-              <button type="button" class="btn-apple soft hidden" id="btnArticleQuiz">Quiz (<span id="artQzCount">0</span>)</button>
+              <button type="button" class="btn-apple soft hidden" id="btnArticleFlashcards"><span>Flashcard (<span id="artFcCount">0</span>)</span></button>
+              <button type="button" class="btn-apple soft hidden" id="btnArticleQuiz"><span>Quiz (<span id="artQzCount">0</span>)</span></button>
             </section>
 
             <!-- Prev / Next Navigation -->
@@ -446,8 +446,8 @@
               <label for="fcDeckMode">Mazzo</label>
               <select id="fcDeckMode" class="ios-field sm">
                 <option value="curated">Schede chiave (58)</option>
-                <option value="all_articles">Tutti gli articoli (136)</option>
-                <option value="combined">Completo (194)</option>
+                <option value="all_articles">Tutti gli articoli (130)</option>
+                <option value="combined">Completo (188)</option>
               </select>
             </div>
             <div class="filter-field">
@@ -634,11 +634,15 @@
         <!-- SUB-MODE 3C: PERCORSO CLOZE -->
         <div class="practice-pane hidden" id="pane-cloze" role="tabpanel" aria-labelledby="tabPracticeClz">
           <div class="deck-top-bar">
-            <button type="button" class="btn-apple soft sm" id="btnClozeRandom">Casuale</button>
+            <div class="deck-top-left">
+              <button type="button" class="btn-apple soft sm" id="btnClozeRandom">Casuale</button>
+            </div>
             <span class="status-pill" id="clozeQueueSummary">Statuto · Art. 1</span>
-            <button type="button" class="circle-btn sm" id="btnToggleClozeFilters" aria-expanded="false" aria-controls="clozeFilterTray" aria-label="Seleziona articolo" title="Seleziona">
-              <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
-            </button>
+            <div class="deck-top-right">
+              <button type="button" class="circle-btn sm" id="btnToggleClozeFilters" aria-expanded="false" aria-controls="clozeFilterTray" aria-label="Seleziona articolo" title="Seleziona">
+                <svg class="ic xs" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>
+              </button>
+            </div>
           </div>
 
           <div class="apple-card filter-panel hidden" id="clozeFilterTray">
@@ -650,7 +654,7 @@
                 <option value="elettorale">Reg. Elettorale 2026</option>
               </select>
             </div>
-            <div class="filter-field span-2">
+            <div class="filter-field">
               <label for="clozeSecSelect">Articolo</label>
               <select id="clozeSecSelect" class="ios-field sm"></select>
             </div>
@@ -715,6 +719,17 @@
       <div class="ios-container">
         <div class="view-large-head">
           <h1 class="large-title" id="refHeading">Sinossi</h1>
+          <div class="mobile-head-actions">
+            <button type="button" class="circle-btn" data-proxy-click="btnSearchQuick" aria-label="Cerca">
+              <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+            </button>
+            <button type="button" class="circle-btn" data-proxy-click="btnTheme" aria-label="Cambia tema">
+              <svg class="ic sm" id="iconThemeRef" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+            <button type="button" class="circle-btn cloud-btn" data-proxy-click="btnBackup" aria-label="Account Google e Backup Cloud">
+              <svg class="ic sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+            </button>
+          </div>
         </div>
 
         <div class="ref-pills-rail" id="csTabs" role="tablist" aria-label="Categorie sinossi">
@@ -915,6 +930,6 @@
   <!-- ==================== TOAST ==================== -->
   <div class="toast-region" id="toastRegion" role="status" aria-live="polite"></div>
 
-  <script src="app.js?v=4.4.0"></script>
+  <script src="app.js?v=4.4.1"></script>
 </body>
 </html>

@@ -91,7 +91,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.4.0";
+  const APP_VERSION = "v4.4.1";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -1204,6 +1204,7 @@
   function setAnalyticsConsent(value) {
     try { localStorage.setItem(CONSENT_KEY, value); } catch (_) { /* ignore */ }
     document.getElementById("consentBanner")?.classList.add("hidden");
+    document.body.classList.remove("consent-open");
     diagLog("ANALYTICS", `Consenso statistiche: ${value === "granted" ? "ACCETTATO" : "RIFIUTATO"}`);
     if (value === "granted") {
       enableAnalyticsIfConsented();
@@ -1222,7 +1223,10 @@
 
   function initConsentBanner() {
     const banner = document.getElementById("consentBanner");
-    if (banner && !getAnalyticsConsent()) banner.classList.remove("hidden");
+    if (banner && !getAnalyticsConsent()) {
+      banner.classList.remove("hidden");
+      document.body.classList.add("consent-open");
+    }
     document.getElementById("btnConsentAccept")?.addEventListener("click", () => setAnalyticsConsent("granted"));
     document.getElementById("btnConsentDeny")?.addEventListener("click", () => setAnalyticsConsent("denied"));
     document.getElementById("btnConsentManage")?.addEventListener("click", () => {
@@ -1230,6 +1234,7 @@
       const b = document.getElementById("consentBanner");
       if (b) {
         b.classList.remove("hidden");
+        document.body.classList.add("consent-open");
         document.getElementById("btnConsentAccept")?.focus();
       }
     });
@@ -1785,7 +1790,7 @@
     const svg = theme === "dark"
       ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>'
       : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-    ["iconTheme", "iconThemeMobile"].forEach(id => {
+    ["iconTheme", "iconThemeMobile", "iconThemeRef"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = svg;
     });
@@ -1875,7 +1880,10 @@
     ["flashcards", "quiz", "cloze"].forEach(m => {
       document.getElementById(`pane-${m}`).classList.toggle("hidden", m !== mode);
     });
-    if (mode === "cloze") populatePracticeClozeSecSelect(document.getElementById("clozeDocSelect").value);
+    if (mode === "cloze") {
+      populatePracticeClozeSecSelect(document.getElementById("clozeDocSelect").value);
+      renderPracticeCloze();
+    }
     if (!opts.skipHash && currentView === "practice") {
       setHash(`practice/${practiceMode}${practiceMode === "cloze" && practiceClozeSecId ? `/${practiceClozeSecId}` : ""}`);
     }
@@ -2142,6 +2150,7 @@
     const canCloze = CLOZEABLE_SECTIONS.some(s => s.id === readerSecId);
     const clozeTab = document.getElementById("tabInlineCloze");
     clozeTab.disabled = !canCloze;
+    clozeTab.title = canCloze ? "" : "Cloze non disponibile per allegati grafici o codice";
     if (!canCloze) readerMode = "read";
 
     document.querySelectorAll("#readerModeSwitch .ios-seg-btn").forEach(b => {
@@ -2152,7 +2161,8 @@
     });
     document.getElementById("readerReadPane").classList.toggle("hidden", readerMode !== "read");
     document.getElementById("readerClozePane").classList.toggle("hidden", readerMode !== "cloze");
-    document.getElementById("btnToggleNums").classList.toggle("hidden", readerMode !== "read");
+    const hideNumsToggle = readerMode !== "read" || readerSecId === "el-b-1" || !SECTION_MAP.get(readerSecId)?.text?.trim();
+    document.getElementById("btnToggleNums").classList.toggle("hidden", hideNumsToggle);
     document.getElementById("btnSwitchInlineCloze").textContent =
       readerMode === "read" ? "Allenati in Cloze" : "Torna alla lettura";
   }
@@ -2436,12 +2446,18 @@
     imgWrap.innerHTML = "";
     const safeImgs = (sec.images || []).filter(isSafeAssetSrc);
     if (safeImgs.length) {
-      const gallery = safeImgs.map(src => ({ src, cap: `${sec.code} — ${sec.title}` }));
-      safeImgs.forEach((src, i) => {
+      const gallery = safeImgs.map(src => {
+        const pm = src.match(/_p(\d+)\.png$/);
+        const cap = (pm && DIAGRAM_LABELS[pm[1]])
+          ? `${DIAGRAM_LABELS[pm[1]]} (Pag. ${pm[1]})`
+          : `${sec.code} — ${sec.title}`;
+        return { src, cap };
+      });
+      gallery.forEach((item, i) => {
         const card = document.createElement("button");
         card.type = "button";
         card.className = "pdf-card";
-        card.innerHTML = `<img src="${esc(src)}" alt="Schema PDF ${esc(sec.code)}" loading="lazy" /><span class="pdf-card-cap">Apri schema · ${esc(src.split("/").pop())}</span>`;
+        card.innerHTML = `<img src="${esc(item.src)}" alt="Schema PDF ${esc(item.cap)}" loading="lazy" /><span class="pdf-card-cap">${esc(item.cap)}</span>`;
         card.addEventListener("click", () => openLightbox(gallery, i));
         imgWrap.appendChild(card);
       });
@@ -2488,6 +2504,14 @@
     if (pracSel) pracSel.value = levelStr;
   }
 
+  function syncClozeInputModeControls(modeStr) {
+    state.prefs.clozeInputMode = modeStr;
+    const inlineSel = document.getElementById("inlineClozeInput");
+    const pracSel = document.getElementById("clozeInputMode");
+    if (inlineSel) inlineSel.value = modeStr;
+    if (pracSel) pracSel.value = modeStr;
+  }
+
   function renderClozeInto({ secId, levelSel, modeSel, bodyEl, counterEl, barEl, barRevEl, noticeEl, hintBtn, revealBtn, resetBtn, onRestart }) {
     const sec = SECTION_MAP.get(secId);
     if (!sec) return { hintOne: () => {}, revealAll: () => {} };
@@ -2523,7 +2547,8 @@
         const revWord = revealed === 1 ? "rivelata" : "rivelate";
         counterEl.textContent = revealed > 0 ? `${recalled}/${total} · ${revealed} ${revWord}` : `${recalled} / ${total}`;
       } else {
-        counterEl.textContent = revealed > 0 ? `${recalled}/${total} · ${revealed} mostrate` : `${recalled} / ${total}`;
+        const shownWord = revealed === 1 ? "mostrata" : "mostrate";
+        counterEl.textContent = revealed > 0 ? `${recalled}/${total} · ${revealed} ${shownWord}` : `${recalled} / ${total}`;
       }
       barEl.style.width = `${(total > 0 ? (recalled / total) * 100 : 0).toFixed(2)}%`;
       if (barRevEl) barRevEl.style.width = `${(total > 0 ? (revealed / total) * 100 : 0).toFixed(2)}%`;
@@ -2607,17 +2632,21 @@
         }
         if (lead) p.appendChild(document.createTextNode(lead));
 
-        const isShortNumeric = core.length <= 2 || /^[€\d.,\/:%]+$/.test(core);
+        const isNumericToken = /^[€\d.,\/:%]+$/.test(core);
+        const isShortWord = !isNumericToken && core.length <= 2;
         const itemIdx = items.length;
 
         if (mode === "click") {
           const btn = document.createElement("button");
           btn.type = "button";
           btn.className = "cloze-blank";
-          btn.textContent = isShortNumeric
+          btn.textContent = (isNumericToken || isShortWord)
             ? "···"
             : (level === 4 ? `${core[0]} ${"·".repeat(Math.min(core.length - 1, 5))}` : `${core[0]} ···`);
-          btn.setAttribute("aria-label", isShortNumeric ? "Scopri valore numerico" : `Scopri parola che inizia per ${core[0]}`);
+          btn.setAttribute(
+            "aria-label",
+            isNumericToken ? "Scopri valore numerico" : (isShortWord ? "Scopri parola breve" : `Scopri parola che inizia per ${core[0]}`)
+          );
           const entry = {
             done: false,
             inputEl: null,
@@ -2649,8 +2678,11 @@
           const inp = document.createElement("input");
           inp.type = "text";
           inp.className = "cloze-input";
-          inp.placeholder = isShortNumeric ? "#" : `${core[0]}…`;
-          inp.setAttribute("aria-label", isShortNumeric ? "Scrivi il numero o valore" : `Scrivi parola che inizia per ${core[0]}`);
+          inp.placeholder = isNumericToken ? "#" : (isShortWord ? "··" : `${core[0]}…`);
+          inp.setAttribute(
+            "aria-label",
+            isNumericToken ? "Scrivi il numero o valore" : (isShortWord ? `Scrivi parola di ${core.length} lettere` : `Scrivi parola che inizia per ${core[0]}`)
+          );
           inp.style.width = `${Math.max(72, Math.min(168, core.length * 9.2 + 20))}px`;
 
           const peek = document.createElement("button");
@@ -3163,6 +3195,16 @@
 
     document.getElementById("btnRetryWrong").classList.toggle("hidden", qzWrong.length === 0);
     document.getElementById("wrongInlineCount").textContent = qzWrong.length;
+    if (mobileDock && window.innerWidth <= 900) {
+      requestAnimationFrame(() => {
+        const navWrap = document.getElementById("mobileNavWrap");
+        const dockRect = mobileDock.getBoundingClientRect();
+        const navTop = navWrap ? navWrap.getBoundingClientRect().top : window.innerHeight;
+        if (dockRect.bottom > navTop - 8) {
+          mobileDock.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      });
+    }
   }
 
   function showQuizSummary() {
@@ -3306,10 +3348,10 @@
     } else if (csTab === "hierarchy") {
       wrap.innerHTML = `
         <div class="ref-table-wrap"><table class="ref-table">
-          <thead><tr><th>Grado</th><th>Fonte</th><th>Prevalenza e note</th></tr></thead>
+          <thead><tr><th class="col-rank">Grado</th><th>Fonte</th><th>Prevalenza e note</th></tr></thead>
           <tbody>
             ${cs.hierarchy.map(r => `<tr>
-              <td data-label="Grado"><span class="num-hl">#${esc(r.rank)}</span></td>
+              <td class="col-rank" data-label="Grado"><span class="num-hl">#${esc(r.rank)}</span></td>
               <td data-label="Fonte"><strong>${esc(r.source)}</strong></td>
               <td data-label="Note">${esc(r.note)} ${r.ref ? `<button type="button" class="text-action" data-ref-jump="${esc(r.ref)}">${esc(formatSourceCitation(r.ref))} ›</button>` : ""}</td>
             </tr>`).join("")}
@@ -3664,12 +3706,13 @@
       syncClozeLevelControls(e.target.value);
       saveState();
       renderInlineCloze();
+      renderPracticeCloze();
     });
     document.getElementById("inlineClozeInput").addEventListener("change", e => {
-      state.prefs.clozeInputMode = e.target.value;
-      document.getElementById("clozeInputMode").value = e.target.value;
+      syncClozeInputModeControls(e.target.value);
       saveState();
       renderInlineCloze();
+      renderPracticeCloze();
     });
     document.getElementById("btnInlineHint").addEventListener("click", () => inlineClozeCtrl?.hintOne());
     document.getElementById("btnInlineRevealAll").addEventListener("click", () => inlineClozeCtrl?.revealAll());
@@ -3893,12 +3936,13 @@
       syncClozeLevelControls(e.target.value);
       saveState();
       renderPracticeCloze();
+      if (readerMode === "cloze") renderInlineCloze();
     });
     document.getElementById("clozeInputMode").addEventListener("change", e => {
-      state.prefs.clozeInputMode = e.target.value;
-      document.getElementById("inlineClozeInput").value = e.target.value;
+      syncClozeInputModeControls(e.target.value);
       saveState();
       renderPracticeCloze();
+      if (readerMode === "cloze") renderInlineCloze();
     });
     document.getElementById("btnPClozeHint").addEventListener("click", () => practiceClozeCtrl?.hintOne());
     document.getElementById("btnPClozeRevealAll").addEventListener("click", () => practiceClozeCtrl?.revealAll());
@@ -3992,8 +4036,8 @@
       renderBackupSummary();
       updateCloudUI();
       syncConsentLabel();
-      refreshDiagConsoleUI();
       openModal("backupModal");
+      refreshDiagConsoleUI();
       if (scrollToConsole) {
         setTimeout(() => {
           document.getElementById("diagConsoleSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
