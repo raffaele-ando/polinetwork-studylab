@@ -91,11 +91,13 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.4.3";
+  const APP_VERSION = "v4.5.0";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
   let searchIndex = [];
+  let deferredInstallPrompt = null;
+  let swStatus = "non-registrato";
   let diagEvents = loadDiagEvents();
   let diagSeq = diagEvents.length;
 
@@ -171,6 +173,7 @@
       `Utente Google      : ${fbUser ? `CONNESSO (uid=${maskUid(fbUser.uid)}, email=${maskEmail(fbUser.email)})` : "NON CONNESSO"}`,
       `Collezione Cloud   : ${CLOUD_COLLECTION}`,
       `Stato Sync Cloud   : status=${cloudStatus} pendingPush=${cloudPendingPush} lastSyncedAt=${cloudLastSyncedAt ? new Date(cloudLastSyncedAt).toISOString() : "mai"} liveListener=${cloudLiveActive} retries=${pushRetryAttempt}`,
+      `PWA & Offline SW   : standalone=${isStandalonePwa()} sw=${swStatus} installPrompt=${!!deferredInstallPrompt}`,
       "",
       `=== CRONOLOGIA EVENTI (${diagEvents.length} registrati) ===`,
       ...diagEvents,
@@ -1739,9 +1742,122 @@
     window.addEventListener("hashchange", applyRouteFromHash);
     setInterval(() => { if (!document.hidden && currentView === "overview") renderDeadlineCard(); }, 60000);
     initConsentBanner();
+    initPwaInstallSupport();
     updateCloudUI();
     refreshDiagConsoleUI();
     initFirebaseCloud();
+  }
+
+  function isStandalonePwa() {
+    try {
+      return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function updatePwaInstallUI() {
+    const standalone = isStandalonePwa();
+    const badge = document.getElementById("pwaModalStatusBadge");
+    const sub = document.getElementById("pwaModalSubtitle");
+    const actions = document.getElementById("pwaModalActions");
+    const btnModal = document.getElementById("btnModalInstallApp");
+    const homeBtns = document.querySelectorAll(".pwa-install-trigger");
+
+    if (standalone) {
+      if (badge) {
+        badge.textContent = "● Installata";
+        badge.className = "cloud-pill-status online";
+      }
+      if (sub) sub.textContent = "App installata e attiva in modalità standalone offline.";
+      if (actions) actions.classList.add("hidden");
+      homeBtns.forEach(b => b.classList.add("hidden"));
+    } else {
+      if (badge) {
+        badge.textContent = swStatus === "attivo" ? "● Offline attiva" : "● Web App pronta";
+        badge.className = "cloud-pill-status online";
+      }
+      if (actions) actions.classList.remove("hidden");
+      if (btnModal) {
+        btnModal.textContent = deferredInstallPrompt ? "Installa app (1 tap)" : "Come installare l'app";
+      }
+      homeBtns.forEach(b => b.classList.remove("hidden"));
+    }
+  }
+
+  async function handlePwaInstallClick(fromHome = false) {
+    const guide = document.getElementById("pwaInstallGuide");
+    if (deferredInstallPrompt) {
+      try {
+        diagLog("PWA", "Apertura prompt nativo di installazione…");
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        diagLog("PWA", `Esito prompt installazione: ${choice?.outcome || "unknown"}`);
+        if (choice?.outcome === "accepted") {
+          deferredInstallPrompt = null;
+          if (guide) guide.classList.add("hidden");
+          showToast("Installazione avviata!");
+        }
+        updatePwaInstallUI();
+        return;
+      } catch (err) {
+        diagLog("PWA", "WARN errore prompt installazione", err?.message || String(err));
+      }
+    }
+
+    if (fromHome) {
+      renderBackupSummary();
+      updateCloudUI();
+      syncConsentLabel();
+      openModal("backupModal");
+      refreshDiagConsoleUI();
+    }
+    if (guide) {
+      const ua = navigator.userAgent || "";
+      const isIOS = /iPad|iPhone|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      if (isIOS) {
+        guide.innerHTML = "<strong>Su iPhone / iPad (Safari):</strong> tocca l'icona <strong>Condividi</strong> nella barra di Safari e scegli <strong>Aggiungi alla schermata Home</strong>.";
+      } else {
+        guide.innerHTML = "<strong>Per installare l'app:</strong> apri il menu del browser (<strong>⋮</strong> in alto a destra o l'icona nella barra degli indirizzi) e seleziona <strong>Installa app</strong> / <strong>Aggiungi a schermata Home</strong>.";
+      }
+      guide.classList.remove("hidden");
+      guide.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  function initPwaInstallSupport() {
+    window.addEventListener("beforeinstallprompt", e => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      diagLog("PWA", "Prompt di installazione nativo pronto (beforeinstallprompt)");
+      updatePwaInstallUI();
+    });
+
+    window.addEventListener("appinstalled", () => {
+      deferredInstallPrompt = null;
+      document.getElementById("pwaInstallGuide")?.classList.add("hidden");
+      diagLog("PWA", "Web App installata sul dispositivo (appinstalled)");
+      updatePwaInstallUI();
+      showToast("App installata con successo!");
+    });
+
+    document.getElementById("btnModalInstallApp")?.addEventListener("click", () => handlePwaInstallClick(false));
+    document.getElementById("btnHomeInstallOut")?.addEventListener("click", () => handlePwaInstallClick(true));
+    document.getElementById("btnHomeInstallIn")?.addEventListener("click", () => handlePwaInstallClick(true));
+
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+      navigator.serviceWorker.register("sw.js").then(reg => {
+        swStatus = "attivo";
+        diagLog("PWA-SW", "Service Worker registrato e attivo (offline-ready)", `scope=${reg.scope}`);
+        updatePwaInstallUI();
+      }).catch(err => {
+        swStatus = "errore";
+        diagLog("PWA-SW", "WARN registrazione Service Worker", err?.message || String(err));
+        updatePwaInstallUI();
+      });
+    } else {
+      updatePwaInstallUI();
+    }
   }
 
   function applySavedPrefsToControls() {
