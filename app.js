@@ -20,6 +20,7 @@
   let termCardPrimaryTarget = null;
   let termCardSecondaryTarget = null;
   let termCardActiveTitle = "";
+  let termCardActiveId = null;
 
   let state = null;
   let currentView = "overview";
@@ -101,7 +102,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.6.0";
+  const APP_VERSION = "v4.7.0";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -520,7 +521,7 @@
     const rawPrefs = (p.prefs && typeof p.prefs === "object" && !Array.isArray(p.prefs)) ? p.prefs : {};
     const clozeLevel = ["1", "2", "3", "4"].includes(String(rawPrefs.clozeLevel)) ? String(rawPrefs.clozeLevel) : def.prefs.clozeLevel;
     const clozeInputMode = ["click", "type"].includes(rawPrefs.clozeInputMode) ? rawPrefs.clozeInputMode : def.prefs.clozeInputMode;
-    const fcDeckMode = ["curated", "all_articles", "combined"].includes(rawPrefs.fcDeckMode) ? rawPrefs.fcDeckMode : def.prefs.fcDeckMode;
+    const fcDeckMode = ["curated", "glossary", "glossary_rev", "all_articles", "combined"].includes(rawPrefs.fcDeckMode) ? rawPrefs.fcDeckMode : def.prefs.fcDeckMode;
     const scaleRaw = Number(p.readerScale);
     const readerScale = Number.isFinite(scaleRaw) ? Number(Math.max(0.88, Math.min(1.28, scaleRaw)).toFixed(2)) : 1;
 
@@ -1932,11 +1933,21 @@
 
   function syncDynamicOptionLabels() {
     const nCur = PACK.flashcards.length;
+    const nGl = GLOSSARY.length;
     const nArt = CLOZEABLE_SECTIONS.length;
     const deckSel = document.getElementById("fcDeckMode");
-    deckSel.options[0].textContent = `Schede chiave (${nCur})`;
-    deckSel.options[1].textContent = `Tutti gli articoli (${nArt})`;
-    deckSel.options[2].textContent = `Completo (${nCur + nArt})`;
+    if (deckSel) {
+      const labels = {
+        curated: `Schede chiave (${nCur})`,
+        glossary: `Termini e definizioni (${nGl})`,
+        glossary_rev: `Indovina il termine (${nGl})`,
+        all_articles: `Tutti gli articoli (${nArt})`,
+        combined: `Completo (${nCur + nGl + nArt})`,
+      };
+      for (const opt of deckSel.options) {
+        if (labels[opt.value]) opt.textContent = labels[opt.value];
+      }
+    }
 
     const nAll = PACK.quizzes.length;
     const nBlitz = PACK.quizzes.filter(q => q.mode === "blitz").length;
@@ -2135,7 +2146,7 @@
   // ==================== 1. STUDIO (HOME) ====================
   function getTrulyDueReviewedCards() {
     const now = Date.now();
-    const allCards = getDeckCards("combined");
+    const allCards = getAllSm2TrackedCards();
     return allCards.filter(c => state.sm2[c.id] && now >= state.sm2[c.id].nextReview);
   }
 
@@ -2152,6 +2163,10 @@
     }
     const mb = document.getElementById("mobileDueBadge");
     if (mb) mb.classList.toggle("hidden", dueReviewed === 0);
+    const fcDueBtn = document.getElementById("btnFcDueFocus");
+    const fcDueCnt = document.getElementById("fcDueInlineCount");
+    if (fcDueCnt) fcDueCnt.textContent = dueReviewed;
+    if (fcDueBtn) fcDueBtn.classList.toggle("hidden", dueReviewed === 0 || !!fcCustomContext);
     return dueReviewed;
   }
 
@@ -2621,6 +2636,66 @@
     termCardPrimaryTarget = null;
     termCardSecondaryTarget = null;
     termCardActiveTitle = "";
+    termCardActiveId = null;
+  }
+
+  function syncTermReviewBtn(termId) {
+    const btn = document.getElementById("btnTermQueueReview");
+    if (!btn || !termId) return;
+    const fcId = `gl-${termId}`;
+    const rec = state.sm2[fcId];
+    const now = Date.now();
+    const isDueNow = !!(rec && now >= rec.nextReview);
+    const isLearnedFuture = !!(rec && rec.reps > 0 && now < rec.nextReview);
+    btn.classList.toggle("is-queued", isDueNow);
+    btn.classList.toggle("is-learned", isLearnedFuture);
+    btn.setAttribute("aria-pressed", isDueNow ? "true" : "false");
+    if (isDueNow) {
+      btn.textContent = "✓ In ripasso";
+      btn.title = "In coda nelle flashcard da ripassare (tocca per rimuovere)";
+    } else if (isLearnedFuture) {
+      const daysLeft = Math.max(1, Math.round((rec.nextReview - now) / 86400000));
+      btn.textContent = `Rivista ${rec.reps}× · tra ${daysLeft}g`;
+      btn.title = "Tocca per rimettere subito in coda ripasso";
+    } else {
+      btn.textContent = "+ Ripasso";
+      btn.title = "Aggiungi questo termine alle flashcard da ripassare";
+    }
+  }
+
+  function toggleTermCardReview() {
+    if (!termCardActiveId) return;
+    const entry = GLOSSARY_MAP.get(termCardActiveId);
+    if (!entry) return;
+    const fcId = `gl-${termCardActiveId}`;
+    const rec = state.sm2[fcId];
+    const now = Date.now();
+    const ts = ensureTs();
+
+    if (rec && now >= rec.nextReview && rec.reps === 0) {
+      delete state.sm2[fcId];
+      ts.sm2Del[fcId] = now;
+      diagLog("ACTION", `Termine rimosso dal ripasso (${fcId})`, entry.term);
+      saveState();
+      updateDueBadges();
+      syncTermReviewBtn(termCardActiveId);
+      showToast("Rimosso dal ripasso");
+      return;
+    }
+
+    delete ts.sm2Del[fcId];
+    state.sm2[fcId] = {
+      reps: rec ? rec.reps : 0,
+      interval: 0,
+      ef: rec?.ef || 2.5,
+      nextReview: now,
+      _editedAt: now,
+    };
+    diagLog("ACTION", `Termine aggiunto al ripasso SM-2 (${fcId})`, entry.term);
+    saveState();
+    updateDueBadges();
+    syncTermReviewBtn(termCardActiveId);
+    showToast(`«${entry.term}» aggiunta al ripasso flashcard`);
   }
 
   function openTermCard(termId, triggerEl) {
@@ -2641,6 +2716,8 @@
     activeTermTrigger.setAttribute("aria-expanded", "true");
     termOpenScrollY = window.scrollY;
     termCardActiveTitle = entry.term;
+    termCardActiveId = termId;
+    syncTermReviewBtn(termId);
 
     const curSec = SECTION_MAP.get(readerSecId);
     const curDoc = curSec?.doc || "statuto";
@@ -2911,7 +2988,7 @@
     }
 
     const canCloze = CLOZEABLE_SECTIONS.some(s => s.id === sec.id);
-    const relFcs = PACK.flashcards.filter(c => c.ref === sec.id);
+    const relFcs = getFlashcardsForArticle(sec.id);
     const relQzs = PACK.quizzes.filter(q => q.ref === sec.id);
     document.getElementById("articleConnections").classList.toggle("hidden", !canCloze && !relFcs.length && !relQzs.length);
     document.getElementById("btnSwitchInlineCloze").classList.toggle("hidden", !canCloze);
@@ -3305,6 +3382,104 @@
   }
 
   // ==================== 3A. FLASHCARD ====================
+  function maskGlossarySummary(entry) {
+    let masked = entry.summary || "";
+    const pats = [...(entry.patterns || [])].sort((a, b) => (b.p?.length || 0) - (a.p?.length || 0));
+    for (const pat of pats) {
+      if (!pat?.p) continue;
+      try {
+        const re = new RegExp(`(^|[^\\p{L}\\p{N}])(?:${pat.p})(?![\\p{L}\\p{N}])`, pat.cs ? "gu" : "giu");
+        masked = masked.replace(re, "$1[…]");
+      } catch (_e) { /* skip invalid pattern */ }
+    }
+    return masked;
+  }
+
+  function makeGlossaryForwardCard(g) {
+    const sec = SECTION_MAP.get(g.target);
+    const doc = sec?.doc || "statuto";
+    const refLabel = sec ? `${DOC_SHORT[sec.doc]} ${sec.code}` : DOC_SHORT[doc];
+    const isRoleOrOrgan = g.category === "Organi" || g.category === "Cariche e Ruoli";
+    return {
+      id: `gl-${g.id}`,
+      doc,
+      ref: g.target,
+      refLabel,
+      tag: g.category || "Glossario",
+      q: isRoleOrOrgan
+        ? `Cos’è e quali funzioni ha «${g.term}»?`
+        : `Cos’è e come funziona «${g.term}»?`,
+      a: g.summary,
+      facts: Array.isArray(g.facts) ? g.facts : [],
+    };
+  }
+
+  function makeGlossaryReverseCard(g) {
+    const sec = SECTION_MAP.get(g.target);
+    const doc = sec?.doc || "statuto";
+    const refLabel = sec ? `${DOC_SHORT[sec.doc]} ${sec.code}` : DOC_SHORT[doc];
+    return {
+      id: `glr-${g.id}`,
+      doc,
+      ref: g.target,
+      refLabel,
+      tag: g.category || "Glossario",
+      q: "Quale termine o istituto è descritto qui?",
+      qQuote: maskGlossarySummary(g),
+      revTerm: g.term,
+      a: g.summary,
+      facts: Array.isArray(g.facts) ? g.facts : [],
+    };
+  }
+
+  function getGlossaryFlashcards() {
+    return GLOSSARY.map(makeGlossaryForwardCard);
+  }
+
+  function getGlossaryReverseFlashcards() {
+    return GLOSSARY.map(makeGlossaryReverseCard);
+  }
+
+  function getFlashcardsForArticle(secId) {
+    const sec = SECTION_MAP.get(secId);
+    if (!sec) return [];
+    const seen = new Set();
+    const out = [];
+    for (const c of PACK.flashcards) {
+      if (c.ref === secId && !seen.has(c.id)) {
+        seen.add(c.id);
+        out.push(c);
+      }
+    }
+    for (const g of GLOSSARY) {
+      const dtVals = g.docTargets ? Object.values(g.docTargets) : [];
+      if (g.target === secId || g.secondaryTarget === secId || dtVals.includes(secId)) {
+        const fc = makeGlossaryForwardCard(g);
+        if (!seen.has(fc.id)) {
+          seen.add(fc.id);
+          out.push(fc);
+        }
+      }
+    }
+    if (!out.length && sec.text && sec.id !== "el-b-1" && GLOSSARY_MATCHERS.length) {
+      const txt = sec.text;
+      const seenTerm = new Set();
+      for (const mSpec of GLOSSARY_MATCHERS) {
+        if (seenTerm.has(mSpec.id)) continue;
+        mSpec.re.lastIndex = 0;
+        if (mSpec.re.test(txt)) {
+          seenTerm.add(mSpec.id);
+          const fc = makeGlossaryForwardCard(mSpec.entry);
+          if (!seen.has(fc.id)) {
+            seen.add(fc.id);
+            out.push(fc);
+          }
+        }
+      }
+    }
+    return out;
+  }
+
   function getArticleFlashcards() {
     return CLOZEABLE_SECTIONS.map(s => ({
       id: `auto-${s.id}`, doc: s.doc, ref: s.id,
@@ -3317,8 +3492,14 @@
 
   function getDeckCards(mode) {
     if (mode === "curated") return [...PACK.flashcards];
+    if (mode === "glossary") return getGlossaryFlashcards();
+    if (mode === "glossary_rev") return getGlossaryReverseFlashcards();
     if (mode === "all_articles") return getArticleFlashcards();
-    return [...PACK.flashcards, ...getArticleFlashcards()];
+    return [...PACK.flashcards, ...getGlossaryFlashcards(), ...getArticleFlashcards()];
+  }
+
+  function getAllSm2TrackedCards() {
+    return [...PACK.flashcards, ...getGlossaryFlashcards(), ...getGlossaryReverseFlashcards(), ...getArticleFlashcards()];
   }
 
   function isCardDue(id) {
@@ -3331,9 +3512,13 @@
     const prevVal = sel.value || "all";
     const deckMode = document.getElementById("fcDeckMode")?.value || state.prefs.fcDeckMode || "curated";
     sel.innerHTML = '<option value="all">Tutti gli argomenti</option>';
-    const tags = deckMode === "all_articles"
-      ? ["Articoli"]
-      : Array.from(new Set(PACK.flashcards.map(c => c.tag))).sort().concat(deckMode === "combined" ? ["Articoli"] : []);
+    const glCats = Array.from(new Set(GLOSSARY.map(g => g.category).filter(Boolean))).sort();
+    const curTags = Array.from(new Set(PACK.flashcards.map(c => c.tag))).sort();
+    let tags;
+    if (deckMode === "all_articles") tags = ["Articoli"];
+    else if (deckMode === "glossary" || deckMode === "glossary_rev") tags = glCats;
+    else if (deckMode === "combined") tags = Array.from(new Set([...curTags, ...glCats])).sort().concat(["Articoli"]);
+    else tags = curTags;
     for (const t of tags) {
       const opt = document.createElement("option");
       opt.value = t;
@@ -3378,6 +3563,7 @@
     fcLastAction = null;
     document.getElementById("btnFcUndo").classList.add("hidden");
     document.getElementById("btnFcClearFocus").classList.toggle("hidden", !fcCustomContext);
+    updateDueBadges();
     renderFlashcard();
   }
 
@@ -3419,7 +3605,31 @@
     document.getElementById("fcRetryBadge").classList.toggle("hidden", !card._retry);
 
     document.getElementById("fcQuestion").textContent = formatArrows(card.q);
-    document.getElementById("fcAnswer").textContent = formatArrows(card.a);
+    const quoteEl = document.getElementById("fcPromptQuote");
+    if (quoteEl) {
+      quoteEl.textContent = card.qQuote || "";
+      quoteEl.classList.toggle("hidden", !card.qQuote);
+    }
+    const revEl = document.getElementById("fcRevTerm");
+    if (revEl) {
+      revEl.textContent = card.revTerm || "";
+      revEl.classList.toggle("hidden", !card.revTerm);
+    }
+    const factsEl = document.getElementById("fcFacts");
+    if (factsEl) {
+      const fList = Array.isArray(card.facts) ? card.facts.filter(Boolean) : [];
+      if (fList.length) {
+        factsEl.innerHTML = fList.map(f => `<span class="term-fact-chip">${esc(f)}</span>`).join("");
+        factsEl.classList.remove("hidden");
+      } else {
+        factsEl.innerHTML = "";
+        factsEl.classList.add("hidden");
+      }
+    }
+    const ansEl = document.getElementById("fcAnswer");
+    const hideDupAnswer = !!(card.revTerm && card.qQuote && card.qQuote === card.a);
+    ansEl.textContent = hideDupAnswer ? "" : formatArrows(card.a);
+    ansEl.classList.toggle("hidden", hideDupAnswer);
     document.getElementById("fcRefLabel").textContent = card.refLabel;
 
     document.getElementById("int1").textContent = "Ora";
@@ -4309,6 +4519,7 @@
     };
     document.getElementById("btnTermGoArticle")?.addEventListener("click", () => jumpFromTermCard(termCardPrimaryTarget));
     document.getElementById("btnTermSecondary")?.addEventListener("click", () => jumpFromTermCard(termCardSecondaryTarget));
+    document.getElementById("btnTermQueueReview")?.addEventListener("click", toggleTermCardReview);
 
     document.getElementById("readerMasterySelect").addEventListener("change", e => {
       if (!readerSecId) return;
@@ -4352,7 +4563,7 @@
 
     document.getElementById("btnArticleFlashcards").addEventListener("click", () => {
       const sec = SECTION_MAP.get(readerSecId);
-      const rel = PACK.flashcards.filter(c => c.ref === readerSecId);
+      const rel = getFlashcardsForArticle(readerSecId);
       if (!rel.length) return;
       buildFcQueue(false, rel, sec.code);
       switchPracticeMode("flashcards");
@@ -4405,6 +4616,11 @@
       document.getElementById(id).addEventListener("change", () => buildFcQueue(false));
     });
     document.getElementById("btnFcClearFocus").addEventListener("click", () => buildFcQueue(false));
+    document.getElementById("btnFcDueFocus")?.addEventListener("click", () => {
+      const due = getTrulyDueReviewedCards();
+      if (!due.length) return;
+      buildFcQueue(false, due, "Ripasso di oggi");
+    });
     document.getElementById("btnFcShuffle").addEventListener("click", () => {
       buildFcQueue(true, fcCustomCards, fcCustomContext);
       showToast("Mazzo mescolato");
