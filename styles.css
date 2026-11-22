@@ -30,6 +30,7 @@
   --accent-ink: #ffffff;
   --accent-soft: #e6f2ff;
   --accent-soft-text: #004394;
+  --term-underline: rgba(0, 94, 196, 0.50);
 
   /* Apple System Semantics (All >= 8.0:1 AAA on pastel tints) */
   --red: #ff3b30;
@@ -95,6 +96,7 @@
   --accent-ink: #ffffff;
   --accent-soft: rgba(10, 132, 255, 0.22);
   --accent-soft-text: #8cc8ff;
+  --term-underline: rgba(110, 180, 255, 0.58);
 
   --red: #ff453a;
   --red-solid: #d72c24;
@@ -788,10 +790,20 @@ select.ios-field option { background: var(--bg-surface); color: var(--ink-primar
   width: 6px; height: 6px; border-radius: 50%; background: var(--ink-tertiary); opacity: 0.45;
   transition: background 0.14s, opacity 0.14s;
 }
+.pill-toggle .pill-dash {
+  width: 15px; height: 2px; border-radius: 1px;
+  background: repeating-linear-gradient(to right, var(--ink-tertiary) 0 3.5px, transparent 3.5px 6px);
+  opacity: 0.6;
+  transition: background 0.14s, opacity 0.14s;
+}
 .pill-toggle.active {
   border-color: transparent; background: var(--accent-soft); color: var(--accent-soft-text);
 }
 .pill-toggle.active .pill-dot { background: var(--accent-text); opacity: 1; }
+.pill-toggle.active .pill-dash {
+  background: repeating-linear-gradient(to right, var(--accent-text) 0 3.5px, transparent 3.5px 6px);
+  opacity: 1;
+}
 
 /* Comfortable Apple Books Legal Prose */
 .legal-prose {
@@ -866,6 +878,25 @@ select.ios-field option { background: var(--bg-surface); color: var(--ink-primar
   font-weight: 600; cursor: pointer; text-decoration: none;
 }
 .xref-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.term-ref {
+  display: inline; padding: 0 1px; margin: 0; border: none; border-radius: 4px;
+  background: transparent; color: inherit; font: inherit; line-height: inherit;
+  text-align: inherit; cursor: pointer;
+  text-decoration-line: underline; text-decoration-style: dashed;
+  text-decoration-thickness: 1.5px; text-underline-offset: 3.5px;
+  text-decoration-color: var(--term-underline);
+  transition: background-color 0.14s var(--ease), text-decoration-color 0.14s var(--ease), color 0.14s var(--ease);
+}
+@media (hover: hover) {
+  .term-ref:hover {
+    background: var(--accent-soft); color: var(--accent-soft-text);
+    text-decoration-color: var(--accent-text);
+  }
+}
+.term-ref[aria-expanded="true"] {
+  background: var(--accent-soft); color: var(--accent-soft-text);
+  text-decoration-color: var(--accent-text);
+}
 
 .pdf-gallery {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -2019,5 +2050,185 @@ body.consent-open .reader-inner { padding-bottom: 6.5rem; }
 @media (max-width: 380px) {
   .consent-banner {
     width: calc(100vw - 1.7rem);
+  }
+}
+
+/* ==================== TERM GLOSSARY POPOVER / SHEET ==================== */
+.term-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 94;
+  background: rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.term-card {
+  position: fixed;
+  z-index: 95;
+  width: min(392px, calc(100vw - 32px));
+  max-height: calc(100dvh - 104px);
+  overflow-y: auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--sep-strong);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-modal), 0 0 0 0.5px var(--sep);
+  padding: 1rem 1.15rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  animation: termCardIn 0.15s var(--ease);
+}
+@keyframes termCardIn {
+  from { opacity: 0; transform: translateY(5px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+[data-theme="dark"] .term-card {
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.82), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.term-sheet-handle {
+  display: none;
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--sep-strong);
+  margin: -0.15rem auto 0.2rem;
+  flex-shrink: 0;
+}
+.term-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+.term-card-head-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.28rem;
+  min-width: 0;
+}
+.term-cat-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-soft-text);
+}
+.term-card-title {
+  font-family: var(--font-display);
+  font-size: 1.04rem;
+  font-weight: 800;
+  line-height: 1.24;
+  letter-spacing: -0.014em;
+  color: var(--ink-primary);
+}
+.term-close-btn {
+  flex-shrink: 0;
+}
+.term-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.term-fact-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.25;
+  padding: 0.24rem 0.56rem;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  color: var(--ink-primary);
+  border: 0.5px solid var(--sep);
+}
+.term-card-summary {
+  font-size: 0.88rem;
+  line-height: 1.56;
+  color: var(--ink-secondary);
+  margin: 0;
+}
+.term-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  padding-top: 0.68rem;
+  border-top: 0.5px solid var(--sep);
+}
+.term-card-src {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--ink-tertiary);
+  line-height: 1.35;
+  min-width: 0;
+  flex: 1 1 130px;
+}
+.term-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+@media (max-width: 900px) {
+  .term-close-btn {
+    min-width: 38px;
+    min-height: 38px;
+  }
+  .term-card-actions .btn-apple.sm {
+    min-height: 40px;
+    padding: 0.45rem 0.9rem;
+  }
+}
+@media (max-width: 640px) {
+  .term-backdrop {
+    display: block;
+  }
+  .term-card {
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    bottom: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    max-height: 78dvh;
+    border-radius: 22px 22px 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding: 0.7rem 1.15rem calc(1.15rem + env(safe-area-inset-bottom));
+    animation: termSheetIn 0.2s var(--ease);
+  }
+  @keyframes termSheetIn {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .term-sheet-handle {
+    display: block;
+  }
+  .term-card-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+  }
+  .term-card-src {
+    flex: none;
+  }
+  .term-card-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  .term-card-actions .btn-apple.sm {
+    flex: 1 1 0;
+    justify-content: center;
   }
 }

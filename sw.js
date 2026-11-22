@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "polinetwork-studio-v4.5.8";
+const CACHE_NAME = "polinetwork-studio-v4.6.0";
 
 const PRECACHE_URLS = [
   "./",
@@ -11,6 +11,7 @@ const PRECACHE_URLS = [
   "./favicon.ico",
   "./data/corpus.json",
   "./data/study_pack.json",
+  "./data/glossary.json",
   "./assets/logo.svg",
   "./assets/favicon-16x16.png",
   "./assets/favicon-32x32.png",

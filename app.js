@@ -7,10 +7,19 @@
 
   let CORPUS = null;
   let PACK = null;
+  let GLOSSARY = [];
+  let GLOSSARY_MAP = new Map();
+  let GLOSSARY_MATCHERS = [];
   let ALL_SECTIONS = [];
   let STUDYABLE_SECTIONS = [];
   let CLOZEABLE_SECTIONS = [];
   let SECTION_MAP = new Map();
+
+  let activeTermTrigger = null;
+  let termOpenScrollY = 0;
+  let termCardPrimaryTarget = null;
+  let termCardSecondaryTarget = null;
+  let termCardActiveTitle = "";
 
   let state = null;
   let currentView = "overview";
@@ -92,7 +101,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.5.8";
+  const APP_VERSION = "v4.6.0";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -412,6 +421,7 @@
       _ts: { mastery: {}, bookmarks: {}, quizMastered: {}, sm2Del: {} },
       prefs: {
         highlightNums: true,
+        highlightTerms: true,
         clozeLevel: "1",
         clozeInputMode: "click",
         fcDeckMode: "curated",
@@ -535,6 +545,7 @@
       },
       prefs: {
         highlightNums: rawPrefs.highlightNums !== false,
+        highlightTerms: rawPrefs.highlightTerms !== false,
         clozeLevel,
         clozeInputMode,
         fcDeckMode,
@@ -1683,14 +1694,25 @@
     applyReaderScale(state.readerScale);
     applySavedPrefsToControls();
 
-    const [corpusRes, packRes] = await Promise.all([
+    const [corpusRes, packRes, glossaryRes] = await Promise.all([
       fetch(`data/corpus.json?v=${APP_VERSION}`),
       fetch(`data/study_pack.json?v=${APP_VERSION}`),
+      fetch(`data/glossary.json?v=${APP_VERSION}`).catch(() => null),
     ]);
     if (!corpusRes.ok) throw new Error(`Impossibile caricare corpus.json (HTTP ${corpusRes.status})`);
     if (!packRes.ok) throw new Error(`Impossibile caricare study_pack.json (HTTP ${packRes.status})`);
     CORPUS = await corpusRes.json();
     PACK = await packRes.json();
+    if (glossaryRes && glossaryRes.ok) {
+      try {
+        const gJson = await glossaryRes.json();
+        compileGlossaryMatchers(Array.isArray(gJson?.terms) ? gJson.terms : []);
+      } catch (_e) {
+        compileGlossaryMatchers([]);
+      }
+    } else {
+      compileGlossaryMatchers([]);
+    }
 
     ALL_SECTIONS = [];
     SECTION_MAP.clear();
@@ -1715,7 +1737,7 @@
       item.flatNorm = searchNorm(item.flatText);
     }
 
-    diagLog("CORPUS", `Corpus e Study Pack caricati (${Math.round(performance.now() - tBoot)}ms)`, `${CORPUS.documents.length} doc · ${ALL_SECTIONS.length} sez (${STUDYABLE_SECTIONS.length} studiabili) · ${PACK.flashcards.length} flashcard · ${PACK.quizzes.length} quiz`);
+    diagLog("CORPUS", `Corpus e Study Pack caricati (${Math.round(performance.now() - tBoot)}ms)`, `${CORPUS.documents.length} doc · ${ALL_SECTIONS.length} sez (${STUDYABLE_SECTIONS.length} studiabili) · ${PACK.flashcards.length} flashcard · ${PACK.quizzes.length} quiz · ${GLOSSARY.length} termini glossario`);
 
     readerSecId = (state.lastSecId && SECTION_MAP.has(state.lastSecId))
       ? state.lastSecId
@@ -1880,6 +1902,7 @@
   function applySavedPrefsToControls() {
     const p = state.prefs;
     syncNumsToggleUI(p.highlightNums !== false);
+    syncTermsToggleUI(p.highlightTerms !== false);
     document.getElementById("inlineClozeLevel").value = p.clozeLevel || "1";
     document.getElementById("clozeLevelSelect").value = p.clozeLevel || "1";
     document.getElementById("inlineClozeInput").value = p.clozeInputMode || "click";
@@ -1895,6 +1918,16 @@
     const lbl = document.getElementById("numsToggleLabel");
     if (lbl) lbl.textContent = on ? "Numeri attivi" : "Numeri spenti";
     else btn.textContent = on ? "Numeri attivi" : "Numeri spenti";
+  }
+
+  function syncTermsToggleUI(on) {
+    const btn = document.getElementById("btnToggleTerms");
+    if (!btn) return;
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+    const lbl = document.getElementById("termsToggleLabel");
+    if (lbl) lbl.textContent = on ? "Termini attivi" : "Termini spenti";
+    else btn.textContent = on ? "Termini attivi" : "Termini spenti";
   }
 
   function syncDynamicOptionLabels() {
@@ -1977,6 +2010,7 @@
     currentView = viewName;
     document.body.dataset.view = viewName;
     closeFontPopover();
+    closeTermCard();
 
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(`view-${viewName}`)?.classList.add("active");
@@ -2299,6 +2333,8 @@
     document.getElementById("readerClozePane").classList.toggle("hidden", readerMode !== "cloze");
     const hideNumsToggle = readerMode !== "read" || NON_CLOZE_SECTIONS.has(readerSecId) || !SECTION_MAP.get(readerSecId)?.text?.trim();
     document.getElementById("btnToggleNums").classList.toggle("hidden", hideNumsToggle);
+    document.getElementById("btnToggleTerms")?.classList.toggle("hidden", hideNumsToggle || !GLOSSARY.length);
+    if (readerMode !== "read") closeTermCard();
     document.getElementById("btnSwitchInlineCloze").textContent =
       readerMode === "read" ? "Allenati in Cloze" : "Torna alla lettura";
   }
@@ -2451,7 +2487,214 @@
     }
   }
 
-  function formatLegalText(rawText, currentDoc) {
+  function compileGlossaryMatchers(terms) {
+    GLOSSARY = Array.isArray(terms) ? terms : [];
+    GLOSSARY_MAP = new Map();
+    const flat = [];
+    for (const entry of GLOSSARY) {
+      if (!entry?.id || !entry.term || !entry.summary) continue;
+      GLOSSARY_MAP.set(entry.id, entry);
+      for (const pat of entry.patterns || []) {
+        if (!pat?.p) continue;
+        // Entity-safe '&' matching since input HTML is escaped before glossary matching
+        const src = String(pat.p).replace(/&/g, "(?:&amp;|&)");
+        try {
+          const re = new RegExp(`(^|[^\\p{L}\\p{N}])(${src})(?![\\p{L}\\p{N}])`, pat.cs ? "gu" : "giu");
+          flat.push({ len: pat.p.length, id: entry.id, re, entry });
+        } catch (_e) { /* skip invalid pattern */ }
+      }
+    }
+    flat.sort((a, b) => b.len - a.len);
+    GLOSSARY_MATCHERS = flat;
+  }
+
+  function resolveGlossaryTargets(entry, currentDoc) {
+    const dt = entry?.docTargets;
+    const primary = (dt && (dt[currentDoc] || dt.default)) || entry?.target || null;
+    let secondary = entry?.secondaryTarget || null;
+    if (secondary === primary) {
+      secondary = (entry?.target && entry.target !== primary) ? entry.target : null;
+    }
+    return {
+      primary: primary && SECTION_MAP.has(primary) ? primary : null,
+      secondary: secondary && SECTION_MAP.has(secondary) ? secondary : null,
+    };
+  }
+
+  function applyGlossaryTerms(html, currentDoc, currentSecId) {
+    if (state.prefs.highlightTerms === false || !GLOSSARY_MATCHERS.length) return html;
+    // Split around existing interactive/highlighted HTML wrappers so we NEVER break tags or nest <button>
+    const segments = html.split(/(<button\b[^>]*>[\s\S]*?<\/button>|<span\b[^>]*>[\s\S]*?<\/span>|<[^>]+>)/gi);
+    const seenInBlock = new Set();
+
+    for (let i = 0; i < segments.length; i += 2) {
+      const seg = segments[i];
+      if (!seg || seg.length < 3) continue;
+      const occupied = new Uint8Array(seg.length);
+      const replacements = [];
+
+      for (const mSpec of GLOSSARY_MATCHERS) {
+        if (seenInBlock.has(mSpec.id)) continue;
+        const { primary } = resolveGlossaryTargets(mSpec.entry, currentDoc);
+        if (mSpec.entry.skipSelf && primary === currentSecId) continue;
+
+        mSpec.re.lastIndex = 0;
+        let m;
+        while ((m = mSpec.re.exec(seg)) !== null) {
+          const leadLen = m[1] ? m[1].length : 0;
+          const start = m.index + leadLen;
+          const matchedText = m[2];
+          const end = start + matchedText.length;
+          let clash = false;
+          for (let k = start; k < end; k++) {
+            if (occupied[k]) { clash = true; break; }
+          }
+          if (clash) continue;
+          for (let k = start; k < end; k++) occupied[k] = 1;
+          seenInBlock.add(mSpec.id);
+          replacements.push({ start, end, id: mSpec.id, text: matchedText });
+          break; // at most once per block per concept
+        }
+      }
+
+      if (replacements.length) {
+        replacements.sort((a, b) => a.start - b.start);
+        let out = "";
+        let cursor = 0;
+        for (const r of replacements) {
+          out += seg.slice(cursor, r.start);
+          out += `<button type="button" class="term-ref" data-term="${esc(r.id)}" aria-haspopup="dialog" aria-expanded="false">${r.text}</button>`;
+          cursor = r.end;
+        }
+        out += seg.slice(cursor);
+        segments[i] = out;
+      }
+    }
+    return segments.join("");
+  }
+
+  function positionTermCard(triggerEl) {
+    const card = document.getElementById("termPopover");
+    if (!card || card.classList.contains("hidden")) return;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (vw <= 640 || !triggerEl || !triggerEl.isConnected) {
+      card.style.left = "";
+      card.style.top = "";
+      return;
+    }
+    const r = triggerEl.getBoundingClientRect();
+    const cardW = card.offsetWidth || Math.min(392, vw - 32);
+    const cardH = card.offsetHeight || 220;
+    const minTop = vw <= 900 ? 64 : 118;
+    const maxBot = vw <= 900 ? vh - 96 : vh - 16;
+
+    let left = r.left + (r.width / 2) - (cardW / 2);
+    left = Math.max(16, Math.min(left, vw - cardW - 16));
+
+    const spaceBelow = maxBot - (r.bottom + 10);
+    const spaceAbove = (r.top - 10) - minTop;
+    let top;
+    if (spaceBelow >= cardH || spaceBelow >= spaceAbove) {
+      top = Math.min(r.bottom + 10, maxBot - cardH);
+    } else {
+      top = Math.max(minTop, r.top - cardH - 10);
+    }
+    top = Math.max(minTop, Math.min(top, maxBot - Math.min(cardH, maxBot - minTop)));
+
+    card.style.left = `${Math.round(left)}px`;
+    card.style.top = `${Math.round(top)}px`;
+  }
+
+  function closeTermCard(restoreFocus = false) {
+    const card = document.getElementById("termPopover");
+    const backdrop = document.getElementById("termBackdrop");
+    if (!card || card.classList.contains("hidden")) return;
+    card.classList.add("hidden");
+    backdrop?.classList.add("hidden");
+    const prev = activeTermTrigger;
+    if (prev) {
+      prev.setAttribute("aria-expanded", "false");
+      activeTermTrigger = null;
+      if (restoreFocus && prev.isConnected) prev.focus();
+    }
+    termCardPrimaryTarget = null;
+    termCardSecondaryTarget = null;
+    termCardActiveTitle = "";
+  }
+
+  function openTermCard(termId, triggerEl) {
+    const entry = GLOSSARY_MAP.get(termId);
+    const card = document.getElementById("termPopover");
+    if (!entry || !card) return;
+
+    if (activeTermTrigger === triggerEl && !card.classList.contains("hidden")) {
+      closeTermCard(true);
+      return;
+    }
+
+    closeFontPopover();
+    if (activeTermTrigger && activeTermTrigger !== triggerEl) {
+      activeTermTrigger.setAttribute("aria-expanded", "false");
+    }
+    activeTermTrigger = triggerEl;
+    activeTermTrigger.setAttribute("aria-expanded", "true");
+    termOpenScrollY = window.scrollY;
+    termCardActiveTitle = entry.term;
+
+    const curSec = SECTION_MAP.get(readerSecId);
+    const curDoc = curSec?.doc || "statuto";
+    const { primary, secondary } = resolveGlossaryTargets(entry, curDoc);
+    termCardPrimaryTarget = primary;
+    termCardSecondaryTarget = secondary;
+
+    document.getElementById("termCardCategory").textContent = entry.category || "Normativa";
+    document.getElementById("termCardTitle").textContent = entry.term;
+    document.getElementById("termCardSummary").textContent = entry.summary;
+
+    const factsEl = document.getElementById("termCardFacts");
+    const facts = Array.isArray(entry.facts) ? entry.facts.filter(Boolean) : [];
+    if (facts.length) {
+      factsEl.innerHTML = facts.map(f => `<span class="term-fact-chip">${esc(f)}</span>`).join("");
+      factsEl.classList.remove("hidden");
+    } else {
+      factsEl.innerHTML = "";
+      factsEl.classList.add("hidden");
+    }
+
+    const srcEl = document.getElementById("termCardSource");
+    const goBtn = document.getElementById("btnTermGoArticle");
+    const secBtn = document.getElementById("btnTermSecondary");
+    const pSec = primary ? SECTION_MAP.get(primary) : null;
+    const sSec = secondary && secondary !== readerSecId ? SECTION_MAP.get(secondary) : null;
+
+    if (pSec && primary === readerSecId) {
+      srcEl.textContent = `Fonte: ${DOC_SHORT[pSec.doc]} · ${pSec.code} (articolo corrente)`;
+      goBtn.classList.add("hidden");
+    } else if (pSec) {
+      srcEl.textContent = `${DOC_SHORT[pSec.doc]} · ${pSec.code} — ${pSec.title}`;
+      goBtn.textContent = `Vai a ${pSec.code} ›`;
+      goBtn.classList.remove("hidden");
+    } else {
+      srcEl.textContent = "";
+      goBtn.classList.add("hidden");
+    }
+
+    if (sSec) {
+      secBtn.textContent = `${DOC_SHORT[sSec.doc]} ${sSec.code} ›`;
+      secBtn.classList.remove("hidden");
+    } else {
+      secBtn.classList.add("hidden");
+    }
+
+    document.getElementById("termCardFoot").classList.toggle("hidden", !srcEl.textContent && goBtn.classList.contains("hidden") && secBtn.classList.contains("hidden"));
+
+    card.classList.remove("hidden");
+    document.getElementById("termBackdrop")?.classList.remove("hidden");
+    positionTermCard(triggerEl);
+  }
+
+  function formatLegalText(rawText, currentDoc, currentSecId) {
     let html = esc(rawText);
     if (state.prefs.highlightNums !== false) {
       // Avoid lookbehind for Safari < 16.4 compatibility; capture optional leading separator instead
@@ -2478,6 +2721,7 @@
         return SECTION_MAP.has(id) ? `<button type="button" class="xref-link" data-jump="${esc(id)}">${m}</button>` : m;
       });
     }
+    html = applyGlossaryTerms(html, currentDoc, currentSecId);
     return html;
   }
 
@@ -2497,6 +2741,7 @@
   }
 
   function renderReaderArticle(secId, opts = {}) {
+    closeTermCard();
     const sec = SECTION_MAP.get(secId);
     if (!sec) return;
     readerSecId = secId;
@@ -2559,7 +2804,7 @@
       if (blocks[0]?.text?.trim()) {
         const introDiv = document.createElement("div");
         introDiv.className = "prose-block paragraph";
-        introDiv.innerHTML = formatLegalText(blocks[0].text, sec.doc);
+        introDiv.innerHTML = formatLegalText(blocks[0].text, sec.doc, sec.id);
         bodyEl.appendChild(introDiv);
       }
       const codeStr = blocks.slice(1).map(b => b.text).join("\n\n") || sec.text;
@@ -2597,7 +2842,7 @@
       for (const blk of sec.blocks) {
         const div = document.createElement("div");
         div.className = `prose-block ${blk.type}`;
-        div.innerHTML = formatLegalText(blk.text, sec.doc);
+        div.innerHTML = formatLegalText(blk.text, sec.doc, sec.id);
         if (blk.type === "subitem") {
           if (!currentSublist) {
             currentSublist = document.createElement("div");
@@ -2656,7 +2901,7 @@
           <span>Trascrizione testuale del modulo (testo integrale)</span>
           <svg class="ic sm chev-down" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
         </summary>
-        <div class="form-transcript-body">${formatLegalText(formattedForm, sec.doc)}</div>
+        <div class="form-transcript-body">${formatLegalText(formattedForm, sec.doc, sec.id)}</div>
       `;
       imgWrap.appendChild(det);
     }
@@ -4013,6 +4258,58 @@
       if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
     });
 
+    document.getElementById("btnToggleTerms")?.addEventListener("click", () => {
+      state.prefs.highlightTerms = !(state.prefs.highlightTerms !== false);
+      saveState();
+      syncTermsToggleUI(state.prefs.highlightTerms);
+      closeTermCard();
+      if (readerSecId) renderReaderArticle(readerSecId, { skipHash: true });
+    });
+
+    // Interactive dashed-underlined glossary terms (delegated on entire reader pane)
+    document.getElementById("readerReadPane")?.addEventListener("click", e => {
+      const termBtn = e.target.closest(".term-ref");
+      if (termBtn) {
+        e.stopPropagation();
+        openTermCard(termBtn.dataset.term, termBtn);
+        return;
+      }
+      // Also support .xref-link inside PDF form transcripts
+      const xrefBtn = e.target.closest("#readerArtImages .xref-link");
+      if (xrefBtn && readerSecId) {
+        const curSec = SECTION_MAP.get(readerSecId);
+        if (curSec) {
+          openArticle(xrefBtn.dataset.jump, {
+            returnTo: { type: "article", target: curSec.id, label: `${curSec.code} (${DOC_SHORT[curSec.doc]})`, reason: "Rimando" },
+          });
+        }
+      }
+    });
+    document.getElementById("termPopover")?.addEventListener("click", e => e.stopPropagation());
+    document.getElementById("closeTermCard")?.addEventListener("click", () => closeTermCard(true));
+    document.getElementById("termBackdrop")?.addEventListener("click", () => closeTermCard(true));
+    document.addEventListener("click", () => closeTermCard(false));
+    window.addEventListener("scroll", () => {
+      if (window.innerWidth > 640 && activeTermTrigger && Math.abs(window.scrollY - termOpenScrollY) > 90) {
+        closeTermCard(false);
+      }
+    }, { passive: true });
+    window.addEventListener("resize", () => {
+      if (activeTermTrigger) positionTermCard(activeTermTrigger);
+    }, { passive: true });
+
+    const jumpFromTermCard = targetId => {
+      if (!targetId || !SECTION_MAP.has(targetId)) return;
+      const curSec = SECTION_MAP.get(readerSecId);
+      const reasonTitle = termCardActiveTitle ? `Termine: ${termCardActiveTitle}` : "Termine";
+      closeTermCard(false);
+      openArticle(targetId, curSec && curSec.id !== targetId
+        ? { returnTo: { type: "article", target: curSec.id, label: `${curSec.code} (${DOC_SHORT[curSec.doc]})`, reason: reasonTitle } }
+        : {});
+    };
+    document.getElementById("btnTermGoArticle")?.addEventListener("click", () => jumpFromTermCard(termCardPrimaryTarget));
+    document.getElementById("btnTermSecondary")?.addEventListener("click", () => jumpFromTermCard(termCardSecondaryTarget));
+
     document.getElementById("readerMasterySelect").addEventListener("change", e => {
       if (!readerSecId) return;
       const val = Number(e.target.value);
@@ -4441,7 +4738,7 @@
         document.getElementById("btnSearchQuick").click();
         return;
       }
-      if (e.key === "Escape") { closeAllModals(); closeTocDrawer(); closeFontPopover(); return; }
+      if (e.key === "Escape") { closeAllModals(); closeTocDrawer(); closeFontPopover(); closeTermCard(true); return; }
       if (!document.getElementById("lightboxModal").classList.contains("hidden")) {
         if (e.key === "ArrowLeft") document.getElementById("btnLbPrev").click();
         if (e.key === "ArrowRight") document.getElementById("btnLbNext").click();

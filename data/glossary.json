@@ -1,0 +1,1524 @@
+{
+  "version": 1,
+  "terms": [
+    {
+      "id": "assemblea-elettiva",
+      "term": "Assemblea Elettiva",
+      "category": "Elezioni",
+      "facts": [
+        "21/11/2026",
+        "Presiede Comm. Elettorale",
+        "Assemblea ordinaria"
+      ],
+      "summary": "Assemblea ordinaria dedicata all'elezione del Consiglio Direttivo, presieduta dal Presidente della Commissione Elettorale. Si articola in appello, presentazioni (≥ 5 min), domande, arringa finale (max 2 min), voto di prova, doppia votazione STV e scrutinio in diretta.",
+      "target": "el-a-13",
+      "secondaryTarget": "el-a-1",
+      "patterns": [
+        {
+          "p": "Assemblea\\s+Elettiva"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "assemblea-straordinaria",
+      "term": "Assemblea straordinaria",
+      "category": "Organi",
+      "facts": [
+        "1ª conv. > ⅔ di persona",
+        "Delibera ⅔ presenti"
+      ],
+      "summary": "Delibera su modifiche dello Statuto, proroga del mandato del Direttivo, scioglimento, liquidazione, devoluzione del patrimonio e fusione. Richiede quorum più elevati: > ⅔ di persona (senza deleghe) in 1ª convocazione, > ½ in 2ª (+7 gg), ≥ ⅓ in 3ª (+3 gg).",
+      "target": "statuto-art-12",
+      "secondaryTarget": "statuto-art-20",
+      "patterns": [
+        {
+          "p": "Assemble[ae]\\s+straordinari[ae]"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "assemblea-ordinaria",
+      "term": "Assemblea ordinaria",
+      "category": "Organi",
+      "facts": [
+        "1ª conv. > ½ soci",
+        "2ª conv. qualsiasi n°"
+      ],
+      "summary": "Approva il bilancio, definisce le linee programmatiche, elegge e revoca Direttivo e Collegio dei Probiviri, approva o ratifica i regolamenti interni e può opporsi all'esclusione dei Soci. Delibera a maggioranza dei presenti.",
+      "target": "statuto-art-12",
+      "secondaryTarget": null,
+      "patterns": [
+        {
+          "p": "Assemble[ae]\\s+ordinari[ae]"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "assemblea",
+      "term": "Assemblea dei Soci",
+      "category": "Organi",
+      "facts": [
+        "Organo sovrano",
+        "≥ 2 volte/anno",
+        "Preavviso 7 gg"
+      ],
+      "summary": "Organo sovrano di PoliNetwork composto da tutti i Soci (ciascuno ha diritto a 1 voto). Si riunisce almeno due volte l'anno su convocazione inviata tramite canale di contatto almeno 7 giorni prima.",
+      "target": "statuto-art-12",
+      "secondaryTarget": "statuto-art-6",
+      "patterns": [
+        {
+          "p": "Assemble[ae]\\s+dei\\s+Soci"
+        },
+        {
+          "p": "Assemblea"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "consiglio-direttivo",
+      "term": "Consiglio Direttivo",
+      "category": "Organi",
+      "facts": [
+        "5–9 membri",
+        "Mandato 2 anni",
+        "Max 2 consecutivi"
+      ],
+      "summary": "Organo amministrativo ed esecutivo composto da 5 a 9 membri eletti dall'Assemblea per 2 anni (rieleggibili una sola volta consecutivamente). Amministra l'associazione, attua le delibere assembleari, predispone il bilancio ed emana i regolamenti interni.",
+      "target": "statuto-art-13",
+      "secondaryTarget": "statuto-art-6",
+      "patterns": [
+        {
+          "p": "Consiglio\\s+Direttivo(?:\\s+uscente|\\s+Eletto)?"
+        },
+        {
+          "p": "Direttivo(?:\\s+uscente)?"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "commissione-elettorale-permanente",
+      "term": "Commissione Elettorale Permanente",
+      "category": "Organi",
+      "facts": [
+        "Pres. + Vicepres. Direttivo",
+        "Pres. Probiviri (Segr.)"
+      ],
+      "summary": "Organo composto da Presidente e Vicepresidente del Direttivo e Presidente del Collegio dei Probiviri (che funge da Segretario). Gestisce le elezioni e i ricorsi del Collegio dei Probiviri e nomina un Probiviro temporaneo entro 5 gg se il Collegio è vuoto.",
+      "target": "rri-1-7-5-2",
+      "secondaryTarget": "rri-1-7-5-5",
+      "patterns": [
+        {
+          "p": "Commissione\\s+Elettorale\\s+Permanente"
+        }
+      ]
+    },
+    {
+      "id": "commissione-elettorale",
+      "term": "Commissione Elettorale",
+      "category": "Elezioni",
+      "facts": [
+        "3 Soci sorteggiati",
+        "Non candidabili",
+        "Presiede il voto"
+      ],
+      "summary": "Organo terzo di 3 Soci (Presidente, Segretario e Membro) sorteggiati dai Probiviri tra i volontari. Non candidabili al Direttivo, verificano candidature e deleghe, presiedono l'Assemblea Elettiva, eseguono lo scrutinio in diretta e decidono i ricorsi.",
+      "target": "rri-1-6-1-2",
+      "secondaryTarget": "el-a-5",
+      "docTargets": {
+        "elettorale": "el-a-5",
+        "default": "rri-1-6-1-2"
+      },
+      "patterns": [
+        {
+          "p": "Presidente\\s+della\\s+Commissione\\s+Elettorale"
+        },
+        {
+          "p": "Segretario\\s+della\\s+Commissione\\s+Elettorale"
+        },
+        {
+          "p": "Commissione\\s+Elettorale"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "cariche-probiviri",
+      "term": "Cariche interne dei Probiviri",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Eletti a ⅔",
+        "Mandato 12 mesi",
+        "Non prorogabile"
+      ],
+      "summary": "Il Collegio dei Probiviri elegge internamente a maggioranza di ⅔ il proprio Presidente e Segretario (mandato di 12 mesi, rieleggibile ma non prorogabile). In caso di impedimento subentrano il Decano (più anziano) e il secondo Probiviro più anziano.",
+      "target": "rri-1-7-3-1",
+      "secondaryTarget": "rri-1-7-2-1",
+      "patterns": [
+        {
+          "p": "Presidente\\s+del\\s+Collegio\\s+dei\\s+Probiviri"
+        },
+        {
+          "p": "Segretario\\s+del\\s+Collegio\\s+dei\\s+Probiviri"
+        },
+        {
+          "p": "Decano\\s+del\\s+Collegio\\s+dei\\s+Probiviri"
+        },
+        {
+          "p": "Presidente\\s+del\\s+Collegio"
+        }
+      ]
+    },
+    {
+      "id": "collegio-probiviri",
+      "term": "Collegio dei Probiviri",
+      "category": "Organi",
+      "facts": [
+        "1–7 membri",
+        "Mandato 3 anni",
+        "Anche non Soci"
+      ],
+      "summary": "Organo di garanzia e controllo giuridico (1–7 membri, anche non Soci, scelti preferibilmente con esperienza legale). Vigila sul rispetto di Statuto, RRI e legge, può opporre veto alle decisioni associative e decide ricorsi e appelli elettorali.",
+      "target": "statuto-art-18",
+      "secondaryTarget": "rri-1-7-2-1",
+      "patterns": [
+        {
+          "p": "Collegio\\s+dei\\s+Probiviri"
+        },
+        {
+          "p": "Consiglio\\s+dei\\s+Probiviri"
+        },
+        {
+          "p": "Probivir[io]"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "organo-controllo",
+      "term": "Organo di Controllo e Revisore",
+      "category": "Organi",
+      "facts": [
+        "Delibera assembleare",
+        "Casi di legge"
+      ],
+      "summary": "Figure di controllo contabile e di legalità di cui l'ente si dota con specifica delibera dell'Assemblea nei casi previsti dalla legge (D.Lgs. 117/2017). Il revisore esterno è incompatibile con il Collegio dei Probiviri.",
+      "target": "statuto-art-19",
+      "secondaryTarget": "rri-1-7-4",
+      "patterns": [
+        {
+          "p": "organo\\s+di\\s+controllo"
+        },
+        {
+          "p": "revisore\\s+contabile"
+        },
+        {
+          "p": "revisore\\s+esterno"
+        }
+      ]
+    },
+    {
+      "id": "presidente",
+      "term": "Presidente del Direttivo",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Rappresentante legale",
+        "Voto prevalente in parità"
+      ],
+      "summary": "Rappresenta legalmente PoliNetwork, convoca e presiede il Direttivo e l'Assemblea (salvo quella elettiva o di revoca) e svolge l'ordinaria amministrazione. Convoca le elezioni almeno 1 mese prima della scadenza del mandato.",
+      "target": "statuto-art-14",
+      "secondaryTarget": "rri-1-6-2",
+      "patterns": [
+        {
+          "p": "Presidente\\s+del\\s+(?:Consiglio\\s+)?Direttivo"
+        },
+        {
+          "p": "Presidenza\\s+del\\s+Consiglio\\s+Direttivo"
+        },
+        {
+          "p": "Presidente"
+        },
+        {
+          "p": "Presidenza"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "vicepresidente",
+      "term": "Vicepresidente",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Sostituisce il Presidente",
+        "Subentra se cessa"
+      ],
+      "summary": "Sostituisce il Presidente in caso di impedimento e diventa Presidente se questi cessa dalle funzioni. Può convocare l'Assemblea se ritiene il Presidente inadempiente e regge ad interim i Team privi di Team Lead e Vicario.",
+      "target": "statuto-art-15",
+      "secondaryTarget": "rri-1-6-2",
+      "patterns": [
+        {
+          "p": "Vicepresidente(?:\\s+del\\s+(?:Consiglio\\s+)?Direttivo)?"
+        },
+        {
+          "p": "Vicepresidenza"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "tesoriere",
+      "term": "Tesoriere",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Finanze & patrimonio",
+        "Iscrizioni economiche"
+      ],
+      "summary": "Gestisce le finanze, il patrimonio e la copertura finanziaria delle attività (in accordo con l'Assemblea), ricerca fondi e supporto economico e cura la parte economica delle iscrizioni dei Soci.",
+      "target": "statuto-art-16",
+      "secondaryTarget": "statuto-art-19",
+      "patterns": [
+        {
+          "p": "Tesoriere"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "segretario",
+      "term": "Segretario",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Verbali & Libro Soci",
+        "Redige la RRI"
+      ],
+      "summary": "Dirige gli uffici, redige i verbali di Assemblea e Direttivo, cura il Libro dei Soci (annotazione entro 7 gg dal pagamento) e il registro volontari, gestisce i rapporti con enti esterni e redige/aggiorna la RRI.",
+      "target": "statuto-art-17",
+      "secondaryTarget": "rri-1-3-3",
+      "patterns": [
+        {
+          "p": "Segretario\\s+del\\s+(?:Consiglio\\s+)?Direttivo"
+        },
+        {
+          "p": "Segretario"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "decano-soci",
+      "term": "Decano dei Soci",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Più anziano per iscrizione",
+        "Convoca se Direttivo decade"
+      ],
+      "summary": "Il Socio più anziano per data di iscrizione (a parità, il più anziano anagraficamente). Sostituisce il Presidente in caso di Direttivo dimissionario e convoca entro 1 mese l'Assemblea in caso di decadenza del Direttivo.",
+      "target": "rri-1-4-4",
+      "secondaryTarget": "statuto-art-15",
+      "patterns": [
+        {
+          "p": "Decano\\s+(?:per\\s+iscrizione\\s+)?dei\\s+Soci"
+        },
+        {
+          "p": "Decano"
+        }
+      ]
+    },
+    {
+      "id": "team-lead",
+      "term": "Team Lead e Vicario",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Mandato 1 anno",
+        "Max 2 Team (1 se carica)",
+        "Relazione ≤ 6 mesi"
+      ],
+      "summary": "Amministra un Team operativo (IT, HR, Design & Marketing, Events & Partnership) su mandato del Direttivo e può nominare un Vicario. Ciascun Socio può guidare max 2 Team (1 se ricopre una carica sociale); tutti i Team Lead decadono alla convocazione delle elezioni.",
+      "target": "rri-2-2-1",
+      "secondaryTarget": null,
+      "patterns": [
+        {
+          "p": "Team\\s+Lead"
+        },
+        {
+          "p": "Vicario"
+        }
+      ]
+    },
+    {
+      "id": "team-it",
+      "term": "Team IT",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Progetti open source",
+        "Bot & sito",
+        "Canale contatto"
+      ],
+      "summary": "Coordina i gruppi di lavoro tecnici (con licenza open source), garantisce il supporto tecnico (bot di moderazione, sito web, pagine social) e il suo Team Lead definisce il canale di contatto ufficiale dell'associazione.",
+      "target": "rri-2-2-2",
+      "secondaryTarget": "rri-1-4-5",
+      "patterns": [
+        {
+          "p": "Team\\s+IT",
+          "cs": true
+        },
+        {
+          "p": "team\\s+IT",
+          "cs": true
+        }
+      ]
+    },
+    {
+      "id": "team-hr",
+      "term": "Team HR",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Registro Admin & gruppi",
+        "Reclutamento"
+      ],
+      "summary": "Responsabile della comunicazione interna: coordina gli Admin nella gestione ordinaria del Network, tiene il registro degli Admin e il registro dei gruppi e si occupa del reclutamento di nuovi Admin e volontari.",
+      "target": "rri-2-2-3",
+      "secondaryTarget": "rri-2-2-1",
+      "patterns": [
+        {
+          "p": "Team\\s+HR",
+          "cs": true
+        }
+      ]
+    },
+    {
+      "id": "team-design",
+      "term": "Team Design & Marketing",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Social Media",
+        "Grafica & immagine"
+      ],
+      "summary": "Gestisce i canali Social Media del Network, la promozione e il reparto grafico, curando l'immagine coordinata dell'associazione.",
+      "target": "rri-2-2-4",
+      "secondaryTarget": "rri-2-2-1",
+      "patterns": [
+        {
+          "p": "Team\\s+Design\\s*&\\s*Marketing"
+        },
+        {
+          "p": "Design\\s*&\\s*Marketing"
+        }
+      ]
+    },
+    {
+      "id": "team-events",
+      "term": "Team Events & Partnership",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Eventi & banchetti",
+        "Collaborazioni terzi"
+      ],
+      "summary": "Organizza e gestisce gli eventi e i banchetti di PoliNetwork dentro e fuori il Politecnico di Milano, e avvia/gestisce le collaborazioni con soggetti terzi.",
+      "target": "rri-2-2-5",
+      "secondaryTarget": "rri-2-2-1",
+      "patterns": [
+        {
+          "p": "Team\\s+Events\\s*&\\s*Partnership"
+        },
+        {
+          "p": "Events\\s*&\\s*Partnership"
+        }
+      ]
+    },
+    {
+      "id": "helper",
+      "term": "Helper (Coadiuvatori)",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Nominati dal Direttivo",
+        "Notifica entro 7 gg"
+      ],
+      "summary": "Soci nominati dal Consiglio Direttivo per assisterlo nell'ordinaria amministrazione di PoliNetwork. Il Segretario comunica ogni nomina all'Assemblea entro 7 giorni.",
+      "target": "rri-2-2-6",
+      "secondaryTarget": null,
+      "patterns": [
+        {
+          "p": "helper"
+        },
+        {
+          "p": "coadiuvator[ie]"
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "term": "Admin (Moderatore)",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Modera gruppi Network",
+        "Incompatibile con Probiviri"
+      ],
+      "summary": "Persona nominata per moderare uno o più gruppi gestiti dall'associazione (coordinata dal Team HR). Può comminare ammonizioni ed espulsioni sui gruppi assegnati; il ruolo di admin attivo è incompatibile con il Collegio dei Probiviri.",
+      "target": "rri-1-4-2",
+      "secondaryTarget": "rri-1-7-1",
+      "patterns": [
+        {
+          "p": "admin\\s+attiv[oi]"
+        },
+        {
+          "p": "admin"
+        }
+      ]
+    },
+    {
+      "id": "volontari",
+      "term": "Volontari",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Registro volontari",
+        "Art. 17 D.Lgs. 117/2017"
+      ],
+      "summary": "Persone che svolgono attività di volontariato in modo non occasionale per l'associazione, iscritte in un apposito registro tenuto dal Segretario. Hanno diritto a partecipare all'Assemblea Elettiva senza diritto di voto (se non Soci).",
+      "target": "statuto-art-8",
+      "secondaryTarget": "el-a-9",
+      "patterns": [
+        {
+          "p": "volontari[oa]?"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "soci-emeriti",
+      "term": "Libro dei Soci Emeriti",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Fondatori di diritto",
+        "Su richiesta al Direttivo"
+      ],
+      "summary": "Albo d'onore per chi ha dato un contributo a PoliNetwork (i fondatori ne fanno parte di diritto). L'inserimento si richiede al Direttivo (silenzio-rigetto oltre il limite temporale); l'Assemblea può rimuovere chiunque in ogni momento.",
+      "target": "statuto-art-11",
+      "secondaryTarget": null,
+      "patterns": [
+        {
+          "p": "libro\\s+dei\\s+soci\\s+emeriti"
+        },
+        {
+          "p": "soci\\s+emeriti"
+        }
+      ]
+    },
+    {
+      "id": "associati",
+      "term": "Soci / Associati",
+      "category": "Cariche e Ruoli",
+      "facts": [
+        "Numero illimitato",
+        "1 voto ciascuno"
+      ],
+      "summary": "Aderenti a PoliNetwork (numero illimitato, ammessi senza discriminazioni). Hanno diritto di voto e di elettorato attivo/passivo, accesso ai verbali e al bilancio, e dovere di osservare Statuto, RRI e quota associativa.",
+      "target": "statuto-art-7",
+      "secondaryTarget": "statuto-art-10",
+      "patterns": [
+        {
+          "p": "aspirant[ei]\\s+soc[io]"
+        },
+        {
+          "p": "Associat[oi]"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "ospiti",
+      "term": "Ospiti all'Assemblea Elettiva",
+      "category": "Elezioni",
+      "facts": [
+        "Richiesta entro 18/11",
+        "Parere unanime CE",
+        "Solo ascolto"
+      ],
+      "summary": "Persone esterne invitate dal Direttivo previo parere vincolante unanime della Commissione Elettorale (richiesta entro il 18/11, decisione entro il 20/11). È una concessione: l'ospite può solo assistere, senza intervenire né riprendere.",
+      "target": "el-a-9",
+      "secondaryTarget": "el-a-1",
+      "patterns": [
+        {
+          "p": "ospit[ei]"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "aps-runts",
+      "term": "PoliNetwork APS e RUNTS",
+      "category": "Definizioni",
+      "facts": [
+        "Ente Terzo Settore",
+        "Iscrizione RUNTS"
+      ],
+      "summary": "PoliNetwork APS è un'associazione non riconosciuta, apartitica e aconfessionale di durata illimitata. L'acronimo APS (Associazione di Promozione Sociale) è spendibile verso terzi solo al perfezionamento dell'iscrizione al Registro Unico Nazionale del Terzo Settore (RUNTS).",
+      "target": "statuto-art-1",
+      "secondaryTarget": "statuto-art-19",
+      "patterns": [
+        {
+          "p": "Registro\\s+Unico\\s+Nazionale\\s+del\\s+Terzo\\s+Settore"
+        },
+        {
+          "p": "Associazione\\s+di\\s+Promozione\\s+Sociale"
+        },
+        {
+          "p": "Ente\\s+del\\s+Terzo\\s+Settore"
+        },
+        {
+          "p": "RUNTS",
+          "cs": true
+        },
+        {
+          "p": "Runts",
+          "cs": true
+        },
+        {
+          "p": "APS",
+          "cs": true
+        }
+      ]
+    },
+    {
+      "id": "limite-temporale",
+      "term": "Limite temporale",
+      "category": "Definizioni",
+      "facts": [
+        "30 gg ordinari",
+        "90 gg Gen–Feb / Giu–Set"
+      ],
+      "summary": "Termine statutario standard pari a 30 giorni; si estende automaticamente a 90 giorni se la richiesta è presentata nei mesi di Gennaio, Febbraio, Giugno, Luglio, Agosto o Settembre.",
+      "target": "statuto-art-2",
+      "secondaryTarget": null,
+      "patterns": [
+        {
+          "p": "limite\\s+temporale"
+        }
+      ]
+    },
+    {
+      "id": "canale-contatto",
+      "term": "Canale di contatto",
+      "category": "Definizioni",
+      "facts": [
+        "Definito da Team Lead IT",
+        "Telegram supplemento"
+      ],
+      "summary": "Mezzo di comunicazione scritta ufficiale definito dal Team Lead IT ai sensi dello Statuto (con Telegram come supplemento), conforme al GDPR e accessibile a tutti i Soci. È usato per convocazioni, notifiche e deleghe.",
+      "target": "rri-1-4-5",
+      "secondaryTarget": "statuto-art-2",
+      "docTargets": {
+        "statuto": "statuto-art-2",
+        "default": "rri-1-4-5"
+      },
+      "patterns": [
+        {
+          "p": "canal[ei]\\s+di\\s+contatto"
+        }
+      ]
+    },
+    {
+      "id": "numero-socio",
+      "term": "Numero di Socio",
+      "category": "Definizioni",
+      "facts": [
+        "Codice iscrizione",
+        "Conferma entro 7 gg"
+      ],
+      "summary": "Codice univoco di iscrizione assegnato al Socio e trasmesso dal Segretario entro 7 giorni dall'annotazione nel Libro dei Soci (a sua volta effettuata entro 7 gg dal pagamento della quota).",
+      "target": "rri-1-4-1",
+      "secondaryTarget": "statuto-art-9",
+      "patterns": [
+        {
+          "p": "Numero\\s+di\\s+Socio"
+        },
+        {
+          "p": "codice\\s+di\\s+iscrizione"
+        }
+      ]
+    },
+    {
+      "id": "quota-associativa",
+      "term": "Quota associativa",
+      "category": "Definizioni",
+      "facts": [
+        "€5,00 / anno",
+        "1 set – 31 ago",
+        "Rinnovi fino al 31 dic"
+      ],
+      "summary": "Contributo annuale di €5,00 valido dal 1° settembre al 31 agosto successivo (rinnovi entro il 31 dicembre; esenzione anno successivo per chi si tessera dal 1° giugno al 31 agosto). È personale, non rimborsabile né trasferibile.",
+      "target": "rri-1-4-6",
+      "secondaryTarget": "statuto-art-10",
+      "patterns": [
+        {
+          "p": "quot[ae]\\s+associativ[ae]"
+        },
+        {
+          "p": "quot[ae]\\s+social[ei]"
+        }
+      ]
+    },
+    {
+      "id": "libri-sociali",
+      "term": "Libri Sociali",
+      "category": "Definizioni",
+      "facts": [
+        "4 libri obbligatori",
+        "Libera visione ai Soci"
+      ],
+      "summary": "Registri obbligatori dell'associazione: Libro dei Soci e libri delle adunanze/deliberazioni di Assemblea, Direttivo e Collegio dei Probiviri. Tenuti in sede e/o in archivio digitale GDPR-compliant in libera visione a tutti i Soci.",
+      "target": "statuto-art-22",
+      "secondaryTarget": "statuto-art-9",
+      "patterns": [
+        {
+          "p": "libri\\s+sociali"
+        },
+        {
+          "p": "libro\\s+dei\\s+Soci"
+        },
+        {
+          "p": "registro\\s+dei\\s+soci"
+        }
+      ]
+    },
+    {
+      "id": "bilancio",
+      "term": "Bilancio e Patrimonio",
+      "category": "Definizioni",
+      "facts": [
+        "Annuale (1 gen)",
+        "Approvazione ≤ 6 mesi",
+        "RUNTS entro 30 giu"
+      ],
+      "summary": "Documenti contabili annuali predisposti dal Direttivo, approvati dall'Assemblea ordinaria entro 6 mesi dalla chiusura dell'esercizio e depositati al RUNTS entro il 30 giugno. È vietata ogni distribuzione di utili o avanzi.",
+      "target": "statuto-art-19",
+      "secondaryTarget": "statuto-art-21",
+      "patterns": [
+        {
+          "p": "rendiconto\\s+economico-finanziario"
+        },
+        {
+          "p": "bilancio"
+        }
+      ]
+    },
+    {
+      "id": "recesso-espulsione",
+      "term": "Recesso ed Espulsione",
+      "category": "Definizioni",
+      "facts": [
+        "Dimissioni immediate",
+        "Opposizione Assemblea"
+      ],
+      "summary": "La qualità di Socio si perde per decadenza (mancata quota dopo 1 mese), dimissioni scritte (effetto immediato), espulsione per gravi motivi (deliberata dal Direttivo, sospesa se l'Assemblea propone opposizione entro il limite temporale) o decesso.",
+      "target": "statuto-art-11",
+      "secondaryTarget": "rri-1-5-2",
+      "patterns": [
+        {
+          "p": "espulsione"
+        },
+        {
+          "p": "recesso"
+        }
+      ]
+    },
+    {
+      "id": "gravi-motivi",
+      "term": "Gravi motivi e comportamenti lesivi",
+      "category": "Definizioni",
+      "facts": [
+        "4 fattispecie RRI",
+        "Fonda l'espulsione"
+      ],
+      "summary": "Comportamenti che rendono incompatibile la permanenza del Socio: violenza anche verbale, violazione del codice penale, condotte contro la linea associativa o scarsa partecipazione ingiustificata valutata dai Probiviri.",
+      "target": "rri-1-4-3",
+      "secondaryTarget": "statuto-art-11",
+      "patterns": [
+        {
+          "p": "gravi\\s+motivi"
+        },
+        {
+          "p": "grave\\s+motivo"
+        }
+      ]
+    },
+    {
+      "id": "scioglimento",
+      "term": "Scioglimento e devoluzione",
+      "category": "Definizioni",
+      "facts": [
+        "Assemblea straordinaria",
+        "Patrimonio a ETS"
+      ],
+      "summary": "Deliberato dall'Assemblea straordinaria con la maggioranza dei ⅔ dei presenti. Il patrimonio residuo viene obbligatoriamente devoluto ad altri Enti del Terzo Settore ai sensi dell'art. 9 D.Lgs. 117/2017.",
+      "target": "statuto-art-20",
+      "secondaryTarget": "statuto-art-12",
+      "patterns": [
+        {
+          "p": "devoluzione\\s+del\\s+patrimonio"
+        },
+        {
+          "p": "scioglimento"
+        }
+      ]
+    },
+    {
+      "id": "regolamento-fondamentale",
+      "term": "Regolamento Fondamentale",
+      "category": "Regole Network",
+      "facts": [
+        "Regolamento 1 della RRI",
+        "Solo voto Assemblea"
+      ],
+      "summary": "Il primo regolamento della Raccolta dei Regolamenti Interni (RRI). A differenza degli altri regolamenti interni modificabili dal Direttivo, può essere promulgato o modificato esclusivamente con voto favorevole dell'Assemblea dei Soci.",
+      "target": "rri-1-3-3",
+      "secondaryTarget": null,
+      "patterns": [
+        {
+          "p": "Regolamento\\s+Fondamentale"
+        }
+      ]
+    },
+    {
+      "id": "rri",
+      "term": "Raccolta dei Regolamenti Interni (RRI)",
+      "category": "Regole Network",
+      "facts": [
+        "Notifica ≤ 3 gg",
+        "Ricorso ≤ 10 gg",
+        "Revisione ogni 5 anni"
+      ],
+      "summary": "Raccolta organica redatta dal Segretario con tutti i regolamenti vigenti (ogni nuova versione abroga le precedenti). Nella gerarchia delle fonti sottostà allo Statuto e prevale sul Regolamento Elettorale.",
+      "target": "rri-1-3-3",
+      "secondaryTarget": "el-a-20",
+      "patterns": [
+        {
+          "p": "Raccolta\\s+dei\\s+Regolamenti\\s+Interni"
+        },
+        {
+          "p": "RRI",
+          "cs": true
+        }
+      ]
+    },
+    {
+      "id": "conflitto-interessi",
+      "term": "Conflitto di interessi",
+      "category": "Regole Network",
+      "facts": [
+        "Obbligo dichiarazione",
+        "Astensione dal voto"
+      ],
+      "summary": "Ogni membro del Network (Soci, Direttivo, Probiviri, Team Lead, volontari) deve dichiarare eventuali conflitti prima della discussione e del voto e astenersi dalla votazione; la violazione può invalidare o far slittare il voto.",
+      "target": "rri-5-2",
+      "secondaryTarget": "rri-5-1",
+      "patterns": [
+        {
+          "p": "Linee\\s+Guida\\s+per\\s+la\\s+gestione\\s+dei\\s+Conflitti\\s+di\\s+Interesse"
+        },
+        {
+          "p": "conflitt[oi]\\s+di\\s+interess[ei]"
+        }
+      ]
+    },
+    {
+      "id": "incompatibilita",
+      "term": "Incompatibilità",
+      "category": "Regole Network",
+      "facts": [
+        "Cariche non cumulabili",
+        "Pres./Vice vs Giunta/CNSU"
+      ],
+      "summary": "Divieto di cumulare cariche in conflitto: Presidente, Vicepresidente e Segretario fra loro; Presidente/Vicepresidente con Giunta del Consiglio degli Studenti o CNSU; Probiviri con Direttivo, admin attivo, Team Lead o organi accademici.",
+      "target": "rri-1-6-2",
+      "secondaryTarget": "rri-1-7-4",
+      "patterns": [
+        {
+          "p": "incompatibilit[àa]"
+        }
+      ]
+    },
+    {
+      "id": "decadenza",
+      "term": "Decadenza dalla carica",
+      "category": "Regole Network",
+      "facts": [
+        "Verifica Probiviri ≤ 30 gg",
+        "Solo ad assunzione carica"
+      ],
+      "summary": "Cessazione dalla carica del Direttivo (o di un suo membro) per perdita della qualità di Socio o assunzione di cariche direttive in altre associazioni/liste del PoliMi. La sola candidatura non comporta decadenza.",
+      "target": "rri-1-6-3",
+      "secondaryTarget": "statuto-art-11",
+      "patterns": [
+        {
+          "p": "decadenza"
+        }
+      ]
+    },
+    {
+      "id": "veto-probiviri",
+      "term": "Veto del Collegio dei Probiviri",
+      "category": "Regole Network",
+      "facts": [
+        "Superabile con Direttivo + Assemblea",
+        "Maggioranza assoluta"
+      ],
+      "summary": "Facoltà del Collegio dei Probiviri di opporsi a qualsiasi decisione ritenuta in contrasto con Statuto, RRI o legge. Il veto è superabile solo se sia il Direttivo sia l'Assemblea approvano una mozione a maggioranza assoluta.",
+      "target": "rri-1-7-2-1",
+      "secondaryTarget": "statuto-art-18",
+      "patterns": [
+        {
+          "p": "veto"
+        }
+      ]
+    },
+    {
+      "id": "candidati-eleggibili",
+      "term": "Candidati eleggibili (Probiviri)",
+      "category": "Regole Network",
+      "facts": [
+        "Lista d'attesa",
+        "Già approvati dall'Assemblea"
+      ],
+      "summary": "Persone che hanno già ottenuto riscontro positivo dall'Assemblea dei Soci e attendono in graduatoria che si liberi un posto nel Collegio dei Probiviri.",
+      "target": "rri-1-7-1",
+      "secondaryTarget": "rri-1-7-5-3",
+      "patterns": [
+        {
+          "p": "candidat[oi]\\s+eleggibil[ei]"
+        }
+      ]
+    },
+    {
+      "id": "sanzioni-warn-ban",
+      "term": "Ammonizioni (Warn), Ban e Retrocessione",
+      "category": "Regole Network",
+      "facts": [
+        "Max 3 warn (12 mesi)",
+        "Ban gruppi",
+        "Retrocessione ruolo"
+      ],
+      "summary": "Sistema sanzionatorio del Network: ammonizioni/warn (superate le 3 scatta il ban; scadono dopo 12 mesi), ban temporaneo o permanente da uno o più gruppi, e retrocessione/revoca dai ruoli di Admin, Socio o membro del Direttivo.",
+      "target": "rri-2-3-2",
+      "secondaryTarget": "rri-4-3",
+      "patterns": [
+        {
+          "p": "retrocessione"
+        },
+        {
+          "p": "ammonizion[ei]"
+        },
+        {
+          "p": "warn"
+        },
+        {
+          "p": "ban"
+        }
+      ]
+    },
+    {
+      "id": "doxing",
+      "term": "Doxing",
+      "category": "Regole Network",
+      "facts": [
+        "Severamente vietato",
+        "Cancellazione + ban"
+      ],
+      "summary": "Pratica di cercare e diffondere pubblicamente online dati personali o sensibili altrui (nome, indirizzo, telefono, ecc.) con intento malevolo. È vietato: gli admin rimuovono i dati e, in caso malevolo, escludono dai gruppi.",
+      "target": "rri-4-6",
+      "secondaryTarget": null,
+      "patterns": [
+        {
+          "p": "doxx?ing"
+        }
+      ]
+    },
+    {
+      "id": "dialogo-pari-spam",
+      "term": "Dialogo fra pari e Divieto di spam",
+      "category": "Regole Network",
+      "facts": [
+        "Spam = 4 ammonizioni",
+        "Scambio spontaneo ammesso"
+      ],
+      "summary": "Il dialogo fra pari è lo scambio spontaneo e pertinente tra utenti nei gruppi. I messaggi promozionali non preventivamente autorizzati (spam) sono vietati e comportano 4 ammonizioni immediate.",
+      "target": "rri-4-4",
+      "secondaryTarget": "rri-4-7",
+      "patterns": [
+        {
+          "p": "dialogo\\s+fra\\s+pari"
+        },
+        {
+          "p": "spam"
+        }
+      ]
+    },
+    {
+      "id": "periodo-elettorale",
+      "term": "Periodo e Silenzio elettorale",
+      "category": "Regole Network",
+      "facts": [
+        "Inizio semestre → +2 sett.",
+        "Violazione = 4 warn"
+      ],
+      "summary": "Lasso di tempo dall'inizio del semestre delle elezioni studentesche fino a 2 settimane dopo il silenzio elettorale. I messaggi promozionali elettorali sono vietati (4 ammonizioni), salvo eccezioni neutrali espressamente autorizzate.",
+      "target": "rri-4-8",
+      "secondaryTarget": null,
+      "patterns": [
+        {
+          "p": "periodo\\s+elettorale"
+        },
+        {
+          "p": "silenzio\\s+elettorale"
+        },
+        {
+          "p": "messagg[io]+\\s+promozional[ei]\\s+per\\s+finalit[àa]\\s+elettoral[ei]"
+        }
+      ]
+    },
+    {
+      "id": "crediti-promozionali",
+      "term": "Messaggi e Crediti promozionali",
+      "category": "Regole Network",
+      "facts": [
+        "3 crediti/semestre",
+        "Cooldown 15 gg",
+        "Preventiva approvazione"
+      ],
+      "summary": "Associazioni ed Enti registrati dal Segretario ricevono 3 crediti/semestre non cumulabili per messaggi approvati dal Direttivo (costo da 0 su PoliAssociazioni a 3 per tutti i gruppi di un corso; pausa di 15 gg per gruppo).",
+      "target": "rri-4-7",
+      "secondaryTarget": null,
+      "patterns": [
+        {
+          "p": "messagg[io]+\\s+promozional[ei]"
+        },
+        {
+          "p": "PoliAssociazioni",
+          "cs": true
+        }
+      ]
+    },
+    {
+      "id": "privacy-gdpr",
+      "term": "Informativa Privacy e GDPR",
+      "category": "Regole Network",
+      "facts": [
+        "Reg. UE 2016/679",
+        "privacy@polinetwork.org"
+      ],
+      "summary": "Informativa ai sensi dell'art. 13 GDPR e Codice Privacy sul trattamento dei dati di Soci e candidati soci. Titolare del trattamento è PoliNetwork APS; i diritti dell'interessato si esercitano via privacy@polinetwork.org.",
+      "target": "rri-3",
+      "secondaryTarget": "rri-3-10",
+      "patterns": [
+        {
+          "p": "GDPR",
+          "cs": true
+        },
+        {
+          "p": "informativa\\s+(?:sul\\s+trattamento\\s+dei\\s+dati\\s+personali|privacy)"
+        },
+        {
+          "p": "Titolare\\s+del\\s+trattamento"
+        }
+      ]
+    },
+    {
+      "id": "votazioni-asincrone",
+      "term": "Votazioni telematiche asincrone",
+      "category": "Assemblea e Voto",
+      "facts": [
+        "Aperte ≥ 48h (o 24h)",
+        "Quorum 1ª conv.",
+        "Escluse elezioni/bilancio"
+      ],
+      "summary": "Votazioni telematiche indette dal Direttivo (aperte almeno 48 ore, o 24 ore se già raggiunta la maggioranza assoluta) con i quorum di 1ª convocazione ordinaria. Vietate per bilancio, elezione/revoca Direttivo, Probiviri, espulsioni e materie straordinarie.",
+      "target": "rri-1-5-1-2",
+      "secondaryTarget": "statuto-art-12",
+      "patterns": [
+        {
+          "p": "votazion[ei]\\s+telematic[ah]e?\\s+asincron[ae]"
+        },
+        {
+          "p": "voto\\s+telematico\\s+asincrono"
+        }
+      ]
+    },
+    {
+      "id": "partecipazione-distanza",
+      "term": "Partecipazione a distanza",
+      "category": "Assemblea e Voto",
+      "facts": [
+        "Richiesta ≥ 24h prima",
+        "Identificazione video"
+      ],
+      "summary": "Diritto di chiedere la partecipazione telematica almeno 24 ore prima dell'inizio dei lavori. Nell'Assemblea Elettiva la richiesta (Modulo F) è sempre accolta per i Soci, con breve identificazione a volto visibile in video.",
+      "target": "rri-1-5-1-3",
+      "secondaryTarget": "el-a-10",
+      "docTargets": {
+        "elettorale": "el-a-10",
+        "default": "rri-1-5-1-3"
+      },
+      "patterns": [
+        {
+          "p": "partecipazione\\s+a\\s+distanza"
+        }
+      ]
+    },
+    {
+      "id": "delega",
+      "term": "Delega di voto",
+      "category": "Assemblea e Voto",
+      "facts": [
+        "Max 3 deleghe/socio",
+        "No Direttivo/candidati",
+        "Entro 18/11 (Modulo E)"
+      ],
+      "summary": "Un Socio può farsi rappresentare da un altro Socio tramite delega scritta (max 3 deleghe a testa; vietato delegare membri del Direttivo uscente o candidati, e vietata in 1ª convocazione straordinaria). In elezione si usa il Modulo E firmato graficamente.",
+      "target": "statuto-art-12",
+      "secondaryTarget": "el-a-18-1",
+      "docTargets": {
+        "elettorale": "el-a-18-1",
+        "default": "statuto-art-12"
+      },
+      "patterns": [
+        {
+          "p": "portator[ei]\\s+di\\s+deleg[ah]e?"
+        },
+        {
+          "p": "modulo\\s+di\\s+delega"
+        },
+        {
+          "p": "deleg[ah]e?"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "quorum",
+      "term": "Quorum e Convocazioni",
+      "category": "Assemblea e Voto",
+      "facts": [
+        "Ord.: > ½ poi qualsiasi",
+        "Straord.: > ⅔ / > ½ / ≥ ⅓"
+      ],
+      "summary": "Numero legale richiesto per aprire validamente l'Assemblea. In ordinaria: maggioranza assoluta in 1ª convocazione (anche con deleghe) e qualunque numero in 2ª. In straordinaria: > ⅔ di persona in 1ª, > ½ in 2ª (+7 gg), ≥ ⅓ in 3ª (+3 gg).",
+      "target": "statuto-art-12",
+      "secondaryTarget": "el-a-11",
+      "docTargets": {
+        "elettorale": "el-a-11",
+        "default": "statuto-art-12"
+      },
+      "patterns": [
+        {
+          "p": "quorum\\s+costitutiv[oi]"
+        },
+        {
+          "p": "quorum\\s+deliberativ[oi]"
+        },
+        {
+          "p": "numero\\s+legale"
+        },
+        {
+          "p": "prima\\s+convocazione"
+        },
+        {
+          "p": "seconda\\s+convocazione"
+        },
+        {
+          "p": "terza\\s+convocazione"
+        }
+      ]
+    },
+    {
+      "id": "voto-segreto",
+      "term": "Voto segreto e voto palese",
+      "category": "Assemblea e Voto",
+      "facts": [
+        "Obbligatorio su persone",
+        "Riprese sospese al voto"
+      ],
+      "summary": "Le delibere sono a voto palese, salvo quelle riguardanti singole persone o gruppi ristretti e le votazioni elettive, che sono a voto segreto (nessuno può ricondurre il voto al votante; le riprese si sospendono durante il voto).",
+      "target": "el-a-14",
+      "secondaryTarget": "statuto-art-12",
+      "docTargets": {
+        "statuto": "statuto-art-12",
+        "default": "el-a-14"
+      },
+      "patterns": [
+        {
+          "p": "segretezza\\s+del\\s+voto"
+        },
+        {
+          "p": "voto\\s+segreto"
+        },
+        {
+          "p": "voto\\s+palese"
+        }
+      ]
+    },
+    {
+      "id": "verbale",
+      "term": "Verbale di seduta",
+      "category": "Assemblea e Voto",
+      "facts": [
+        "Firma Pres. + verbalizzante",
+        "Trascritto nei Libri Sociali"
+      ],
+      "summary": "Resoconto ufficiale delle riunioni e delle deliberazioni, sottoscritto da Presidente e verbalizzante (in Assemblea Elettiva redatto dal Segretario della Commissione Elettorale) e archiviato nei Libri Sociali a disposizione dei Soci.",
+      "target": "statuto-art-12",
+      "secondaryTarget": "statuto-art-22",
+      "patterns": [
+        {
+          "p": "verbalizzante"
+        },
+        {
+          "p": "verbale"
+        }
+      ]
+    },
+    {
+      "id": "elettorato-attivo",
+      "term": "Elettorato attivo",
+      "category": "Elezioni",
+      "facts": [
+        "Tutti i Soci al voto",
+        "Tesseramento ≤ 20/10"
+      ],
+      "summary": "Diritto di voto in Assemblea Elettiva riconosciuto a tutti i Soci in essere il giorno del voto, purché abbiano presentato domanda di ammissione entro la chiusura tesseramenti del 20/10/2026 e versato la quota prima dell'Assemblea.",
+      "target": "el-a-8",
+      "secondaryTarget": "statuto-art-10",
+      "patterns": [
+        {
+          "p": "elettorato\\s+attivo"
+        },
+        {
+          "p": "chiusura\\s+dei\\s+tesseramenti"
+        }
+      ]
+    },
+    {
+      "id": "lettera-aperta",
+      "term": "Candidatura, Lettera aperta e Preferenze",
+      "category": "Elezioni",
+      "facts": [
+        "28/10 – 18/11/2026",
+        "2 email @polinetwork.org",
+        "Max 2 cariche"
+      ],
+      "summary": "La candidatura si invia dall'account associativo polinetwork.org tramite 2 email: lettera aperta ai Soci + Modulo D con firma grafica. Si possono indicare fino a 2 preferenze di carica in ordine, modificabili fino al 19/11 ore 15:00.",
+      "target": "el-a-2",
+      "secondaryTarget": "el-d",
+      "patterns": [
+        {
+          "p": "lettera\\s+aperta(?:\\s+ai\\s+Soci)?"
+        },
+        {
+          "p": "modulo\\s+di\\s+candidatura"
+        },
+        {
+          "p": "preferenz[ae]\\s+di\\s+carica"
+        }
+      ]
+    },
+    {
+      "id": "ineleggibilita",
+      "term": "Ineleggibilità",
+      "category": "Elezioni",
+      "facts": [
+        "2 mandati consecutivi",
+        "Comm. Elettorale",
+        "Art. 2382 c.c."
+      ],
+      "summary": "Impedimento alla candidatura al Direttivo per chi ha già svolto 2 mandati consecutivi, fa parte della Commissione Elettorale o si trova nelle cause dell'art. 2382 c.c. (interdizione, inabilitazione, fallimento o condanne ostative).",
+      "target": "el-a-2",
+      "secondaryTarget": "rri-1-7-5-4",
+      "patterns": [
+        {
+          "p": "ineleggibilit[àa]"
+        },
+        {
+          "p": "ineleggibil[ei]"
+        }
+      ]
+    },
+    {
+      "id": "firma-grafica",
+      "term": "Firma grafica",
+      "category": "Elezioni",
+      "facts": [
+        "Obbligatoria sui moduli",
+        "Invio da @polinetwork.org"
+      ],
+      "summary": "Firma autografa scansionata o apposta graficamente sul PDF, obbligatoria per la validità dei moduli di candidatura (Allegato D) e delega (Allegato E), unitamente all'invio dall'account associativo polinetwork.org.",
+      "target": "el-j-1",
+      "secondaryTarget": "el-a-2",
+      "patterns": [
+        {
+          "p": "firma\\s+grafica"
+        },
+        {
+          "p": "firmat[oa]\\s+graficamente"
+        }
+      ]
+    },
+    {
+      "id": "voto-prova",
+      "term": "Voto di prova",
+      "category": "Elezioni",
+      "facts": [
+        "Prima del voto reale",
+        "Non anonimo",
+        "Zero valore legale"
+      ],
+      "summary": "Test preliminare svolto prima dell'apertura del voto ufficiale per accertare che tutti i Soci e i portatori di delega accedano correttamente a Microsoft Forms. Non è anonimo per verificare il funzionamento delle deleghe.",
+      "target": "el-a-15",
+      "secondaryTarget": "el-a-13",
+      "patterns": [
+        {
+          "p": "voto\\s+di\\s+prova"
+        }
+      ]
+    },
+    {
+      "id": "scheda-bianca-nulla",
+      "term": "Scheda bianca e scheda nulla",
+      "category": "Elezioni",
+      "facts": [
+        "Indipendenti fra 1ª e 2ª",
+        "Escluse dalla quota"
+      ],
+      "summary": "Scelta esplicita su Microsoft Forms indipendente tra prima e seconda votazione. È nulla anche la scheda senza ordinamento o consegnata in ritardo; né schede bianche né nulle concorrono al calcolo della quota di Droop.",
+      "target": "el-a-15",
+      "secondaryTarget": "el-a-16-1",
+      "patterns": [
+        {
+          "p": "sched[ae]\\s+bianc[ah]e?"
+        },
+        {
+          "p": "sched[ae]\\s+null[ae]"
+        }
+      ]
+    },
+    {
+      "id": "stv",
+      "term": "Voto Singolo Trasferibile (STV)",
+      "category": "Elezioni",
+      "facts": [
+        "Preferenza ordinata",
+        "Calcolo frazionario esatto"
+      ],
+      "summary": "Sistema elettorale proporzionale in cui l'elettore ordina tutti i candidati validi. Chi raggiunge la quota di Droop è eletto e la sua eccedenza si trasferisce frazionariamente al candidato successivo; altrimenti si esclude l'ultimo e i suoi voti passano oltre.",
+      "target": "el-a-16-2",
+      "secondaryTarget": "el-i-2",
+      "patterns": [
+        {
+          "p": "Single\\s+Transferable\\s+Vote"
+        },
+        {
+          "p": "voto\\s+singolo\\s+trasferibile"
+        },
+        {
+          "p": "voto\\s+di\\s+preferenza\\s+ordinato"
+        },
+        {
+          "p": "instant-runoff"
+        },
+        {
+          "p": "STV",
+          "cs": true
+        }
+      ]
+    },
+    {
+      "id": "quota-droop",
+      "term": "Quota di Droop",
+      "category": "Elezioni",
+      "facts": [
+        "⌊voti / (seggi + 1)⌋ + 1",
+        "Solo schede valide"
+      ],
+      "summary": "Soglia minima di voti necessaria per essere eletti nello scrutinio STV: parte intera di (schede valide / (seggi + 1)) aumentata di 1, calcolata in forma frazionaria esatta. Con 1 solo seggio equivale alla maggioranza assoluta.",
+      "target": "el-a-16-2",
+      "secondaryTarget": "el-i-2",
+      "patterns": [
+        {
+          "p": "quota\\s+di\\s+Droop"
+        }
+      ]
+    },
+    {
+      "id": "ordine-priorita",
+      "term": "Ordine di priorità (2ª votazione)",
+      "category": "Elezioni",
+      "facts": [
+        "Solo tra gli eletti",
+        "STV a 1 seggio per posto"
+      ],
+      "summary": "Seconda votazione sulla stessa scheda che ordina una posizione alla volta i soli candidati eletti nella prima (instant-runoff). Determina la precedenza con cui ciascun eletto ottiene la propria carica sociale preferita ancora vacante.",
+      "target": "el-a-16-3",
+      "secondaryTarget": "statuto-art-13",
+      "patterns": [
+        {
+          "p": "ordine\\s+di\\s+priorit[àa]"
+        },
+        {
+          "p": "seconda\\s+votazione"
+        }
+      ]
+    },
+    {
+      "id": "ordine-spareggio",
+      "term": "Ordine di spareggio (Parità)",
+      "category": "Elezioni",
+      "facts": [
+        "1° Anzianità iscrizione",
+        "2° Più giovane",
+        "3° Sorteggio"
+      ],
+      "summary": "Graduatoria preventiva definita dalla Commissione Elettorale (comunicata entro le 08:00 del 21/11) per risolvere ogni parità in STV: prevale il Socio più anziano per iscrizione, poi il più giovane anagraficamente, infine il sorteggio.",
+      "target": "el-a-16-4",
+      "secondaryTarget": "el-a-7",
+      "patterns": [
+        {
+          "p": "ordine\\s+di\\s+spareggio"
+        }
+      ]
+    },
+    {
+      "id": "graduatoria-non-eletti",
+      "term": "Graduatoria dei non eletti",
+      "category": "Elezioni",
+      "facts": [
+        "Dall'ultimo escluso",
+        "Subentro di diritto"
+      ],
+      "summary": "Ordine dei candidati non eletti (rimasti in gara per voti, poi esclusi in ordine inverso; esclusi i ritirati). In caso di dimissioni, decadenza o impedimento di un Consigliere, subentra di diritto il primo in graduatoria per il mandato residuo.",
+      "target": "el-a-16-5",
+      "secondaryTarget": "statuto-art-13",
+      "patterns": [
+        {
+          "p": "graduatoria\\s+dei\\s+non\\s+eletti"
+        }
+      ]
+    },
+    {
+      "id": "seggi-disponibili",
+      "term": "Numero di seggi disponibili",
+      "category": "Elezioni",
+      "facts": [
+        "> 6 candidati → 7 seggi",
+        "5–6 candidati → 5 seggi",
+        "< 5 → rinvio"
+      ],
+      "summary": "Si assegnano 7 seggi se i candidati validi alle 23:59 del 20/11 sono più di 6, oppure 5 seggi se sono 5 o 6. Con meno di 5 candidati validi l'Assemblea Elettiva viene sospesa e si riaprono le candidature fino a 14 giorni.",
+      "target": "el-a-17",
+      "secondaryTarget": "statuto-art-13",
+      "patterns": [
+        {
+          "p": "numero\\s+d(?:ei|i)\\s+seggi\\s+disponibili"
+        },
+        {
+          "p": "seggi\\s+disponibili"
+        }
+      ]
+    },
+    {
+      "id": "ricorsi-elettorali",
+      "term": "Ricorsi e Appello",
+      "category": "Elezioni",
+      "facts": [
+        "Elettorali ≤ 06/12 (15 gg)",
+        "Appello Probiviri ≤ 7 gg",
+        "Non sospende insed."
+      ],
+      "summary": "Contro l'elezione si ricorre alla Commissione Elettorale entro il 06/12/2026 (decisione entro 30 gg), con appello ai Probiviri entro 7 gg; i ricorsi su rifiuti candidature/ospiti vanno ai Probiviri entro 24h (max 20/11 ore 12:00). In RRI, ricorso ai Probiviri entro 10 gg.",
+      "target": "el-a-19",
+      "secondaryTarget": "rri-1-3-3",
+      "docTargets": {
+        "rri": "rri-1-3-3",
+        "default": "el-a-19"
+      },
+      "patterns": [
+        {
+          "p": "appello\\s+al\\s+Collegio\\s+dei\\s+Probiviri"
+        },
+        {
+          "p": "ricors[oi]"
+        }
+      ],
+      "skipSelf": true
+    },
+    {
+      "id": "allegato-tecnico",
+      "term": "Allegato B (Software di scrutinio)",
+      "category": "Elezioni",
+      "facts": [
+        "Script Python ufficiale",
+        "Eseguito in diretta"
+      ],
+      "summary": "Codice sorgente Python ufficiale dello scrutinio STV eseguito dalla Commissione Elettorale in diretta con condivisione schermo. In caso di discordanza tra software e norme, prevale sempre il Regolamento.",
+      "target": "el-b-1",
+      "secondaryTarget": "el-a-16-6",
+      "patterns": [
+        {
+          "p": "Allegato\\s+B(?:\\s*\\(Allegato\\s+tecnico\\))?"
+        }
+      ]
+    },
+    {
+      "id": "allegato-d",
+      "term": "Allegato D (Modulo candidatura)",
+      "category": "Elezioni",
+      "facts": [
+        "Pag. 21",
+        "Firma grafica obbligatoria"
+      ],
+      "summary": "Modulo ufficiale di candidatura al Consiglio Direttivo (con dichiarazione dei requisiti e fino a 2 preferenze di carica), da inviare firmato graficamente alla Commissione Elettorale entro il 18/11/2026.",
+      "target": "el-d",
+      "secondaryTarget": "el-a-2",
+      "patterns": [
+        {
+          "p": "Allegato\\s+D"
+        }
+      ]
+    },
+    {
+      "id": "allegato-e",
+      "term": "Allegato E (Modulo delega)",
+      "category": "Elezioni",
+      "facts": [
+        "Pag. 22",
+        "Entro 18/11/2026"
+      ],
+      "summary": "Modulo ufficiale di delega per l'Assemblea Elettiva, da compilare con firma grafica e inviare dal proprio account associativo polinetwork.org alla Commissione Elettorale (con Probiviri e delegato in CC) entro il 18/11.",
+      "target": "el-e",
+      "secondaryTarget": "el-a-18-1",
+      "patterns": [
+        {
+          "p": "Allegato\\s+E(?:\\s*\\([^)]+\\))?"
+        }
+      ]
+    },
+    {
+      "id": "refusi",
+      "term": "Correzione dei refusi",
+      "category": "Elezioni",
+      "facts": [
+        "Solo errori materiali",
+        "Fino al giorno prima"
+      ],
+      "summary": "Procedura che consente alla Commissione Elettorale (a maggioranza) di correggere errori materiali di ortografia, rimandi o numeri evidenti inviando nuovo PDF + elenco differenze fino al giorno prima del voto, senza cambiare il senso delle norme.",
+      "target": "el-a-21",
+      "secondaryTarget": "rri-1-3-3",
+      "patterns": [
+        {
+          "p": "refus[oi]"
+        }
+      ]
+    }
+  ]
+}
