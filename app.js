@@ -92,7 +92,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.5.2";
+  const APP_VERSION = "v4.5.3";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -2798,11 +2798,31 @@
 
     const elisionRe = /^((?:dell|all|dall|nell|sull|un|l|d)['’])(.+)$/i;
 
+    let currentSublist = null;
+
     for (const blk of sec.blocks) {
       const p = document.createElement("div");
       p.className = "cloze-para";
       const tokens = blk.text.split(/(\s+)/);
       let paraWordIdx = 0;
+
+      const appendGroupedToken = (leadText, node, trailText) => {
+        if (leadText || trailText) {
+          const group = document.createElement("span");
+          group.className = "cloze-token-group";
+          if (leadText) group.appendChild(document.createTextNode(leadText));
+          group.appendChild(node);
+          if (trailText) {
+            const tr = document.createElement("span");
+            tr.className = "cloze-trail";
+            tr.textContent = trailText;
+            group.appendChild(tr);
+          }
+          p.appendChild(group);
+        } else {
+          p.appendChild(node);
+        }
+      };
 
       for (const tok of tokens) {
         if (/^\s+$/.test(tok)) { p.appendChild(document.createTextNode(tok)); continue; }
@@ -2828,7 +2848,6 @@
           p.appendChild(document.createTextNode(tok));
           continue;
         }
-        if (lead) p.appendChild(document.createTextNode(lead));
 
         const isNumericToken = /^[€\d.,\/:%]+$/.test(core);
         const isShortWord = !isNumericToken && core.length <= 2;
@@ -2868,18 +2887,7 @@
             updateProgress();
           });
           items.push(entry);
-          if (trail) {
-            const group = document.createElement("span");
-            group.className = "cloze-token-group";
-            const tr = document.createElement("span");
-            tr.className = "cloze-trail";
-            tr.textContent = trail;
-            group.appendChild(btn);
-            group.appendChild(tr);
-            p.appendChild(group);
-          } else {
-            p.appendChild(btn);
-          }
+          appendGroupedToken(lead, btn, trail);
         } else {
           const wrap = document.createElement("span");
           wrap.className = "cloze-input-wrap";
@@ -2947,21 +2955,20 @@
           items.push(entry);
           wrap.appendChild(inp);
           wrap.appendChild(peek);
-          if (trail) {
-            const group = document.createElement("span");
-            group.className = "cloze-token-group";
-            const tr = document.createElement("span");
-            tr.className = "cloze-trail";
-            tr.textContent = trail;
-            group.appendChild(wrap);
-            group.appendChild(tr);
-            p.appendChild(group);
-          } else {
-            p.appendChild(wrap);
-          }
+          appendGroupedToken(lead, wrap, trail);
         }
       }
-      bodyEl.appendChild(p);
+      if (blk.type === "subitem") {
+        if (!currentSublist) {
+          currentSublist = document.createElement("div");
+          currentSublist.className = "prose-sublist";
+          bodyEl.appendChild(currentSublist);
+        }
+        currentSublist.appendChild(p);
+      } else {
+        currentSublist = null;
+        bodyEl.appendChild(p);
+      }
     }
 
     if (items.length === 0) {
@@ -3026,9 +3033,11 @@
   function renderPracticeCloze() {
     const sec = SECTION_MAP.get(practiceClozeSecId);
     if (!sec) return;
+    const lv = document.getElementById("clozeLevelSelect").value || "1";
+    const md = document.getElementById("clozeInputMode").value === "type" ? "Scrivi" : "Tocca";
     document.getElementById("pClozeCode").textContent = `${DOC_SHORT[sec.doc]} · ${sec.code}`;
     document.getElementById("pClozeTitle").textContent = sec.title;
-    document.getElementById("clozeQueueSummary").textContent = `${DOC_SHORT[sec.doc]} · ${sec.code}`;
+    document.getElementById("clozeQueueSummary").textContent = `Lv. ${lv} · ${md}`;
 
     const idx = CLOZEABLE_SECTIONS.findIndex(s => s.id === practiceClozeSecId);
     document.getElementById("btnPClozePrev").disabled = idx <= 0;
@@ -3841,8 +3850,12 @@
     const studied = STUDYABLE_SECTIONS.filter(s => (state.mastery[s.id] || 0) >= 2).length;
     const sm2Count = Object.keys(state.sm2).length;
     const bmCount = Object.keys(state.bookmarks).filter(k => state.bookmarks[k] && SECTION_MAP.has(k)).length;
-    document.getElementById("backupSummary").textContent =
-      `Sezioni: ${studied}/${STUDYABLE_SECTIONS.length} · Flashcard: ${sm2Count} · Salvati: ${bmCount} · Quiz: ${state.quizStats.total}`;
+    document.getElementById("backupSummary").innerHTML = `
+      <span class="backup-stat-item">Sezioni: <strong>${studied}/${STUDYABLE_SECTIONS.length}</strong></span>
+      <span class="backup-stat-item">Flashcard: <strong>${sm2Count}</strong></span>
+      <span class="backup-stat-item">Salvati: <strong>${bmCount}</strong></span>
+      <span class="backup-stat-item">Quiz: <strong>${state.quizStats.total}</strong></span>
+    `;
   }
 
   // ==================== EVENT WIRING ====================

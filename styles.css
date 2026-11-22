@@ -632,9 +632,11 @@ select.ios-field option { background: var(--bg-surface); color: var(--ink-primar
 .toc-doc-header {
   position: sticky; top: 0; z-index: 2;
   background: var(--bg-canvas);
+  border-bottom: 0.5px solid var(--sep);
+  margin-bottom: 0.25rem;
   display: flex; justify-content: space-between; align-items: center;
   font-size: 0.71rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
-  color: var(--ink-tertiary); padding: 0.6rem 0.45rem 0.35rem;
+  color: var(--ink-tertiary); padding: 0.58rem 0.5rem 0.45rem;
 }
 .toc-doc-header:first-child { padding-top: 0.5rem; }
 .toc-item {
@@ -881,20 +883,20 @@ select.ios-field option { background: var(--bg-surface); color: var(--ink-primar
   .pdf-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-float); }
 }
 .pdf-card-top {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 0.6rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 0.65rem;
   padding: 0.7rem 0.95rem; background: var(--bg-subtle); border-bottom: 0.5px solid var(--sep);
 }
 @media (min-width: 641px) {
-  #csContent .pdf-card-top { min-height: 4.85rem; }
+  #csContent .pdf-card-top { min-height: 4.85rem; align-items: flex-start; }
 }
 .pdf-card-cap {
   display: block; flex: 1; min-width: 0;
   font-size: 0.81rem; font-weight: 600; line-height: 1.35; color: var(--ink-primary);
 }
 .pdf-zoom-pill {
-  display: inline-flex; align-items: center; gap: 0.28rem; flex-shrink: 0;
-  font-size: 0.72rem; font-weight: 600; color: var(--accent-soft-text);
-  background: var(--accent-soft); padding: 0.18rem 0.52rem; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 0.3rem; flex-shrink: 0;
+  font-size: 0.74rem; font-weight: 600; color: var(--accent-soft-text);
+  background: var(--accent-soft); padding: 0.32rem 0.65rem; min-height: 30px; border-radius: 999px;
   white-space: nowrap;
 }
 .pdf-card img { width: 100%; display: block; background: #fff; }
@@ -1391,9 +1393,12 @@ table.ref-table tr.tl-election td { background: var(--orange-soft); }
 .backup-actions-row .backup-reset-btn { margin-left: auto; }
 
 .backup-summary {
-  background: var(--bg-subtle); border-radius: var(--r-sm); padding: 0.75rem 0.9rem;
+  background: var(--bg-subtle); border-radius: var(--r-sm); padding: 0.72rem 0.9rem;
   font-size: 0.82rem; color: var(--ink-secondary); font-variant-numeric: tabular-nums;
+  display: flex; flex-wrap: wrap; gap: 0.35rem 0.95rem;
 }
+.backup-stat-item { white-space: nowrap; }
+.backup-stat-item strong { color: var(--ink-primary); font-weight: 600; }
 .confirm-box {
   background: var(--red-soft); border-radius: var(--r-md); padding: 0.9rem 1rem;
   display: flex; flex-direction: column; gap: 0.65rem; font-size: 0.85rem;
@@ -1798,6 +1803,9 @@ body.consent-open .reader-inner { padding-bottom: 6.5rem; }
   table.ref-table td.col-source {
     text-align: left; width: 100%; padding-right: 0;
     padding-top: 0.55rem; margin-top: 0.45rem; border-top: 0.5px solid var(--sep);
+  }
+  .ref-note-src {
+    padding-top: 0.55rem; margin-top: 0.5rem; border-top: 0.5px solid var(--sep);
   }
   table.ref-table td::before {
     content: attr(data-label); display: block;
