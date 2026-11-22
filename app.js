@@ -102,7 +102,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.7.0";
+  const APP_VERSION = "v4.7.1";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -2017,11 +2017,16 @@
 
   function switchView(viewName, opts = {}) {
     if (!["overview", "reader", "practice", "reference"].includes(viewName)) viewName = "overview";
+    const prevView = currentView;
     if (currentView === "reader" && viewName !== "reader" && !opts.keepReturn) returnStack = [];
     currentView = viewName;
     document.body.dataset.view = viewName;
     closeFontPopover();
     closeTermCard();
+    if (prevView !== viewName) {
+      const tr = document.getElementById("toastRegion");
+      if (tr) tr.innerHTML = "";
+    }
 
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(`view-${viewName}`)?.classList.add("active");
@@ -2046,6 +2051,7 @@
     }
     if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: "instant" });
     if (viewName === "practice" && practiceMode === "quiz" && qzAnswered) ensureQuizDockVisible(true);
+    if (viewName === "practice" && practiceMode === "flashcards" && fcFlipped) ensureFlashcardDockVisible(true);
   }
 
   function switchPracticeMode(mode, opts = {}) {
@@ -2069,6 +2075,7 @@
     }
     if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: "instant" });
     if (mode === "quiz" && qzAnswered) ensureQuizDockVisible(true);
+    if (mode === "flashcards" && fcFlipped) ensureFlashcardDockVisible(true);
   }
 
   function applyRouteFromHash() {
@@ -2346,9 +2353,12 @@
     });
     document.getElementById("readerReadPane").classList.toggle("hidden", readerMode !== "read");
     document.getElementById("readerClozePane").classList.toggle("hidden", readerMode !== "cloze");
-    const hideNumsToggle = readerMode !== "read" || NON_CLOZE_SECTIONS.has(readerSecId) || !SECTION_MAP.get(readerSecId)?.text?.trim();
+    const curSec = SECTION_MAP.get(readerSecId);
+    const hasProse = !!(curSec?.text?.trim() && !(curSec.images && curSec.images.length > 0));
+    const hideNumsToggle = readerMode !== "read" || NON_CLOZE_SECTIONS.has(readerSecId) || !hasProse;
+    const hideTermsToggle = readerMode !== "read" || !hasProse || !GLOSSARY.length;
     document.getElementById("btnToggleNums").classList.toggle("hidden", hideNumsToggle);
-    document.getElementById("btnToggleTerms")?.classList.toggle("hidden", hideNumsToggle || !GLOSSARY.length);
+    document.getElementById("btnToggleTerms")?.classList.toggle("hidden", hideTermsToggle);
     if (readerMode !== "read") closeTermCard();
     document.getElementById("btnSwitchInlineCloze").textContent =
       readerMode === "read" ? "Allenati in Cloze" : "Torna alla lettura";
@@ -2596,26 +2606,33 @@
     if (vw <= 640 || !triggerEl || !triggerEl.isConnected) {
       card.style.left = "";
       card.style.top = "";
+      card.style.maxHeight = "";
       return;
     }
+    card.style.maxHeight = "";
     const r = triggerEl.getBoundingClientRect();
     const cardW = card.offsetWidth || Math.min(392, vw - 32);
-    const cardH = card.offsetHeight || 220;
+    const naturalH = card.offsetHeight || 220;
     const minTop = vw <= 900 ? 64 : 118;
     const maxBot = vw <= 900 ? vh - 96 : vh - 16;
+    const gap = 10;
 
     let left = r.left + (r.width / 2) - (cardW / 2);
     left = Math.max(16, Math.min(left, vw - cardW - 16));
 
-    const spaceBelow = maxBot - (r.bottom + 10);
-    const spaceAbove = (r.top - 10) - minTop;
-    let top;
-    if (spaceBelow >= cardH || spaceBelow >= spaceAbove) {
-      top = Math.min(r.bottom + 10, maxBot - cardH);
-    } else {
-      top = Math.max(minTop, r.top - cardH - 10);
+    const spaceBelow = maxBot - (r.bottom + gap);
+    const spaceAbove = (r.top - gap) - minTop;
+    const useBelow = spaceBelow >= naturalH || spaceBelow >= spaceAbove;
+    const avail = Math.max(150, Math.floor(useBelow ? spaceBelow : spaceAbove));
+
+    let effectiveH = naturalH;
+    if (naturalH > avail) {
+      card.style.maxHeight = `${avail}px`;
+      effectiveH = avail;
     }
-    top = Math.max(minTop, Math.min(top, maxBot - Math.min(cardH, maxBot - minTop)));
+
+    let top = useBelow ? (r.bottom + gap) : (r.top - gap - effectiveH);
+    top = Math.max(minTop, Math.min(top, maxBot - effectiveH));
 
     card.style.left = `${Math.round(left)}px`;
     card.style.top = `${Math.round(top)}px`;
@@ -2626,7 +2643,9 @@
     const backdrop = document.getElementById("termBackdrop");
     if (!card || card.classList.contains("hidden")) return;
     card.classList.add("hidden");
+    card.style.maxHeight = "";
     backdrop?.classList.add("hidden");
+    document.body.classList.remove("term-sheet-open");
     const prev = activeTermTrigger;
     if (prev) {
       prev.setAttribute("aria-expanded", "false");
@@ -2695,7 +2714,7 @@
     saveState();
     updateDueBadges();
     syncTermReviewBtn(termCardActiveId);
-    showToast(`«${entry.term}» aggiunta al ripasso flashcard`);
+    showToast(`In ripasso: ${entry.term}`);
   }
 
   function openTermCard(termId, triggerEl) {
@@ -2768,6 +2787,7 @@
 
     card.classList.remove("hidden");
     document.getElementById("termBackdrop")?.classList.remove("hidden");
+    document.body.classList.add("term-sheet-open");
     positionTermCard(triggerEl);
   }
 
@@ -3643,12 +3663,26 @@
     revealWrap.classList.remove("hidden");
   }
 
+  function ensureFlashcardDockVisible(instant = false) {
+    const dock = document.getElementById("fcThumbDock");
+    if (!dock || window.innerWidth > 900) return;
+    requestAnimationFrame(() => {
+      const navWrap = document.getElementById("mobileNavWrap");
+      const dockRect = dock.getBoundingClientRect();
+      const navTop = navWrap ? navWrap.getBoundingClientRect().top : window.innerHeight;
+      if (dockRect.bottom > navTop - 8) {
+        dock.scrollIntoView({ behavior: instant ? "instant" : "smooth", block: "nearest" });
+      }
+    });
+  }
+
   function flipFlashcard() {
     if (!fcQueue.length || fcFlipped) return;
     fcFlipped = true;
     document.getElementById("fcBack").classList.remove("hidden");
     document.getElementById("fcRatingWrap").classList.remove("hidden");
     document.getElementById("fcRevealWrap").classList.add("hidden");
+    ensureFlashcardDockVisible(false);
   }
 
   function rateFlashcard(quality) {

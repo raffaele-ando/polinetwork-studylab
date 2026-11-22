@@ -483,7 +483,7 @@
       "secondaryTarget": "el-a-9",
       "patterns": [
         {
-          "p": "volontari[oa]?"
+          "p": "volontari[o]?"
         }
       ],
       "skipSelf": true
@@ -1465,7 +1465,8 @@
       "secondaryTarget": "el-a-16-6",
       "patterns": [
         {
-          "p": "Allegato\\s+B(?:\\s*\\(Allegato\\s+tecnico\\))?"
+          "p": "[Aa]llegato\\s+B(?:\\s*\\([Aa]llegato\\s+tecnico\\))?",
+          "cs": true
         }
       ]
     },
@@ -1482,7 +1483,8 @@
       "secondaryTarget": "el-a-2",
       "patterns": [
         {
-          "p": "Allegato\\s+D"
+          "p": "[Aa]llegato\\s+D",
+          "cs": true
         }
       ]
     },
@@ -1499,7 +1501,8 @@
       "secondaryTarget": "el-a-18-1",
       "patterns": [
         {
-          "p": "Allegato\\s+E(?:\\s*\\([^)]+\\))?"
+          "p": "[Aa]llegato\\s+E(?:\\s*\\([^)]+\\))?",
+          "cs": true
         }
       ]
     },
