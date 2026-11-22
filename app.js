@@ -43,6 +43,7 @@
   let csTab = "timeline";
   let lbGallery = [];
   let lbIdx = 0;
+  let lbZoom = 1;
 
   let gsResults = [];
   let gsActiveIdx = -1;
@@ -91,7 +92,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.5.0";
+  const APP_VERSION = "v4.5.1";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -779,6 +780,8 @@
     [
       { ic: "cloudBtnIcon", av: "cloudBtnAvatar", dot: "cloudStatusDot" },
       { ic: "cloudBtnIconMobile", av: "cloudBtnAvatarMobile", dot: "cloudStatusDotMobile" },
+      { ic: "cloudBtnIconPractice", av: "cloudBtnAvatarPractice", dot: "cloudStatusDotPractice" },
+      { ic: "cloudBtnIconRef", av: "cloudBtnAvatarRef", dot: "cloudStatusDotRef" },
     ].forEach(({ ic, av, dot }) => {
       const icEl = document.getElementById(ic);
       const avEl = document.getElementById(av);
@@ -1762,7 +1765,9 @@
     const sub = document.getElementById("pwaModalSubtitle");
     const actions = document.getElementById("pwaModalActions");
     const btnModal = document.getElementById("btnModalInstallApp");
-    const homeBtns = document.querySelectorAll(".pwa-install-trigger");
+    const guide = document.getElementById("pwaInstallGuide");
+    const homeCard = document.getElementById("pwaHomeCard");
+    const guideVisible = !!(guide && !guide.classList.contains("hidden"));
 
     if (standalone) {
       if (badge) {
@@ -1771,17 +1776,27 @@
       }
       if (sub) sub.textContent = "App installata e attiva in modalità standalone offline.";
       if (actions) actions.classList.add("hidden");
-      homeBtns.forEach(b => b.classList.add("hidden"));
+      if (guide) guide.classList.add("hidden");
+      if (homeCard) homeCard.classList.add("hidden");
     } else {
       if (badge) {
         badge.textContent = swStatus === "attivo" ? "● Offline attiva" : "● Web App pronta";
         badge.className = "cloud-pill-status online";
       }
-      if (actions) actions.classList.remove("hidden");
+      if (homeCard) homeCard.classList.remove("hidden");
       if (btnModal) {
-        btnModal.textContent = deferredInstallPrompt ? "Installa app (1 tap)" : "Come installare l'app";
+        if (deferredInstallPrompt) {
+          btnModal.textContent = "Installa app (1 tap)";
+          btnModal.className = "btn-apple primary sm full";
+        } else {
+          btnModal.textContent = "Come installare l'app";
+          btnModal.className = "btn-apple soft sm full";
+        }
       }
-      homeBtns.forEach(b => b.classList.remove("hidden"));
+      if (actions) {
+        // Hide redundant manual CTA once instructions are already expanded (keep visible for native 1-tap prompt)
+        actions.classList.toggle("hidden", !deferredInstallPrompt && guideVisible);
+      }
     }
   }
 
@@ -1809,6 +1824,8 @@
       renderBackupSummary();
       updateCloudUI();
       syncConsentLabel();
+      const diagDet = document.getElementById("diagConsoleDetails");
+      if (diagDet) diagDet.open = false;
       openModal("backupModal");
       refreshDiagConsoleUI();
     }
@@ -1821,6 +1838,7 @@
         guide.innerHTML = "<strong>Per installare l'app:</strong> apri il menu del browser (<strong>⋮</strong> in alto a destra o l'icona nella barra degli indirizzi) e seleziona <strong>Installa app</strong> / <strong>Aggiungi a schermata Home</strong>.";
       }
       guide.classList.remove("hidden");
+      updatePwaInstallUI();
       guide.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }
@@ -1842,8 +1860,7 @@
     });
 
     document.getElementById("btnModalInstallApp")?.addEventListener("click", () => handlePwaInstallClick(false));
-    document.getElementById("btnHomeInstallOut")?.addEventListener("click", () => handlePwaInstallClick(true));
-    document.getElementById("btnHomeInstallIn")?.addEventListener("click", () => handlePwaInstallClick(true));
+    document.getElementById("btnHomeInstallApp")?.addEventListener("click", () => handlePwaInstallClick(true));
 
     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
       navigator.serviceWorker.register("sw.js").then(reg => {
@@ -1906,7 +1923,7 @@
     const svg = theme === "dark"
       ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>'
       : '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
-    ["iconTheme", "iconThemeMobile", "iconThemeRef"].forEach(id => {
+    ["iconTheme", "iconThemeMobile", "iconThemePractice", "iconThemeRef"].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = svg;
     });
@@ -1974,6 +1991,7 @@
     if (viewName === "overview") renderOverview();
     else if (viewName === "reader") syncReaderSidebarDots();
     else if (viewName === "practice") populatePracticeClozeSecSelect(document.getElementById("clozeDocSelect").value);
+    else if (viewName === "reference") requestAnimationFrame(syncRefRailFades);
 
     if (!opts.skipHash) {
       if (viewName === "reader" && readerSecId) setHash(`reader/${readerSecId}${readerMode === "cloze" ? "/cloze" : ""}`);
@@ -2359,11 +2377,12 @@
       btn.type = "button";
       btn.dataset.secId = s.id;
       btn.className = `toc-item lvl-${s.level} ${isContainer ? "is-group" : ""} ${s.id === readerSecId ? "active" : ""}`;
+      const bmSvg = '<span class="toc-star" aria-label="Salvato"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></span>';
       btn.innerHTML = `
         <span class="toc-dot ${isContainer ? "" : `s${m}`}" aria-hidden="true"></span>
         <span class="toc-code">${esc(s.num || s.code)}</span>
         <span class="toc-title" title="${esc(s.title)}">${esc(s.title)}</span>
-        ${state.bookmarks[s.id] ? '<span class="toc-star" aria-label="Salvato">★</span>' : ""}
+        ${state.bookmarks[s.id] ? bmSvg : ""}
       `;
       btn.addEventListener("click", () => {
         returnStack = [];
@@ -2392,7 +2411,7 @@
         star = document.createElement("span");
         star.className = "toc-star";
         star.setAttribute("aria-label", "Salvato");
-        star.textContent = "★";
+        star.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
         el.appendChild(star);
       } else if (!isBm && star) {
         star.remove();
@@ -2409,7 +2428,11 @@
     document.getElementById("btnOpenTocDrawer").setAttribute("aria-expanded", "true");
     document.body.classList.add("modal-open");
     activeTrapContainer = sidebar;
-    document.getElementById("readerSearch").focus();
+    requestAnimationFrame(() => {
+      const activeItem = document.querySelector("#readerTocList .toc-item.active");
+      if (activeItem) activeItem.scrollIntoView({ block: "center", behavior: "instant" });
+      document.getElementById("readerSearch").focus({ preventScroll: true });
+    });
   }
 
   function closeTocDrawer() {
@@ -2513,6 +2536,10 @@
     mSel.value = mVal;
     mSel.dataset.mastery = mVal;
 
+    const readerInner = document.querySelector(".reader-inner");
+    if (readerInner) readerInner.classList.toggle("wide-code", sec.id === "el-b-1");
+
+    const isPdfFormAnnex = ["el-d", "el-e", "el-f"].includes(sec.id);
     const bodyEl = document.getElementById("readerArtBody");
     bodyEl.innerHTML = "";
     if (!isStudyable) {
@@ -2526,10 +2553,43 @@
         bodyEl.appendChild(btn);
       }
     } else if (sec.id === "el-b-1") {
-      const pre = document.createElement("div");
-      pre.className = "prose-block code-block";
-      pre.textContent = sec.text;
-      bodyEl.appendChild(pre);
+      const blocks = Array.isArray(sec.blocks) && sec.blocks.length >= 2 ? sec.blocks : [{ text: "" }, { text: sec.text }];
+      if (blocks[0]?.text?.trim()) {
+        const introDiv = document.createElement("div");
+        introDiv.className = "prose-block paragraph";
+        introDiv.innerHTML = formatLegalText(blocks[0].text, sec.doc);
+        bodyEl.appendChild(introDiv);
+      }
+      const codeStr = blocks.slice(1).map(b => b.text).join("\n\n") || sec.text;
+      const card = document.createElement("div");
+      card.className = "code-card";
+      card.innerHTML = `
+        <div class="code-card-head">
+          <span class="code-card-title">codice/stv_doppio_spoglio.py</span>
+          <div class="code-card-actions">
+            <button type="button" class="btn-apple soft sm" data-code-wrap aria-pressed="true">A capo: ON</button>
+            <button type="button" class="btn-apple soft sm" data-code-copy>Copia</button>
+          </div>
+        </div>
+        <pre class="prose-block code-block"></pre>
+      `;
+      const preEl = card.querySelector("pre");
+      preEl.textContent = codeStr;
+      const wrapBtn = card.querySelector("[data-code-wrap]");
+      wrapBtn.addEventListener("click", () => {
+        const nowNoWrap = preEl.classList.toggle("no-wrap");
+        wrapBtn.setAttribute("aria-pressed", nowNoWrap ? "false" : "true");
+        wrapBtn.textContent = nowNoWrap ? "A capo: OFF" : "A capo: ON";
+      });
+      card.querySelector("[data-code-copy]").addEventListener("click", () => {
+        navigator.clipboard?.writeText(codeStr).then(() => showToast("Codice sorgente copiato")).catch(() => showToast("Impossibile copiare"));
+      });
+      bodyEl.appendChild(card);
+    } else if (isPdfFormAnnex) {
+      const note = document.createElement("p");
+      note.className = "form-intro-note";
+      note.textContent = "Modulo ufficiale riprodotto integralmente nella tavola PDF qui sotto. Tocca l'anteprima per aprire e ingrandire i dettagli.";
+      bodyEl.appendChild(note);
     } else {
       let currentSublist = null;
       for (const blk of sec.blocks) {
@@ -2561,6 +2621,7 @@
     const imgWrap = document.getElementById("readerArtImages");
     imgWrap.innerHTML = "";
     const safeImgs = (sec.images || []).filter(isSafeAssetSrc);
+    const zoomPillHtml = `<span class="pdf-zoom-pill" aria-hidden="true"><svg class="ic xs" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>Ingrandisci</span>`;
     if (safeImgs.length) {
       const gallery = safeImgs.map(src => {
         const pm = src.match(/_p(\d+)\.png$/);
@@ -2573,10 +2634,28 @@
         const card = document.createElement("button");
         card.type = "button";
         card.className = "pdf-card";
-        card.innerHTML = `<img src="${esc(item.src)}" alt="Schema PDF ${esc(item.cap)}" loading="lazy" /><span class="pdf-card-cap">${esc(item.cap)}</span>`;
+        card.innerHTML = `<span class="pdf-card-top"><span class="pdf-card-cap">${esc(item.cap)}</span>${zoomPillHtml}</span><img src="${esc(item.src)}" alt="Schema PDF ${esc(item.cap)}" loading="lazy" />`;
         card.addEventListener("click", () => openLightbox(gallery, i));
         imgWrap.appendChild(card);
       });
+    }
+    if (isPdfFormAnnex && sec.text && sec.text.trim()) {
+      const det = document.createElement("details");
+      det.className = "apple-disclosure form-transcript";
+      det.style.gridColumn = "1 / -1";
+      const formattedForm = sec.text
+        .replace(/\s+(Oggetto:)/g, "\n\n$1")
+        .replace(/\s+(Io sottoscritto\/a)/g, "\n\n$1")
+        .replace(/\s+(DELEGO|CHIEDO|DICHIARO|CANDIDATURA)\b/g, "\n\n$1")
+        .replace(/\s+(La presente|Accetto|Milano\s+Firma)/g, "\n\n$1");
+      det.innerHTML = `
+        <summary>
+          <span>Trascrizione testuale del modulo (testo integrale)</span>
+          <svg class="ic sm chev-down" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div class="form-transcript-body">${formatLegalText(formattedForm, sec.doc)}</div>
+      `;
+      imgWrap.appendChild(det);
     }
 
     if (readerMode === "cloze" && CLOZEABLE_SECTIONS.some(s => s.id === sec.id)) {
@@ -2661,10 +2740,10 @@
       const done = recalled + revealed;
       if (mode === "type") {
         const revWord = revealed === 1 ? "rivelata" : "rivelate";
-        counterEl.textContent = revealed > 0 ? `${recalled}/${total} · ${revealed} ${revWord}` : `${recalled} / ${total}`;
+        counterEl.textContent = revealed > 0 ? `${recalled} / ${total} · ${revealed} ${revWord}` : `${recalled} / ${total}`;
       } else {
         const shownWord = revealed === 1 ? "mostrata" : "mostrate";
-        counterEl.textContent = revealed > 0 ? `${recalled}/${total} · ${revealed} ${shownWord}` : `${recalled} / ${total}`;
+        counterEl.textContent = revealed > 0 ? `${recalled} / ${total} · ${revealed} ${shownWord}` : `${recalled} / ${total}`;
       }
       barEl.style.width = `${(total > 0 ? (recalled / total) * 100 : 0).toFixed(2)}%`;
       if (barRevEl) barRevEl.style.width = `${(total > 0 ? (revealed / total) * 100 : 0).toFixed(2)}%`;
@@ -2786,8 +2865,18 @@
             updateProgress();
           });
           items.push(entry);
-          p.appendChild(btn);
-          if (trail) p.appendChild(document.createTextNode(trail));
+          if (trail) {
+            const group = document.createElement("span");
+            group.className = "cloze-token-group";
+            const tr = document.createElement("span");
+            tr.className = "cloze-trail";
+            tr.textContent = trail;
+            group.appendChild(btn);
+            group.appendChild(tr);
+            p.appendChild(group);
+          } else {
+            p.appendChild(btn);
+          }
         } else {
           const wrap = document.createElement("span");
           wrap.className = "cloze-input-wrap";
@@ -3372,6 +3461,18 @@
     if (inp && CS_PLACEHOLDERS[csTab]) inp.placeholder = CS_PLACEHOLDERS[csTab];
   }
 
+  function syncRefRailFades() {
+    const rail = document.getElementById("csTabs");
+    if (!rail) return;
+    const maxScroll = rail.scrollWidth - rail.clientWidth;
+    if (maxScroll <= 4) {
+      rail.classList.remove("fade-left", "fade-right");
+      return;
+    }
+    rail.classList.toggle("fade-left", rail.scrollLeft > 4);
+    rail.classList.toggle("fade-right", rail.scrollLeft < maxScroll - 4);
+  }
+
   function renderReference() {
     const wrap = document.getElementById("csContent");
     const inp = document.getElementById("csSearch");
@@ -3436,7 +3537,14 @@
     } else if (csTab === "organs") {
       const rows = cs.organs.filter(r => matchFields([r.name, r.composition, r.term, r.powers, formatSourceCitation(r.ref)]));
       wrap.innerHTML = rows.length ? `
-        <div class="ref-table-wrap"><table class="ref-table">
+        <div class="ref-table-wrap"><table class="ref-table ref-table-organs">
+          <colgroup>
+            <col class="col-org-name" />
+            <col class="col-org-comp" />
+            <col class="col-org-term" />
+            <col class="col-org-pow" />
+            <col class="col-org-src" />
+          </colgroup>
           <thead><tr><th>Organo</th><th>Composizione</th><th>Durata</th><th>Poteri</th><th class="col-source">Fonte</th></tr></thead>
           <tbody>
             ${rows.map(r => `<tr>
@@ -3463,13 +3571,14 @@
         </table></div>` : `<p class="muted">Nessun termine trovato.</p>`;
     } else if (csTab === "hierarchy") {
       wrap.innerHTML = `
+        <h2 class="ref-subhead">Gerarchia delle fonti normative</h2>
         <div class="ref-table-wrap"><table class="ref-table">
           <thead><tr><th class="col-rank">Grado</th><th>Fonte</th><th>Prevalenza e note</th></tr></thead>
           <tbody>
             ${cs.hierarchy.map(r => `<tr>
               <td class="col-rank" data-label="Grado"><span class="num-hl">#${esc(r.rank)}</span></td>
               <td data-label="Fonte"><strong>${esc(r.source)}</strong></td>
-              <td data-label="Note">${esc(r.note)} ${r.ref ? `<button type="button" class="text-action" data-ref-jump="${esc(r.ref)}">${esc(formatSourceCitation(r.ref))} ›</button>` : ""}</td>
+              <td data-label="Note"><span>${esc(r.note)}</span>${r.ref ? `<div class="ref-note-src"><button type="button" class="text-action" data-ref-jump="${esc(r.ref)}">${esc(formatSourceCitation(r.ref))} ›</button></div>` : ""}</td>
             </tr>`).join("")}
           </tbody>
         </table></div>
@@ -3485,14 +3594,15 @@
         </div>`;
     } else if (csTab === "diagrams") {
       const elDoc = CORPUS.documents.find(d => d.id === "elettorale");
+      const zoomPillHtml = `<span class="pdf-zoom-pill" aria-hidden="true"><svg class="ic xs" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>Ingrandisci</span>`;
       const entries = Object.entries(elDoc?.visualPagesRendered || {})
         .filter(([, src]) => isSafeAssetSrc(src))
         .map(([p, src]) => ({ p, src, cap: `${DIAGRAM_LABELS[p] || `Pagina ${p}`} (Pag. ${p})` }))
         .filter(item => matchFields([item.cap]));
       wrap.innerHTML = entries.length ? `<div class="pdf-gallery">${entries.map((it, i) => `
         <button type="button" class="pdf-card" data-lb-idx="${i}">
+          <span class="pdf-card-top"><span class="pdf-card-cap">${esc(it.cap)}</span>${zoomPillHtml}</span>
           <img src="${esc(it.src)}" alt="${esc(it.cap)}" loading="lazy" />
-          <span class="pdf-card-cap">${esc(it.cap)}</span>
         </button>
       `).join("")}</div>` : `<p class="muted">Nessuno schema trovato.</p>`;
       wrap.querySelectorAll("[data-lb-idx]").forEach(el => {
@@ -3551,6 +3661,18 @@
     }
   }
 
+  function applyLightboxZoom(nextZoom) {
+    lbZoom = Math.max(1, Math.min(2.5, Math.round(nextZoom * 100) / 100));
+    const imgEl = document.getElementById("lightboxImg");
+    const valEl = document.getElementById("lbZoomVal");
+    const btnOut = document.getElementById("btnLbZoomOut");
+    const btnIn = document.getElementById("btnLbZoomIn");
+    if (imgEl) imgEl.style.width = `${Math.round(lbZoom * 100)}%`;
+    if (valEl) valEl.textContent = `${Math.round(lbZoom * 100)}%`;
+    if (btnOut) btnOut.disabled = lbZoom <= 1;
+    if (btnIn) btnIn.disabled = lbZoom >= 2.5;
+  }
+
   function openLightbox(gallery, idx = 0) {
     lbGallery = gallery;
     lbIdx = idx;
@@ -3563,11 +3685,19 @@
     if (!lbGallery.length) return;
     const item = lbGallery[lbIdx];
     const imgEl = document.getElementById("lightboxImg");
+    const stage = document.getElementById("lightboxStage");
     if (isSafeAssetSrc(item.src)) imgEl.src = item.src;
     imgEl.alt = item.cap || "Schema ufficiale PDF";
-    document.getElementById("lightboxCap").textContent = `${item.cap} (${lbIdx + 1}/${lbGallery.length})`;
-    document.getElementById("btnLbPrev").disabled = lbGallery.length <= 1;
-    document.getElementById("btnLbNext").disabled = lbGallery.length <= 1;
+    applyLightboxZoom(1);
+    if (stage) { stage.scrollTop = 0; stage.scrollLeft = 0; }
+    const isSingle = lbGallery.length <= 1;
+    document.getElementById("lightboxCap").textContent = isSingle ? item.cap : `${item.cap} (${lbIdx + 1}/${lbGallery.length})`;
+    const prevBtn = document.getElementById("btnLbPrev");
+    const nextBtn = document.getElementById("btnLbNext");
+    prevBtn.classList.toggle("hidden", isSingle);
+    nextBtn.classList.toggle("hidden", isSingle);
+    prevBtn.disabled = isSingle;
+    nextBtn.disabled = isSingle;
   }
 
   function sanitizeSnippetText(text) {
@@ -4092,6 +4222,9 @@
     });
 
     // Reference
+    const csTabsRail = document.getElementById("csTabs");
+    csTabsRail?.addEventListener("scroll", syncRefRailFades, { passive: true });
+    window.addEventListener("resize", syncRefRailFades, { passive: true });
     document.querySelectorAll("#csTabs .ref-pill").forEach(t => {
       t.addEventListener("click", () => {
         csTab = t.dataset.cs;
@@ -4099,6 +4232,8 @@
         renderReference();
         setHash(`reference/${csTab}`);
         window.scrollTo({ top: 0, behavior: "instant" });
+        t.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+        setTimeout(syncRefRailFades, 180);
       });
     });
     document.getElementById("csSearch").addEventListener("input", debounce(renderReference, 110));
@@ -4152,11 +4287,15 @@
       renderBackupSummary();
       updateCloudUI();
       syncConsentLabel();
+      document.getElementById("pwaInstallGuide")?.classList.add("hidden");
+      updatePwaInstallUI();
+      const diagDet = document.getElementById("diagConsoleDetails");
+      if (diagDet) diagDet.open = !!scrollToConsole;
       openModal("backupModal");
       refreshDiagConsoleUI();
       if (scrollToConsole) {
         setTimeout(() => {
-          document.getElementById("diagConsoleSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          document.getElementById("diagConsoleDetails")?.scrollIntoView({ behavior: "smooth", block: "start" });
           document.getElementById("btnDiagCopyAll")?.focus();
         }, 60);
       } else {
@@ -4165,8 +4304,9 @@
       }
     };
     document.getElementById("btnBackup").addEventListener("click", () => openBackupModalWithDiag(false));
-    document.getElementById("btnHomeOpenLogOut")?.addEventListener("click", () => openBackupModalWithDiag(true));
-    document.getElementById("btnHomeOpenLogIn")?.addEventListener("click", () => openBackupModalWithDiag(true));
+    document.getElementById("diagConsoleDetails")?.addEventListener("toggle", e => {
+      if (e.currentTarget.open) refreshDiagConsoleUI();
+    });
     document.getElementById("btnDiagTestCloud")?.addEventListener("click", () => runFullCloudAndAppDiagnostic());
     document.getElementById("btnDiagCopyAll")?.addEventListener("click", () => copyDiagnosticReportToClipboard());
     document.getElementById("btnDiagClear")?.addEventListener("click", () => {
@@ -4261,6 +4401,8 @@
     // Lightbox
     document.getElementById("closeLightbox").addEventListener("click", closeAllModals);
     document.getElementById("lightboxModal").addEventListener("click", e => { if (e.target.id === "lightboxModal") closeAllModals(); });
+    document.getElementById("btnLbZoomIn")?.addEventListener("click", () => applyLightboxZoom(lbZoom + 0.5));
+    document.getElementById("btnLbZoomOut")?.addEventListener("click", () => applyLightboxZoom(lbZoom - 0.5));
     document.getElementById("btnLbPrev").addEventListener("click", () => {
       if (lbGallery.length > 1) { lbIdx = (lbIdx - 1 + lbGallery.length) % lbGallery.length; updateLightbox(); }
     });
