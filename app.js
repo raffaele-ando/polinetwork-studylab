@@ -92,7 +92,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.5.1";
+  const APP_VERSION = "v4.5.2";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -1572,7 +1572,7 @@
       .replace(/\s*->\s*/g, "\u00A0→ ")
       .replace(/\s*→\s*/g, "\u00A0→ ")
       .replace(/([≥≤><])\s*(\d)/g, "$1\u00A0$2")
-      .replace(/\([^)]{1,28}\)/g, m => m.replace(/ /g, "\u00A0"));
+      .replace(/\([^)]{1,14}\)/g, m => m.replace(/ /g, "\u00A0"));
   }
 
   function formatArrows(str) {
@@ -2000,6 +2000,7 @@
       else setHash("overview");
     }
     if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: "instant" });
+    if (viewName === "practice" && practiceMode === "quiz" && qzAnswered) ensureQuizDockVisible(true);
   }
 
   function switchPracticeMode(mode, opts = {}) {
@@ -2022,6 +2023,7 @@
       setHash(`practice/${practiceMode}${practiceMode === "cloze" && practiceClozeSecId ? `/${practiceClozeSecId}` : ""}`);
     }
     if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: "instant" });
+    if (mode === "quiz" && qzAnswered) ensureQuizDockVisible(true);
   }
 
   function applyRouteFromHash() {
@@ -2295,7 +2297,7 @@
     });
     document.getElementById("readerReadPane").classList.toggle("hidden", readerMode !== "read");
     document.getElementById("readerClozePane").classList.toggle("hidden", readerMode !== "cloze");
-    const hideNumsToggle = readerMode !== "read" || readerSecId === "el-b-1" || !SECTION_MAP.get(readerSecId)?.text?.trim();
+    const hideNumsToggle = readerMode !== "read" || NON_CLOZE_SECTIONS.has(readerSecId) || !SECTION_MAP.get(readerSecId)?.text?.trim();
     document.getElementById("btnToggleNums").classList.toggle("hidden", hideNumsToggle);
     document.getElementById("btnSwitchInlineCloze").textContent =
       readerMode === "read" ? "Allenati in Cloze" : "Torna alla lettura";
@@ -2621,6 +2623,7 @@
     const imgWrap = document.getElementById("readerArtImages");
     imgWrap.innerHTML = "";
     const safeImgs = (sec.images || []).filter(isSafeAssetSrc);
+    imgWrap.classList.toggle("single-plate", safeImgs.length === 1);
     const zoomPillHtml = `<span class="pdf-zoom-pill" aria-hidden="true"><svg class="ic xs" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>Ingrandisci</span>`;
     if (safeImgs.length) {
       const gallery = safeImgs.map(src => {
@@ -3328,6 +3331,19 @@
     fb.classList.remove("ok", "bad");
   }
 
+  function ensureQuizDockVisible(instant = false) {
+    const mobileDock = document.getElementById("qzMobileDock");
+    if (!mobileDock || mobileDock.classList.contains("hidden") || window.innerWidth > 900) return;
+    requestAnimationFrame(() => {
+      const navWrap = document.getElementById("mobileNavWrap");
+      const dockRect = mobileDock.getBoundingClientRect();
+      const navTop = navWrap ? navWrap.getBoundingClientRect().top : window.innerHeight;
+      if (dockRect.bottom > navTop - 8) {
+        mobileDock.scrollIntoView({ behavior: instant ? "instant" : "smooth", block: "nearest" });
+      }
+    });
+  }
+
   function handleQuizAnswer(chosenIdx) {
     if (qzAnswered || !qzQueue[qzIdx]) return;
     qzAnswered = true;
@@ -3400,16 +3416,7 @@
 
     document.getElementById("btnRetryWrong").classList.toggle("hidden", qzWrong.length === 0);
     document.getElementById("wrongInlineCount").textContent = qzWrong.length;
-    if (mobileDock && window.innerWidth <= 900) {
-      requestAnimationFrame(() => {
-        const navWrap = document.getElementById("mobileNavWrap");
-        const dockRect = mobileDock.getBoundingClientRect();
-        const navTop = navWrap ? navWrap.getBoundingClientRect().top : window.innerHeight;
-        if (dockRect.bottom > navTop - 8) {
-          mobileDock.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        }
-      });
-    }
+    ensureQuizDockVisible(false);
   }
 
   function showQuizSummary() {
@@ -3663,13 +3670,16 @@
 
   function applyLightboxZoom(nextZoom) {
     lbZoom = Math.max(1, Math.min(2.5, Math.round(nextZoom * 100) / 100));
+    const stage = document.getElementById("lightboxStage");
     const imgEl = document.getElementById("lightboxImg");
     const valEl = document.getElementById("lbZoomVal");
     const btnOut = document.getElementById("btnLbZoomOut");
     const btnIn = document.getElementById("btnLbZoomIn");
-    if (imgEl) imgEl.style.width = `${Math.round(lbZoom * 100)}%`;
+    const isFit = lbZoom <= 1;
+    if (stage) stage.classList.toggle("is-fit", isFit);
+    if (imgEl) imgEl.style.width = isFit ? "" : `${Math.round(lbZoom * 100)}%`;
     if (valEl) valEl.textContent = `${Math.round(lbZoom * 100)}%`;
-    if (btnOut) btnOut.disabled = lbZoom <= 1;
+    if (btnOut) btnOut.disabled = isFit;
     if (btnIn) btnIn.disabled = lbZoom >= 2.5;
   }
 
