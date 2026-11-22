@@ -925,7 +925,22 @@ select.ios-field option { background: var(--bg-surface); color: var(--ink-primar
   background: #f5f5f7;
   border-radius: 0;
   border-bottom: 1px solid var(--sep-strong);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.cloze-sticky-strip.is-stuck::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 1px);
+  height: 18px;
+  background: linear-gradient(
+    to bottom,
+    var(--bg-surface) 0%,
+    color-mix(in srgb, var(--bg-surface) 82%, transparent) 48%,
+    transparent 100%
+  );
+  pointer-events: none;
 }
 .cloze-sticky-strip.is-stuck .btn-apple.soft {
   background: var(--bg-surface);
@@ -933,7 +948,7 @@ select.ios-field option { background: var(--bg-surface); color: var(--ink-primar
 }
 [data-theme="dark"] .cloze-sticky-strip.is-stuck {
   background: #242428;
-  box-shadow: 0 6px 18px -2px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
 }
 .cloze-bar .ios-field, .cloze-selects-card .ios-field { background: var(--bg-surface); }
 .cloze-bar .btn-apple.soft { background: var(--bg-surface); }
@@ -1608,13 +1623,15 @@ mark.search-hit {
 }
 .lightbox-stage {
   overflow: auto; max-height: calc(92vh - 82px); max-height: calc(92dvh - 82px);
-  border-radius: var(--r-md); background: #fff; box-shadow: var(--shadow-modal);
+  border-radius: var(--r-md); background: transparent;
   display: flex; align-items: flex-start; justify-content: center;
   -webkit-overflow-scrolling: touch;
 }
 .lightbox-stage img {
   display: block; width: 100%; height: auto; max-width: none;
-  margin: 0 auto; transform-origin: top left; transition: width 0.16s var(--ease);
+  margin: 0 auto; background: #fff; border-radius: var(--r-md);
+  box-shadow: var(--shadow-modal);
+  transform-origin: top left; transition: width 0.16s var(--ease);
 }
 .lightbox-stage.is-fit {
   overflow: hidden;
