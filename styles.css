@@ -884,10 +884,10 @@ select.ios-field option { background: var(--bg-surface); color: var(--ink-primar
 }
 .pdf-card-top {
   display: flex; align-items: center; justify-content: space-between; gap: 0.65rem;
-  padding: 0.7rem 0.95rem; background: var(--bg-subtle); border-bottom: 0.5px solid var(--sep);
+  padding: 0.7rem 0.95rem; background: var(--bg-subtle); border-bottom: 1px solid var(--sep);
 }
 @media (min-width: 641px) {
-  #csContent .pdf-card-top { min-height: 4.85rem; align-items: flex-start; }
+  #csContent .pdf-card-top { min-height: 5.25rem; align-items: center; }
 }
 .pdf-card-cap {
   display: block; flex: 1; min-width: 0;
@@ -922,33 +922,20 @@ select.ios-field option { background: var(--bg-surface); color: var(--ink-primar
 .cloze-sticky-strip.is-stuck {
   margin: 0 -1.75rem 1.35rem;
   padding: 0.55rem 1.75rem 0.65rem;
-  background: #f5f5f7;
+  background: rgba(244, 244, 248, 0.86);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 0;
   border-bottom: 1px solid var(--sep-strong);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-.cloze-sticky-strip.is-stuck::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: calc(100% + 1px);
-  height: 18px;
-  background: linear-gradient(
-    to bottom,
-    var(--bg-surface) 0%,
-    color-mix(in srgb, var(--bg-surface) 82%, transparent) 48%,
-    transparent 100%
-  );
-  pointer-events: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
 }
 .cloze-sticky-strip.is-stuck .btn-apple.soft {
   background: var(--bg-surface);
   border: 0.5px solid var(--sep);
 }
 [data-theme="dark"] .cloze-sticky-strip.is-stuck {
-  background: #242428;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  background: rgba(34, 34, 38, 0.88);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
 }
 .cloze-bar .ios-field, .cloze-selects-card .ios-field { background: var(--bg-surface); }
 .cloze-bar .btn-apple.soft { background: var(--bg-surface); }
