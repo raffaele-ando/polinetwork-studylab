@@ -103,7 +103,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.7.4";
+  const APP_VERSION = "v4.7.5";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -2009,6 +2009,7 @@
         populatePracticeClozeSecSelect(sec.doc);
       }
     }
+    syncPracticeClozeMemBtn();
   }
 
   function setHash(path) {
@@ -2051,6 +2052,7 @@
       else setHash("overview");
     }
     if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: "instant" });
+    syncFcRatingOpen();
     if (viewName === "practice" && practiceMode === "quiz" && qzAnswered) ensureQuizDockVisible(true);
     if (viewName === "practice" && practiceMode === "flashcards" && fcFlipped) ensureFlashcardDockVisible(true);
   }
@@ -2075,6 +2077,7 @@
       setHash(`practice/${practiceMode}${practiceMode === "cloze" && practiceClozeSecId ? `/${practiceClozeSecId}` : ""}`);
     }
     if (!opts.keepScroll) window.scrollTo({ top: 0, behavior: "instant" });
+    syncFcRatingOpen();
     if (mode === "quiz" && qzAnswered) ensureQuizDockVisible(true);
     if (mode === "flashcards" && fcFlipped) ensureFlashcardDockVisible(true);
   }
@@ -2458,6 +2461,8 @@
       frag.appendChild(btn);
     }
     list.appendChild(frag);
+    const hasFilter = !!(readerInp?.value?.trim()) || readerDocFilter !== "all" || readerStatusFilter !== "all";
+    if (hasFilter) list.scrollTop = 0;
   }
 
   function syncReaderSidebarDots() {
@@ -3375,6 +3380,15 @@
     sel.value = practiceClozeSecId;
   }
 
+  function syncPracticeClozeMemBtn() {
+    const btn = document.getElementById("btnPClozeMarkMem");
+    if (!btn || !practiceClozeSecId) return;
+    const isMem = (state.mastery[practiceClozeSecId] || 0) === 3;
+    btn.classList.toggle("is-memorized", isMem);
+    btn.setAttribute("aria-pressed", isMem ? "true" : "false");
+    btn.textContent = isMem ? "✓ A memoria" : "Segna a memoria";
+  }
+
   function renderPracticeCloze() {
     const sec = SECTION_MAP.get(practiceClozeSecId);
     if (!sec) return;
@@ -3387,6 +3401,7 @@
     const idx = CLOZEABLE_SECTIONS.findIndex(s => s.id === practiceClozeSecId);
     document.getElementById("btnPClozePrev").disabled = idx <= 0;
     document.getElementById("btnPClozeNext").disabled = idx >= CLOZEABLE_SECTIONS.length - 1;
+    syncPracticeClozeMemBtn();
 
     practiceClozeCtrl = renderClozeInto({
       secId: practiceClozeSecId,
@@ -3551,6 +3566,11 @@
     sel.value = tags.includes(prevVal) ? prevVal : "all";
   }
 
+  function syncFcRatingOpen() {
+    const open = currentView === "practice" && practiceMode === "flashcards" && fcFlipped && fcQueue.length > 0;
+    document.body.classList.toggle("fc-rating-open", open);
+  }
+
   function buildFcQueue(shuffle = false, customCards = null, customLabel = null) {
     fcCustomCards = customCards ? [...customCards] : null;
     fcCustomContext = customLabel;
@@ -3558,6 +3578,11 @@
     const docF = document.getElementById("fcDocFilter").value;
     const tagF = document.getElementById("fcTagFilter").value;
     const onlyDue = document.getElementById("fcOnlyDue").checked;
+    const tr = document.getElementById("toastRegion");
+    if (tr) tr.innerHTML = "";
+
+    const fcFilterActive = !fcCustomContext && (mode !== "curated" || docF !== "all" || tagF !== "all" || onlyDue);
+    document.getElementById("btnToggleFcFilters")?.classList.toggle("has-filter", fcFilterActive);
 
     let cards = fcCustomCards ? [...fcCustomCards] : getDeckCards(mode).filter(c => {
       if (docF !== "all" && c.doc !== docF) return false;
@@ -3604,13 +3629,27 @@
       cardEl.classList.add("hidden");
       dockEl.classList.add("hidden");
       emptyEl.classList.remove("hidden");
+      fcFlipped = false;
+      syncFcRatingOpen();
       const onlyDue = document.getElementById("fcOnlyDue").checked;
-      const hasFilters = onlyDue || document.getElementById("fcDocFilter").value !== "all" || document.getElementById("fcTagFilter").value !== "all" || !!fcCustomContext;
+      const docVal = document.getElementById("fcDocFilter").value;
+      const tagVal = document.getElementById("fcTagFilter").value;
+      const hasFilters = onlyDue || docVal !== "all" || tagVal !== "all" || !!fcCustomContext;
+      const globalDue = countTrulyDueReviewed();
       document.getElementById("fcQueueInfo").textContent = fcTotalSession > 0 ? `${fcCompletedSession} di ${fcTotalSession}` : "0 schede";
-      document.getElementById("fcEmptyTitle").textContent = fcTotalSession > 0 ? "Sessione completata" : "Nessuna scheda da ripassare";
-      document.getElementById("fcEmptyDesc").textContent = onlyDue
-        ? "Sei in pari con il ripasso programmato."
-        : "Modifica i filtri o avvia un nuovo ciclo.";
+      if (fcTotalSession > 0) {
+        document.getElementById("fcEmptyTitle").textContent = "Sessione completata";
+        document.getElementById("fcEmptyDesc").textContent = "Hai completato tutte le schede di questa sessione.";
+      } else if (onlyDue && globalDue > 0) {
+        document.getElementById("fcEmptyTitle").textContent = "Nessuna scheda in questo filtro";
+        document.getElementById("fcEmptyDesc").textContent =
+          `Hai ${globalDue} ${globalDue === 1 ? "scheda da ripassare" : "schede da ripassare"} in altri mazzi o documenti.`;
+      } else {
+        document.getElementById("fcEmptyTitle").textContent = "Nessuna scheda da ripassare";
+        document.getElementById("fcEmptyDesc").textContent = onlyDue
+          ? "Sei in pari con il ripasso programmato."
+          : "Modifica i filtri o avvia un nuovo ciclo.";
+      }
       document.getElementById("btnFcShowAll").classList.toggle("hidden", !hasFilters);
       return;
     }
@@ -3624,7 +3663,9 @@
     const currentIdx = Math.min(fcCompletedSession + 1, fcTotalSession);
     document.getElementById("fcQueueInfo").textContent = `${currentIdx} di ${fcTotalSession}`;
     document.getElementById("fcMetaLine").textContent = `${DOC_SHORT[card.doc] || card.doc} · ${card.tag}`;
-    document.getElementById("fcCardMeta").textContent = !rec ? "Nuova" : (rec.reps === 0 ? "Ripetizione" : `Rivista ${rec.reps}×`);
+    const fcCardMetaEl = document.getElementById("fcCardMeta");
+    fcCardMetaEl.textContent = !rec ? "Nuova" : (rec.reps === 0 ? "Ripetizione" : `Rivista ${rec.reps}×`);
+    fcCardMetaEl.classList.toggle("hidden", !!card._retry);
     document.getElementById("fcRetryBadge").classList.toggle("hidden", !card._retry);
 
     document.getElementById("fcQuestion").textContent = formatArrows(card.q);
@@ -3664,6 +3705,7 @@
     document.getElementById("fcBack").classList.add("hidden");
     ratingWrap.classList.add("hidden");
     revealWrap.classList.remove("hidden");
+    syncFcRatingOpen();
   }
 
   function ensureFlashcardDockVisible(instant = false) {
@@ -3682,9 +3724,12 @@
   function flipFlashcard() {
     if (!fcQueue.length || fcFlipped) return;
     fcFlipped = true;
+    const tr = document.getElementById("toastRegion");
+    if (tr) tr.innerHTML = "";
     document.getElementById("fcBack").classList.remove("hidden");
     document.getElementById("fcRatingWrap").classList.remove("hidden");
     document.getElementById("fcRevealWrap").classList.add("hidden");
+    syncFcRatingOpen();
     ensureFlashcardDockVisible(false);
   }
 
@@ -3753,6 +3798,12 @@
 
   function startQuiz(customList = null, customLabel = null) {
     qzCustomContext = customLabel;
+    const qzFilterActive = !qzCustomContext && (
+      document.getElementById("qzModeFilter").value !== "all" ||
+      document.getElementById("qzDocFilter").value !== "all" ||
+      document.getElementById("qzOnlyUnmastered").checked
+    );
+    document.getElementById("btnToggleQzFilters")?.classList.toggle("has-filter", qzFilterActive);
     const list = customList || getFilteredQuizPool();
     qzQueue = shuffleArray(list).map(shuffleQuizItemOptions);
     qzIdx = 0;
