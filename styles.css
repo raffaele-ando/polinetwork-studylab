@@ -1798,7 +1798,6 @@ body.consent-open .reader-inner { padding-bottom: 6.5rem; }
   .practice-top-head { gap: 0.7rem 0.75rem; }
   .practice-seg-control { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); order: 3; }
   .practice-seg-control .ios-seg-btn { padding: 0.35rem 0.25rem; }
-  .deck-top-bar { grid-template-columns: auto 1fr auto; }
   .deck-top-bar .status-pill { justify-self: center; white-space: nowrap; }
   .deck-top-bar .circle-btn { width: 44px; height: 44px; }
   .deck-top-right { gap: 0.6rem; }
@@ -2287,6 +2286,10 @@ body.consent-open .reader-inner { padding-bottom: 6.5rem; }
   }
 }
 @media (max-width: 640px) {
+  .deck-top-bar .circle-btn { width: 40px; height: 40px; }
+  .deck-top-left { gap: 0.35rem; }
+  .deck-top-right { gap: 0.45rem; }
+  .focus-chip { padding: 0.36rem 0.65rem; font-size: 0.76rem; }
   .toast-region {
     left: 1rem;
     right: 1rem;
