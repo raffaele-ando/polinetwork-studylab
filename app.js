@@ -103,7 +103,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.7.7";
+  const APP_VERSION = "v4.7.8";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -1974,11 +1974,24 @@
     });
   }
 
+  const READER_SCALES = [0.88, 0.94, 1.00, 1.12, 1.25];
+
   function applyReaderScale(scale) {
-    state.readerScale = Number(Math.max(0.88, Math.min(1.28, Number(scale) || 1)).toFixed(2));
+    const num = Number(scale) || 1;
+    let best = READER_SCALES[2];
+    let minDiff = Infinity;
+    for (const s of READER_SCALES) {
+      const d = Math.abs(s - num);
+      if (d < minDiff) { minDiff = d; best = s; }
+    }
+    state.readerScale = best;
     document.documentElement.style.setProperty("--reader-scale", state.readerScale);
     const valEl = document.getElementById("fontScaleVal");
     if (valEl) valEl.textContent = `${Math.round(state.readerScale * 100)}%`;
+    const btnDec = document.getElementById("btnFontDec");
+    const btnInc = document.getElementById("btnFontInc");
+    if (btnDec) btnDec.disabled = state.readerScale <= READER_SCALES[0];
+    if (btnInc) btnInc.disabled = state.readerScale >= READER_SCALES[READER_SCALES.length - 1];
   }
 
   function closeFontPopover() {
@@ -4603,12 +4616,16 @@
     document.addEventListener("click", closeFontPopover);
     document.getElementById("btnFontDec").addEventListener("click", () => {
       const prev = state.readerScale;
-      applyReaderScale(prev - 0.08);
+      const idx = READER_SCALES.findIndex(s => Math.abs(s - prev) < 0.01);
+      const nextIdx = idx > 0 ? idx - 1 : 0;
+      applyReaderScale(READER_SCALES[nextIdx]);
       if (state.readerScale !== prev) saveState();
     });
     document.getElementById("btnFontInc").addEventListener("click", () => {
       const prev = state.readerScale;
-      applyReaderScale(prev + 0.08);
+      const idx = READER_SCALES.findIndex(s => Math.abs(s - prev) < 0.01);
+      const nextIdx = idx >= 0 && idx < READER_SCALES.length - 1 ? idx + 1 : READER_SCALES.length - 1;
+      applyReaderScale(READER_SCALES[nextIdx]);
       if (state.readerScale !== prev) saveState();
     });
 

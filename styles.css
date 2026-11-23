@@ -763,9 +763,15 @@ select.ios-field option { background: var(--bg-surface); color: var(--ink-primar
   width: 36px; height: 34px; border: none; border-radius: 10px;
   background: var(--bg-subtle); color: var(--ink-primary);
   font-size: 0.82rem; font-weight: 700; cursor: pointer;
+  transition: background 0.14s, opacity 0.14s;
+}
+.fp-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 @media (hover: hover) {
-  .fp-btn:hover { background: var(--bg-hover); }
+  .fp-btn:hover:not(:disabled) { background: var(--bg-hover); }
 }
 .fp-val {
   min-width: 46px; text-align: center; font-size: 0.78rem; font-weight: 600;
@@ -1579,7 +1585,7 @@ table.ref-table tr.tl-election td { background: var(--orange-soft); }
   width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: block;
 }
 .pwa-modal-title-group {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0.32rem 0.55rem;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.32rem 0.55rem;
   min-width: 0; flex: 1;
 }
 .pwa-modal-title-group strong { font-size: 0.94rem; line-height: 1.25; color: var(--ink-primary); }
