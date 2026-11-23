@@ -358,6 +358,11 @@ body.modal-open { overflow: hidden; }
   background: var(--green-soft);
   color: var(--green-text);
 }
+.cloze-notice.ok .btn-apple.is-memorized {
+  background: var(--bg-surface);
+  color: var(--green-text);
+  border: 1px solid rgba(52, 199, 89, 0.38);
+}
 @media (hover: hover) {
   .btn-apple.is-memorized:hover:not(:disabled) {
     background: var(--green-soft);
