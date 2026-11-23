@@ -889,6 +889,12 @@ select.ios-field option { background: var(--bg-surface); color: var(--ink-primar
   margin-top: 0.75rem; font-size: 0.9rem; line-height: 1.66; color: var(--ink-primary);
   white-space: pre-line; overflow-wrap: anywhere;
 }
+.form-transcript-body .num-hl {
+  background: transparent;
+  padding: 0;
+  font-weight: 700;
+  color: var(--accent-text);
+}
 .prose-child-link {
   display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
   width: 100%; text-align: left; border: none; background: var(--bg-subtle);
@@ -1473,15 +1479,16 @@ table.ref-table tr.tl-election td { background: var(--orange-soft); }
   overflow-x: hidden;
 }
 .modal-sheet.compact {
-  max-width: 520px; overflow-y: auto; max-height: 88vh; max-height: 88dvh;
-  padding-bottom: 1.5rem; scrollbar-width: thin;
+  max-width: 520px; overflow-y: auto; max-height: 92vh; max-height: 92dvh;
+  gap: 0.72rem;
+  padding: 1.15rem 1.4rem 1.15rem; scrollbar-width: thin;
 }
 .modal-head { display: flex; justify-content: space-between; align-items: center; }
 .modal-sheet.compact .modal-head {
-  position: sticky; top: -1.35rem; z-index: 3;
+  position: sticky; top: -1.15rem; z-index: 3;
   background: var(--bg-surface);
-  margin: -1.35rem -1.45rem 0;
-  padding: 1.15rem 1.45rem 0.75rem;
+  margin: -1.15rem -1.4rem 0;
+  padding: 0.95rem 1.4rem 0.65rem;
   border-bottom: 0.5px solid var(--sep);
 }
 .modal-sheet .circle-btn,
@@ -1520,6 +1527,7 @@ table.ref-table tr.tl-election td { background: var(--orange-soft); }
   width: 10px; height: 10px; border-radius: 50%;
   background: #198744; border: 2px solid var(--bg-surface);
 }
+[data-theme="dark"] .cloud-dot { background: var(--green); }
 .cloud-dot.syncing { background: var(--accent); animation: cloudPulse 1s infinite ease-in-out; }
 .cloud-dot.pending { background: var(--orange); }
 .cloud-dot.error { background: var(--cal-red); }
@@ -1556,7 +1564,7 @@ table.ref-table tr.tl-election td { background: var(--orange-soft); }
 
 .cloud-modal-box {
   background: var(--bg-subtle); border-radius: var(--r-md);
-  padding: 1rem 1.05rem; display: flex; flex-direction: column; gap: 0.75rem;
+  padding: 0.88rem 1rem; display: flex; flex-direction: column; gap: 0.62rem;
   min-width: 0; max-width: 100%;
 }
 .pwa-modal-head-row {
@@ -1578,7 +1586,7 @@ table.ref-table tr.tl-election td { background: var(--orange-soft); }
   background: var(--bg-surface); color: var(--ink-primary);
   border: 0.5px solid var(--sep-strong);
 }
-.cloud-modal-out, .cloud-modal-in { display: flex; flex-direction: column; gap: 0.8rem; }
+.cloud-modal-out, .cloud-modal-in { display: flex; flex-direction: column; gap: 0.65rem; }
 .cloud-modal-head { display: flex; align-items: flex-start; gap: 0.8rem; }
 .cloud-modal-head strong { display: block; font-size: 0.94rem; margin-bottom: 0.15rem; }
 
@@ -1595,11 +1603,19 @@ table.ref-table tr.tl-election td { background: var(--orange-soft); }
 .btn-google-signin:active { transform: scale(0.988); }
 
 .cloud-profile-row {
-  display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 0.75rem;
 }
-.cloud-profile-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
-.cloud-profile-info strong { font-size: 0.94rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cloud-profile-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-profile-info { display: flex; flex-direction: column; gap: 0.14rem; min-width: 0; flex: 1; }
+.cloud-profile-name-row {
+  display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 0.5rem;
+  min-width: 0;
+}
+.cloud-profile-info strong { font-size: 0.94rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cloud-profile-info > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cloud-modal-in .modal-actions {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem;
+}
+.cloud-modal-in .modal-actions .btn-apple { width: 100%; }
 
 .cloud-pill-status {
   font-size: 0.74rem; font-weight: 700; padding: 0.22rem 0.62rem; border-radius: 999px;
@@ -2343,10 +2359,25 @@ body.consent-open .reader-inner { padding-bottom: 6.5rem; }
     min-width: 38px;
     min-height: 38px;
   }
+  .term-card-head-main {
+    gap: 0.34rem;
+  }
+  .term-cat-pill {
+    padding: 0.26rem 0.62rem;
+    font-size: 0.71rem;
+  }
   .term-review-btn {
     min-height: 36px;
-    padding: 0.3rem 0.72rem;
-    font-size: 0.76rem;
+    padding: 0.18rem 0.68rem;
+    font-size: 0.74rem;
+    border: 5px solid transparent;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px var(--sep-strong);
+    margin: -4px 0;
+  }
+  .term-review-btn.is-queued,
+  .term-review-btn.is-learned {
+    box-shadow: none;
   }
   .term-card-actions .btn-apple.sm {
     min-height: 40px;
@@ -2483,4 +2514,25 @@ body.consent-open .reader-inner { padding-bottom: 6.5rem; }
   }
   .cloze-bar-actions { gap: 0.35rem; }
   .cloze-prose { line-height: 2.45; }
+
+  /* Landscape Modals: reclaim outer margin so Search modal previews multiple results */
+  .modal-backdrop { padding: 0.4rem 0.75rem; }
+  .modal-sheet {
+    padding: 0.72rem 1.05rem 0.68rem;
+    gap: 0.52rem;
+    max-height: calc(100dvh - 14px);
+    border-radius: 20px;
+  }
+  .modal-sheet.compact {
+    max-height: calc(100dvh - 14px);
+    padding: 0.72rem 1.05rem 0.85rem;
+  }
+  .modal-sheet.compact .modal-head {
+    top: -0.72rem;
+    margin: -0.72rem -1.05rem 0;
+    padding: 0.62rem 1.05rem 0.48rem;
+  }
+  .search-results { max-height: calc(100dvh - 148px); gap: 0.35rem; }
+  .sr-item { padding: 0.52rem 0.82rem; }
+  .search-modal-foot { padding-top: 0.4rem; }
 }

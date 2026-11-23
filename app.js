@@ -103,7 +103,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.7.5";
+  const APP_VERSION = "v4.7.6";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -2997,10 +2997,14 @@
       det.className = "apple-disclosure form-transcript";
       det.style.gridColumn = "1 / -1";
       const formattedForm = sec.text
+        .replace(/Io sottoscritto\/a\s+nato\/a a\s*\(\s*\)\s+il\s+\/\s*\//g, "Io sottoscritto/a [Nome e Cognome], nato/a a [Comune] ([Prov.]) il [gg/mm/aaaa]")
+        .replace(/residente in\s+numero\s+a\s*\(\s*\)\s+CAP/g, "residente in [Via/Piazza], n. [___], [Comune] ([Prov.]), CAP [_____]")
+        .replace(/DELEGO\s+Il socio\s+A rappresentarmi/g, "DELEGO il socio [Nome e Cognome]\na rappresentarmi")
+        .replace(/\bMilano\s+Firma\b/g, "Milano, [data] — Firma: [__________________]")
         .replace(/\s+(Oggetto:)/g, "\n\n$1")
         .replace(/\s+(Io sottoscritto\/a)/g, "\n\n$1")
-        .replace(/\s+(DELEGO|CHIEDO|DICHIARO|CANDIDATURA)\b/g, "\n\n$1")
-        .replace(/\s+(La presente|Accetto|Milano\s+Firma)/g, "\n\n$1");
+        .replace(/\s+(DELEGO|CHIEDO|PRESENTO|DICHIARO|CANDIDATURA)\b/g, "\n\n$1")
+        .replace(/\s+(La presente|Accetto|Milano,\s*\[data\])/g, "\n\n$1");
       det.innerHTML = `
         <summary>
           <span>Trascrizione testuale del modulo (testo integrale)</span>
@@ -3091,13 +3095,8 @@
     const updateProgress = () => {
       const total = items.length;
       const done = recalled + revealed;
-      if (mode === "type") {
-        const revWord = revealed === 1 ? "rivelata" : "rivelate";
-        counterEl.textContent = revealed > 0 ? `${recalled} / ${total} · ${revealed} ${revWord}` : `${recalled} / ${total}`;
-      } else {
-        const shownWord = revealed === 1 ? "mostrata" : "mostrate";
-        counterEl.textContent = revealed > 0 ? `${recalled} / ${total} · ${revealed} ${shownWord}` : `${recalled} / ${total}`;
-      }
+      const shownWord = revealed === 1 ? "mostrata" : "mostrate";
+      counterEl.textContent = revealed > 0 ? `${recalled} / ${total} · ${revealed} ${shownWord}` : `${recalled} / ${total}`;
       barEl.style.width = `${(total > 0 ? (recalled / total) * 100 : 0).toFixed(2)}%`;
       if (barRevEl) barRevEl.style.width = `${(total > 0 ? (revealed / total) * 100 : 0).toFixed(2)}%`;
       if (resetBtn) resetBtn.disabled = done === 0;
@@ -3123,23 +3122,33 @@
           }
           noticeEl.classList.toggle("ok", recallPct >= 50);
           noticeEl.classList.remove("hidden");
-          const nextLv = level < 4 ? `<button type="button" class="btn-apple soft sm" data-clz-lvup>Livello ${level + 1}</button>` : "";
+          const isAlreadyMem = (state.mastery[secId] || 0) === 3;
+          const nextLv = level < 4 ? `<button type="button" class="btn-apple ${isAlreadyMem ? "primary" : "soft"} sm" data-clz-lvup>Livello ${level + 1}</button>` : "";
+          const memBtn = isAlreadyMem
+            ? `<button type="button" class="btn-apple is-memorized sm" data-clz-mem aria-pressed="true">✓ A memoria</button>`
+            : `<button type="button" class="btn-apple primary sm" data-clz-mem aria-pressed="false">A memoria</button>`;
           noticeEl.innerHTML = `
             <span><strong>Completato:</strong> ${recalled}/${total} (${recallPct}%)</span>
-            <div class="notice-actions">${nextLv}<button type="button" class="btn-apple primary sm" data-clz-mem>A memoria</button></div>
+            <div class="notice-actions">${nextLv}${memBtn}</div>
           `;
           noticeEl.querySelector("[data-clz-lvup]")?.addEventListener("click", () => {
             syncClozeLevelControls(String(level + 1));
             saveState();
             triggerRestart();
           });
-          noticeEl.querySelector("[data-clz-mem]")?.addEventListener("click", () => {
+          noticeEl.querySelector("[data-clz-mem]")?.addEventListener("click", e => {
             state.mastery[secId] = 3;
             ensureTs();
             state._ts.mastery[secId] = Date.now();
             diagLog("ACTION", `Cloze segnato a memoria (${secId})`, "level=3");
             saveState();
             syncAllViewsForStateChange(secId);
+            const btn = e.currentTarget;
+            btn.className = "btn-apple is-memorized sm";
+            btn.setAttribute("aria-pressed", "true");
+            btn.textContent = "✓ A memoria";
+            const lvBtn = noticeEl.querySelector("[data-clz-lvup]");
+            if (lvBtn) lvBtn.className = "btn-apple primary sm";
             showToast(`${sec.code} segnato a memoria`);
           });
         }
@@ -3272,7 +3281,7 @@
               if (entry.done) return;
               entry.done = true;
               entry.inputEl = null;
-              replaceWithChip("cloze-chip-peeked", "rivelata");
+              replaceWithChip("cloze-chip-peeked", "mostrata");
               revealed++;
               if (!batch) {
                 updateProgress();
@@ -3519,13 +3528,22 @@
   }
 
   function getArticleFlashcards() {
-    return CLOZEABLE_SECTIONS.map(s => ({
-      id: `auto-${s.id}`, doc: s.doc, ref: s.id,
-      refLabel: `${DOC_SHORT[s.doc]} ${s.code}`,
-      tag: "Articoli",
-      q: `[${DOC_SHORT[s.doc]}] Cosa dispone ${s.code} — «${s.title}»?`,
-      a: s.text,
-    }));
+    return CLOZEABLE_SECTIONS.map(s => {
+      const codeClean = (s.code || "").trim();
+      const subj = /^Art\./i.test(codeClean)
+        ? `l’${codeClean}`
+        : (/^Sez\./i.test(codeClean) ? `la ${codeClean}` : (codeClean ? `«${codeClean}»` : ""));
+      const qText = subj && s.title && s.title !== codeClean
+        ? `Cosa dispone ${subj} — «${s.title}»?`
+        : `Cosa dispone «${s.title || codeClean}»?`;
+      return {
+        id: `auto-${s.id}`, doc: s.doc, ref: s.id,
+        refLabel: `${DOC_SHORT[s.doc]} ${s.code}`,
+        tag: "Articoli",
+        q: qText,
+        a: s.text,
+      };
+    });
   }
 
   function getDeckCards(mode) {
@@ -3651,6 +3669,7 @@
           : "Modifica i filtri o avvia un nuovo ciclo.";
       }
       document.getElementById("btnFcShowAll").classList.toggle("hidden", !hasFilters);
+      document.getElementById("btnFcRestartSession").classList.toggle("hidden", fcTotalSession === 0 && hasFilters);
       return;
     }
 
