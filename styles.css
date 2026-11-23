@@ -1964,6 +1964,28 @@ body.consent-open .reader-inner { padding-bottom: 6.5rem; }
     padding-inline: 0.65rem;
     grid-template-columns: minmax(74px, 1fr) auto minmax(74px, 1fr);
   }
+}
+@media (max-width: 360px) {
+  .reader-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45rem;
+    padding-inline: 0.55rem;
+  }
+  .reader-nav-bar .ios-seg-btn {
+    padding: 0.34rem 0.65rem;
+    font-size: 0.8rem;
+  }
+  .reader-nav-right {
+    gap: 0.25rem;
+  }
+  .reader-nav-right .text-icon-btn {
+    min-width: 38px;
+    width: 38px;
+  }
+}
+@media (max-width: 380px), (max-height: 700px) and (max-width: 900px) {
   .large-title { font-size: 1.46rem; }
   .practice-top-head { gap: 0.45rem; }
   .deck-top-bar { margin-bottom: 0.35rem; }

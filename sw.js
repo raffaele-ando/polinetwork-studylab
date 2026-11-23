@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "polinetwork-studio-v4.7.3";
+const CACHE_NAME = "polinetwork-studio-v4.7.4";
 
 const PRECACHE_URLS = [
   "./",
