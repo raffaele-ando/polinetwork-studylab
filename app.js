@@ -103,7 +103,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.7.6";
+  const APP_VERSION = "v4.7.7";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -2493,6 +2493,8 @@
 
   function openTocDrawer() {
     lastFocusedEl = document.activeElement;
+    const tr = document.getElementById("toastRegion");
+    if (tr) tr.innerHTML = "";
     const sidebar = document.getElementById("readerSidebar");
     sidebar.classList.add("open");
     document.getElementById("tocBackdrop").classList.remove("hidden");
@@ -2736,6 +2738,8 @@
     }
 
     closeFontPopover();
+    const tr = document.getElementById("toastRegion");
+    if (tr) tr.innerHTML = "";
     if (activeTermTrigger && activeTermTrigger !== triggerEl) {
       activeTermTrigger.setAttribute("aria-expanded", "false");
     }
@@ -3601,6 +3605,11 @@
 
     const fcFilterActive = !fcCustomContext && (mode !== "curated" || docF !== "all" || tagF !== "all" || onlyDue);
     document.getElementById("btnToggleFcFilters")?.classList.toggle("has-filter", fcFilterActive);
+    const dueChipEl = document.getElementById("btnFcDueFocus");
+    if (dueChipEl) {
+      dueChipEl.classList.toggle("is-active", !fcCustomContext && onlyDue);
+      dueChipEl.setAttribute("aria-pressed", (!fcCustomContext && onlyDue) ? "true" : "false");
+    }
 
     let cards = fcCustomCards ? [...fcCustomCards] : getDeckCards(mode).filter(c => {
       if (docF !== "all" && c.doc !== docF) return false;
@@ -3642,6 +3651,8 @@
 
     const pct = fcTotalSession > 0 ? Math.round((fcCompletedSession / fcTotalSession) * 100) : 0;
     document.getElementById("fcBarFill").style.width = `${pct}%`;
+    const shufBtn = document.getElementById("btnFcShuffle");
+    if (shufBtn) shufBtn.disabled = fcQueue.length <= 1;
 
     if (!fcQueue.length) {
       cardEl.classList.add("hidden");
@@ -4205,6 +4216,8 @@
   function openModal(id) {
     const modal = document.getElementById(id);
     if (!modal) return;
+    const tr = document.getElementById("toastRegion");
+    if (tr) tr.innerHTML = "";
     // Close TOC drawer or any OTHER open modal without overwriting original non-modal lastFocusedEl
     const sidebar = document.getElementById("readerSidebar");
     if (sidebar?.classList.contains("open")) {

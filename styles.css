@@ -2289,6 +2289,15 @@ body.consent-open .reader-inner { padding-bottom: 6.5rem; }
   color: var(--accent-soft-text);
   border-color: transparent;
 }
+.focus-chip.due-chip.is-active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+@media (hover: hover) {
+  .focus-chip.due-chip.is-active:hover {
+    background: var(--accent-hover);
+  }
+}
 .term-cat-pill {
   display: inline-flex;
   align-items: center;
