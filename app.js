@@ -54,6 +54,7 @@
   let lbGallery = [];
   let lbIdx = 0;
   let lbZoom = 1;
+  let lbBaseWidth = 0;
 
   let gsResults = [];
   let gsActiveIdx = -1;
@@ -102,7 +103,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.7.1";
+  const APP_VERSION = "v4.7.2";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -266,7 +267,7 @@
       // 4. Cloud Firestore round-trip
       if (!fbUser) {
         diagLog("SELF-TEST", "4/4 Test Cloud Firestore R/W", "SKIP — Effettua prima 'Accedi con Google' per testare lettura/scrittura Cloud.");
-        showToast("Test locale OK · Accedi con Google per il test Cloud");
+        showToast("Test locale OK · Accedi per il Cloud");
         return;
       }
       const uid = fbUser.uid;
@@ -2603,7 +2604,7 @@
     if (!card || card.classList.contains("hidden")) return;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    if (vw <= 640 || !triggerEl || !triggerEl.isConnected) {
+    if (vw <= 640 || vh <= 500 || !triggerEl || !triggerEl.isConnected) {
       card.style.left = "";
       card.style.top = "";
       card.style.maxHeight = "";
@@ -2971,7 +2972,7 @@
       const gallery = safeImgs.map(src => {
         const pm = src.match(/_p(\d+)\.png$/);
         const cap = (pm && DIAGRAM_LABELS[pm[1]])
-          ? `${DIAGRAM_LABELS[pm[1]]} (Pag. ${pm[1]})`
+          ? `${DIAGRAM_LABELS[pm[1]]} (Pag.\u00A0${pm[1]})`
           : `${sec.code} — ${sec.title}`;
         return { src, cap };
       });
@@ -3952,11 +3953,13 @@
 
   // ==================== 4. SINOSSI ====================
   function syncCsTabs() {
+    let activePill = null;
     document.querySelectorAll("#csTabs .ref-pill").forEach(t => {
       const act = t.dataset.cs === csTab;
       t.classList.toggle("active", act);
       t.setAttribute("aria-selected", act ? "true" : "false");
       t.tabIndex = act ? 0 : -1;
+      if (act) activePill = t;
     });
     const contentEl = document.getElementById("csContent");
     if (contentEl) contentEl.setAttribute("aria-labelledby", `csTab-${csTab}`);
@@ -3964,6 +3967,10 @@
     const inp = document.getElementById("csSearch");
     if (filterBar) filterBar.classList.toggle("hidden", csTab === "hierarchy");
     if (inp && CS_PLACEHOLDERS[csTab]) inp.placeholder = CS_PLACEHOLDERS[csTab];
+    if (activePill && currentView === "reference") {
+      activePill.scrollIntoView({ behavior: "instant", inline: "center", block: "nearest" });
+      requestAnimationFrame(syncRefRailFades);
+    }
   }
 
   function syncRefRailFades() {
@@ -4102,7 +4109,7 @@
       const zoomPillHtml = `<span class="pdf-zoom-pill" aria-hidden="true"><svg class="ic xs" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>Ingrandisci</span>`;
       const entries = Object.entries(elDoc?.visualPagesRendered || {})
         .filter(([, src]) => isSafeAssetSrc(src))
-        .map(([p, src]) => ({ p, src, cap: `${DIAGRAM_LABELS[p] || `Pagina ${p}`} (Pag. ${p})` }))
+        .map(([p, src]) => ({ p, src, cap: `${DIAGRAM_LABELS[p] || `Pagina ${p}`} (Pag.\u00A0${p})` }))
         .filter(item => matchFields([item.cap]));
       wrap.innerHTML = entries.length ? `<div class="pdf-gallery">${entries.map((it, i) => `
         <button type="button" class="pdf-card" data-lb-idx="${i}">
@@ -4167,15 +4174,27 @@
   }
 
   function applyLightboxZoom(nextZoom) {
-    lbZoom = Math.max(1, Math.min(2.5, Math.round(nextZoom * 100) / 100));
     const stage = document.getElementById("lightboxStage");
     const imgEl = document.getElementById("lightboxImg");
     const valEl = document.getElementById("lbZoomVal");
     const btnOut = document.getElementById("btnLbZoomOut");
     const btnIn = document.getElementById("btnLbZoomIn");
+    if (lbZoom <= 1 && nextZoom > 1 && imgEl && stage) {
+      const measured = imgEl.getBoundingClientRect().width;
+      lbBaseWidth = measured > 120 ? measured : Math.min(stage.clientWidth || 680, 680);
+    }
+    lbZoom = Math.max(1, Math.min(2.5, Math.round(nextZoom * 100) / 100));
     const isFit = lbZoom <= 1;
     if (stage) stage.classList.toggle("is-fit", isFit);
-    if (imgEl) imgEl.style.width = isFit ? "" : `${Math.round(lbZoom * 100)}%`;
+    if (imgEl) {
+      if (isFit) {
+        imgEl.style.width = "";
+      } else if (lbBaseWidth > 120) {
+        imgEl.style.width = `${Math.round(lbBaseWidth * lbZoom)}px`;
+      } else {
+        imgEl.style.width = `${Math.round(lbZoom * 100)}%`;
+      }
+    }
     if (valEl) valEl.textContent = `${Math.round(lbZoom * 100)}%`;
     if (btnOut) btnOut.disabled = isFit;
     if (btnIn) btnIn.disabled = lbZoom >= 2.5;
@@ -4196,10 +4215,14 @@
     const stage = document.getElementById("lightboxStage");
     if (isSafeAssetSrc(item.src)) imgEl.src = item.src;
     imgEl.alt = item.cap || "Schema ufficiale PDF";
+    lbBaseWidth = 0;
     applyLightboxZoom(1);
     if (stage) { stage.scrollTop = 0; stage.scrollLeft = 0; }
     const isSingle = lbGallery.length <= 1;
-    document.getElementById("lightboxCap").textContent = isSingle ? item.cap : `${item.cap} (${lbIdx + 1}/${lbGallery.length})`;
+    const hasInlineCounter = /\(\d+\/\d+\)/.test(item.cap || "");
+    document.getElementById("lightboxCap").textContent = (isSingle || hasInlineCounter)
+      ? item.cap
+      : `${item.cap} (${lbIdx + 1}/${lbGallery.length})`;
     const prevBtn = document.getElementById("btnLbPrev");
     const nextBtn = document.getElementById("btnLbNext");
     prevBtn.classList.toggle("hidden", isSingle);
@@ -4802,8 +4825,9 @@
         renderReference();
         setHash(`reference/${csTab}`);
         window.scrollTo({ top: 0, behavior: "instant" });
-        t.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
-        setTimeout(syncRefRailFades, 180);
+        t.scrollIntoView({ behavior: "instant", inline: "center", block: "nearest" });
+        syncRefRailFades();
+        requestAnimationFrame(syncRefRailFades);
       });
     });
     document.getElementById("csSearch").addEventListener("input", debounce(renderReference, 110));
