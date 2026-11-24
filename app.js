@@ -103,7 +103,7 @@
 
   // ==================== DIAGNOSTIC TELEMETRY & CLOUD AUDIT CONSOLE ====================
   const DIAG_STORAGE_KEY = "polinetwork_studylab_diag_v1";
-  const APP_VERSION = "v4.7.8";
+  const APP_VERSION = "v4.7.9";
   const VALID_CS_TABS = new Set(["timeline", "quorums", "organs", "deadlines", "hierarchy", "diagrams"]);
   const NON_CLOZE_SECTIONS = new Set(["el-b-1", "el-d", "el-e", "el-f", "el-g", "el-h", "el-k"]);
   let fcCustomCards = null;
@@ -1507,6 +1507,11 @@
     };
   }
 
+  function clearToasts() {
+    const region = document.getElementById("toastRegion");
+    if (region) region.innerHTML = "";
+  }
+
   function showToast(msg) {
     const region = document.getElementById("toastRegion");
     if (!region) return;
@@ -2038,10 +2043,7 @@
     document.body.dataset.view = viewName;
     closeFontPopover();
     closeTermCard();
-    if (prevView !== viewName) {
-      const tr = document.getElementById("toastRegion");
-      if (tr) tr.innerHTML = "";
-    }
+    if (prevView !== viewName) clearToasts();
 
     document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
     document.getElementById(`view-${viewName}`)?.classList.add("active");
@@ -2072,6 +2074,7 @@
 
   function switchPracticeMode(mode, opts = {}) {
     if (!["flashcards", "quiz", "cloze"].includes(mode)) mode = "flashcards";
+    if (practiceMode !== mode) clearToasts();
     practiceMode = mode;
     document.querySelectorAll("#practiceModeSwitch .ios-seg-btn").forEach(b => {
       const act = b.dataset.pmode === mode;
@@ -2158,6 +2161,7 @@
       showToast("Seleziona un articolo normativo.");
       return;
     }
+    if (practiceClozeSecId && practiceClozeSecId !== secId) clearToasts();
     practiceClozeSecId = secId;
     document.getElementById("clozeDocSelect").value = sec.doc;
     populatePracticeClozeSecSelect(sec.doc);
@@ -2665,6 +2669,7 @@
     const card = document.getElementById("termPopover");
     const backdrop = document.getElementById("termBackdrop");
     if (!card || card.classList.contains("hidden")) return;
+    clearToasts();
     card.classList.add("hidden");
     card.style.maxHeight = "";
     backdrop?.classList.add("hidden");
@@ -2863,9 +2868,11 @@
   }
 
   function renderReaderArticle(secId, opts = {}) {
+    const prevSecId = readerSecId;
     closeTermCard();
     const sec = SECTION_MAP.get(secId);
     if (!sec) return;
+    if (prevSecId && prevSecId !== secId) clearToasts();
     readerSecId = secId;
     if (opts.persistLastSec !== false && state.lastSecId !== secId) {
       state.lastSecId = secId;
@@ -4576,6 +4583,7 @@
     document.querySelectorAll("#readerModeSwitch .ios-seg-btn").forEach(b => {
       b.addEventListener("click", () => {
         if (b.disabled || b.dataset.rmode === readerMode) return;
+        clearToasts();
         readerMode = b.dataset.rmode;
         syncReaderModeTabs();
         if (readerMode === "cloze") renderInlineCloze();
@@ -4583,6 +4591,7 @@
       });
     });
     document.getElementById("btnSwitchInlineCloze").addEventListener("click", () => {
+      clearToasts();
       readerMode = readerMode === "read" ? "cloze" : "read";
       syncReaderModeTabs();
       if (readerMode === "cloze") renderInlineCloze();
@@ -4931,6 +4940,7 @@
     window.addEventListener("resize", syncRefRailFades, { passive: true });
     document.querySelectorAll("#csTabs .ref-pill").forEach(t => {
       t.addEventListener("click", () => {
+        if (csTab !== t.dataset.cs) clearToasts();
         csTab = t.dataset.cs;
         syncCsTabs();
         renderReference();
